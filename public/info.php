@@ -8,7 +8,7 @@
  */
 
 $supabaseUrl = getenv('SUPABASE_URL') ?: 'https://vxmyfozpixzbobwnfziq.supabase.co';
-$supabaseKey = getenv('SUPABASE_ANON_KEY') ?: 'sb_publishable_GvytPFFrFpY3BNj7968bLQ_1uvPcoxE';
+$supabaseKey = getenv('SUPABASE_ANON_KEY') ?: '';
 
 $inputs = [];
 $error = '';
