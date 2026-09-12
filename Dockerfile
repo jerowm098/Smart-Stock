@@ -1,10 +1,16 @@
 FROM php:8.2-apache
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 # Enable Apache rewrite module (required for Laravel .htaccess)
 RUN a2enmod rewrite
 
 # Install PHP extensions
-RUN docker-php-ext-install pdo pdo_sqlite
+RUN docker-php-ext-configure pdo_sqlite --with-pdo-sqlite=/usr/local \
+    && docker-php-ext-install pdo pdo_sqlite
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
