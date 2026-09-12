@@ -31,7 +31,22 @@ RUN chmod -R 775 storage bootstrap/cache
 
 # Install Composer dependencies (production only, skip scripts to avoid errors)
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts --ignore-platform-reqs
+RUN mkdir -p /tmp/composer-cache && chmod 777 /tmp/composer-cache
+RUN COMPOSER_ALLOW_SUPERUSER=1 \
+    COMPOSER_HOME=/tmp/composer \
+    COMPOSER_CACHE_DIR=/tmp/composer-cache \
+    COMPOSER_NO_INTERACTION=1 \
+    COMPOSER_PROCESS_TIMEOUT=600 \
+    COMPOSER_MEMORY_LIMIT=-1 \
+    composer install \
+        --no-dev \
+        --optimize-autoloader \
+        --no-interaction \
+        --no-scripts \
+        --no-plugins \
+        --ignore-platform-reqs \
+        --prefer-dist \
+        --quiet
 
 # Generate a new APP_KEY if not already set
 RUN php artisan key:generate --force || true
