@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     libpng-dev \
     libonig-dev \
     libzip-dev \
+    libicu-dev \
     zip \
     unzip \
     libsqlite3-dev \
