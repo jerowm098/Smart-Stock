@@ -66,4 +66,4 @@ services:
       # fully-qualified HTTPS URLs (forms, links, redirects).
       # Change the value below to your actual Render service name.
       - key: APP_URL
-        value: https://laravel-supabase-app.onrender.com
+        value: https://smart-stock.onrender.com
