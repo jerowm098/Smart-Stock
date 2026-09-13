@@ -1,63 +1,54 @@
-FROM php:8.2-apache
+# ---------- Stage 1: Build dependencies ----------
+FROM php:8.3-fpm AS builder
 
-# Install system dependencies and PHP extensions
+WORKDIR /build
+
+# Install system deps
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    libpng-dev \
-    libonig-dev \
-    libzip-dev \
-    libicu-dev \
-    zip \
-    unzip \
-    libsqlite3-dev \
-    && docker-php-ext-configure pdo_sqlite --with-pdo-sqlite=/usr/local \
-    && docker-php-ext-install pdo mbstring exif pcntl bcmath zip intl gd
+    libssl-dev curl gnupg ca-certificates git \
+    && docker-php-ext-install pdo pdo_mysql bcmath ctype fileinfo \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Enable Apache rewrite module
-RUN a2enmod rewrite
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy all project files
-COPY . /var/www/html/
+# Copy and install PHP dependencies
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader --no-scripts
 
-# Change working directory to Laravel public folder
-WORKDIR /var/www/html
+# ---------- Stage 2: Production ----------
+FROM php:8.3-fpm
 
-# Create required Laravel directories
-RUN mkdir -p storage/framework/{sessions,views,cache,data} storage/logs bootstrap/cache public/storage
+WORKDIR /app
 
-# Set permissions
-RUN chmod -R 775 storage bootstrap/cache
+# Install PHP extensions and system deps
+RUN apt-get update && apt-get install -y \
+    libssl-dev curl gnupg ca-certificates \
+    && docker-php-ext-install pdo pdo_mysql bcmath ctype fileinfo session \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install Composer dependencies (production only, skip scripts to avoid errors)
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
-RUN mkdir -p /tmp/composer-cache && chmod 777 /tmp/composer-cache
-RUN COMPOSER_ALLOW_SUPERUSER=1 \
-    COMPOSER_HOME=/tmp/composer \
-    COMPOSER_CACHE_DIR=/tmp/composer-cache \
-    COMPOSER_NO_INTERACTION=1 \
-    COMPOSER_PROCESS_TIMEOUT=600 \
-    COMPOSER_MEMORY_LIMIT=-1 \
-    composer install \
-        --no-dev \
-        --optimize-autoloader \
-        --no-interaction \
-        --no-scripts \
-        --no-plugins \
-        --ignore-platform-reqs \
-        --prefer-dist \
-        --quiet
+# Composer
+COPY --from=builder /usr/bin/composer /usr/bin/composer
 
-# Generate a new APP_KEY if not already set
-RUN php artisan key:generate --force || true
+# Copy vendor from builder
+COPY --from=builder /build/vendor ./vendor
 
-# Configure Apache to serve from public/ directory
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot /var/www/html/public|g' /etc/apache2/sites-available/000-default.conf
-RUN echo '<Directory /var/www/html/public>' >> /etc/apache2/sites-available/000-default.conf \
-    && echo '    AllowOverride All' >> /etc/apache2/sites-available/000-default.conf \
-    && echo '    Require all granted' >> /etc/apache2/sites-available/000-default.conf \
-    && echo '</Directory>' >> /etc/apache2/sites-available/000-default.conf
+# Copy application source
+COPY . .
 
-EXPOSE 80
+# Create required directories with proper permissions for Render
+RUN mkdir -p storage/framework/{cache,sessions,views,testing} storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache \
+    && ln -sf /dev/stdout storage/logs/laravel.log \
+    && composer dump-autoload --optimize --no-dev
 
-CMD ["apache2-foreground"]
+EXPOSE 9000
+
+ENV APP_ENV=production \
+    APP_DEBUG=false \
+    CACHE_STORE=file \
+    SESSION_DRIVER=file \
+    QUEUE_CONNECTION=null
+
+CMD ["php-fpm"]
