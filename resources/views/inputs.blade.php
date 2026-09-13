@@ -117,6 +117,7 @@
     </style>
 </head>
 <body>
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <div class="card">
         <h1>Inputs</h1>
 
@@ -128,23 +129,23 @@
             <div class="alert alert-error">{{ session('error') }}</div>
         @endif
 
-        <form method="POST" action="{{ route('inputs.store') }}">
+        <form method="POST" action="{{ route('inputs.store') }}" autocomplete="on">
             @csrf
 
             <label for="first_name">First Name</label>
-            <input type="text" id="first_name" name="first_name" value="{{ old('first_name') }}" required>
+            <input type="text" id="first_name" name="first_name" value="{{ old('first_name') }}" required autocomplete="given-name">
             @error('first_name') <div class="error">{{ $message }}</div> @enderror
 
             <label for="last_name">Last Name</label>
-            <input type="text" id="last_name" name="last_name" value="{{ old('last_name') }}" required>
+            <input type="text" id="last_name" name="last_name" value="{{ old('last_name') }}" required autocomplete="family-name">
             @error('last_name') <div class="error">{{ $message }}</div> @enderror
 
             <label for="age">Age</label>
-            <input type="number" id="age" name="age" value="{{ old('age') }}" min="1" max="150" required>
+            <input type="number" id="age" name="age" value="{{ old('age') }}" min="1" max="150" required autocomplete="off">
             @error('age') <div class="error">{{ $message }}</div> @enderror
 
             <label for="address">Address</label>
-            <textarea id="address" name="address" rows="3" required>{{ old('address') }}</textarea>
+            <textarea id="address" name="address" rows="3" required autocomplete="street-address">{{ old('address') }}</textarea>
             @error('address') <div class="error">{{ $message }}</div> @enderror
 
             <button type="submit">Submit</button>
