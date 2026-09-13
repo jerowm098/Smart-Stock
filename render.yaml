@@ -62,10 +62,7 @@ services:
       - key: APP_KEY
         sync: false
 
-      # --- APP_URL ---
-      # Mahalaga: kailangang https:// kung hindi, magkakaroon ng
-      # "mixed content" issue sa browser (autofill disabled /
-      # "form is not secure" warning) dahil magiging http ang form action.
-      # I-set ang totoong domain sa Render dashboard.
-      - key: APP_URL
-        value: https://laravel-supabase-app.onrender.com
+      # NOTE: APP_URL does NOT need to be set here.
+      # The TrustProxies middleware (app/Http/Middleware/TrustProxies.php)
+      # tells Laravel to trust Render's X-Forwarded-Proto header, so it
+      # auto-detects HTTPS — no hardcoded domain needed.
