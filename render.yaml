@@ -1,0 +1,63 @@
+# ====================================================================
+#  Render Blueprint (render.yaml)
+#
+#  Ito ay "Infrastructure as Code" - ang buong deployment setup ay
+#  nasa code form. Pag na-upload mo ito sa root ng repo, pwede mong
+#  i-deploy gamit ang "Blueprint" na option sa Render dashboard:
+#
+#     render.com -> New + -> Blueprint -> Connect your repo
+#
+#  Maaari din itong gamitin sa "Blueprints" na service ng Render
+#  (dati tinatawag na "Blueprint plan").
+#
+#  PAMALITAN MO LANG ANG MGA SUMUSUNOD PAGKATAPOS I-COMMIT:
+#    - SUPABASE_URL at SUPABASE_ANON_KEY -> i-add mo sa Render env
+#    - Kaya mo ring i-set ang APP_KEY dito para laging pareho
+# ====================================================================
+
+services:
+  - type: web
+    name: laravel-supabase-app
+    runtime: docker
+    plan: free
+    region: singapore  # malapit sa Pilipinas; pwede mong palitan
+    branch: main
+
+    # Awtomatikong madi-detect ng Render ang Dockerfile sa repo root
+    dockerfilePath: ./Dockerfile
+
+    healthCheckPath: /
+    autoDeploy: true
+
+    envVars:
+      # --- Laravel essentials ---
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+      - key: LOG_CHANNEL
+        value: stderr
+
+      # --- Supabase (PostgREST) ---
+      # INGAT: huwag ilagay ang totoong key dito kung public ang repo!
+      # Sa halip, i-set ito sa Render dashboard:
+      #   Render -> Web Service -> Environment -> Secret Files / Env
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+
+      # --- SESSION/CACHE sa file (walang database na kailangan) ---
+      - key: SESSION_DRIVER
+        value: file
+      - key: CACHE_STORE
+        value: file
+      - key: QUEUE_CONNECTION
+        value: "null"
+
+      # --- APP_KEY ---
+      # MAHALAGA: para manatiling valid ang mga session/encryption
+      # sa bawat deploy, i-set ang APP_KEY sa dashboard o dito.
+      # Generate: php artisan key:generate --show
+      - key: APP_KEY
+        sync: false

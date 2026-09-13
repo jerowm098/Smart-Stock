@@ -1,0 +1,59 @@
+# ------------------------------------------------------------------
+# Nginx site config - Laravel + Supabase
+#
+# ${PORT} ay hinahalili ng entrypoint.sh (Render ay nag-iinject ng
+# $PORT, e.g. 10000). Nasa /etc/nginx/templates/ ang file na ito.
+# ------------------------------------------------------------------
+
+server {
+    listen ${PORT} default_server;
+    server_name _;
+
+    root /app/public;
+    index index.php index.html;
+
+    charset utf-8;
+    client_max_body_size 20M;
+
+    # I-stream ang logs papunta stdout/stderr para makita sa Render
+    access_log /dev/stdout;
+    error_log /dev/stderr warn;
+
+    # Gzip compression
+    gzip on;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css application/json application/javascript
+               text/xml application/xml application/xml+rss image/svg+xml;
+
+    # Laravel front controller - lahat ng request napupunta sa index.php
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    # Static assets na may mahabang cache (ginagawa ng Vite)
+    location ~* \.(?:css|js|jpg|jpeg|png|gif|ico|svg|webp|woff2?|ttf|eot|map)$ {
+        expires 30d;
+        add_header Cache-Control "public, max-age=2592000, immutable";
+        try_files $uri =404;
+    }
+
+    # PHP - ipapasa sa php-fpm sa pamamagitan ng unix socket
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass unix:/var/run/php-fpm.sock;
+        fastcgi_index index.php;
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
+        fastcgi_read_timeout 60s;
+    }
+
+    # I-block ang hidden files (liban sa .well-known)
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}

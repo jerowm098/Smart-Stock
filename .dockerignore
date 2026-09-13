@@ -1,0 +1,62 @@
+# ------------------------------------------------------------------
+# .dockerignore - mga file na HINDI isasama sa Docker build context
+#
+# Bakit mahalaga?
+#   1. Mas mabilis ang build (maliit na context na ipapadala)
+#   2. Hindi ma-leak ang mga sikreto (hal. .env file!)
+#   3. Hindi magkakasalungat ang build artifacts (vendor/ mula sa
+#      container vs. vendor/ sa lokal mong machine)
+# ------------------------------------------------------------------
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environment - ITO ANG PINAKAMAHALAGA (huwag isama ang .env!)
+.env
+.env.*
+!.env.example
+
+# PHP dependencies (bubuo ng container)
+/vendor
+
+# Node / frontend
+/node_modules
+/public/build
+/public/hot
+npm-debug.log*
+
+# Laravel storage & caches (magre-generate sa runtime)
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+!/storage/framework/cache/.gitignore
+!/storage/framework/sessions/.gitignore
+!/storage/framework/views/.gitignore
+!/storage/logs/.gitignore
+
+# Database (walang lokal na db - game ang Supabase)
+/database/database.sqlite
+
+# Tests & ci
+/tests
+/phpunit.xml
+.phpunit.cache
+.phpunit.result.cache
+
+# IDE & OS
+.vscode
+.idea
+.fleet
+.nova
+.zend
+*.log
+.DS_Store
+
+# Misc
+Thumbs.db
+Homestead.json
+Homestead.yaml
+auth.json
