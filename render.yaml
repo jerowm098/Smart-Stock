@@ -17,7 +17,7 @@
 
 services:
   - type: web
-    name: laravel-supabase-app
+    name: Smart-Stock
     runtime: docker
     plan: free
     region: singapore  # malapit sa Pilipinas; pwede mong palitan
