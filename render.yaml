@@ -61,3 +61,11 @@ services:
       # Generate: php artisan key:generate --show
       - key: APP_KEY
         sync: false
+
+      # --- APP_URL ---
+      # Mahalaga: kailangang https:// kung hindi, magkakaroon ng
+      # "mixed content" issue sa browser (autofill disabled /
+      # "form is not secure" warning) dahil magiging http ang form action.
+      # I-set ang totoong domain sa Render dashboard.
+      - key: APP_URL
+        value: https://laravel-supabase-app.onrender.com

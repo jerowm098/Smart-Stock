@@ -47,6 +47,10 @@ server {
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         fastcgi_param PATH_INFO $fastcgi_path_info;
+        # Ipa-pass ang original protocol ng client (https http) para
+        # makuha ng Laravel ang tamang scheme kapag ginagamit ang
+        # URL::secure() o request()->secure() sa production.
+        fastcgi_param HTTP_X_FORWARDED_PROTO $http_x_forwarded_proto;
         fastcgi_buffers 16 16k;
         fastcgi_buffer_size 32k;
         fastcgi_read_timeout 60s;
