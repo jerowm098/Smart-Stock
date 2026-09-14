@@ -69,33 +69,6 @@
         button:hover, a.button:hover {
             background: #189868;
         }
-        .danger {
-            background: #d94b4b;
-        }
-        .danger:hover {
-            background: #bd3838;
-        }
-        .alert {
-            margin-bottom: 18px;
-            padding: 12px 14px;
-            border-radius: 7px;
-            font-size: 14px;
-        }
-        .alert-success {
-            background: #e6f7ef;
-            color: #17734f;
-            border: 1px solid #b8e5d0;
-        }
-        .alert-error {
-            background: #fdecea;
-            color: #a52d2d;
-            border: 1px solid #f4c4c4;
-        }
-        .error {
-            margin-top: 6px;
-            color: #c0392b;
-            font-size: 13px;
-        }
         .small {
             margin-top: 18px;
             color: #718096;
@@ -104,6 +77,21 @@
         }
         .small a {
             color: #24b47e;
+        }
+        .btn-back {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 8px 16px;
+            background: #6c757d;
+            color: #fff;
+            text-decoration: none;
+            font-size: 14px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .btn-back:hover {
+            background: #5a6268;
         }
     </style>
 </head>
@@ -130,6 +118,8 @@
             <button type="submit">Sign in</button>
         </form>
         <p class="small">The token is stored only in an HTTP-only session cookie.</p>
+
+        <a href="{{ route('inputs') }}" class="btn-back">← Back to Inputs</a>
     </main>
 </body>
 </html>
