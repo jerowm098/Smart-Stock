@@ -196,7 +196,7 @@
                 </div>
             </div>
         </section>
-        <p class="small">Protected by the <code>SUPABASE_SCHEMA_ADMIN_TOKEN</code> administrator session.</p>
+        <p class="small">Protected by the <code>SUPABASE_ANON_KEY</code> administrator session.</p>
     </main>
 </body>
 </html>
