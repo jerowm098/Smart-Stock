@@ -110,7 +110,7 @@
 <body>
     <main class="card">
         <h1>Supabase Schema Administration</h1>
-        <p class="muted">Sign in with the administrator token to update or reset the Supabase schema from <code>database/dev.sql</code>.</p>
+        <p class="muted">Sign in with your Supabase anon key to update or reset the Supabase schema from <code>database/dev.sql</code>.</p>
 
         @if (session('success'))
             <div class="alert alert-success">{{ session('success') }}</div>
@@ -122,7 +122,7 @@
 
         <form method="POST" action="{{ route('schema.authenticate') }}" autocomplete="off">
             @csrf
-            <label for="admin_token">Administrator Token</label>
+            <label for="admin_token">Supabase Anon Key</label>
             <input id="admin_token" name="admin_token" type="password" required autofocus>
             @error('admin_token')
                 <div class="error">{{ $message }}</div>

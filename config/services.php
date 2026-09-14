@@ -39,7 +39,7 @@ return [
         'url' => env('SUPABASE_URL'),
         'anon_key' => env('SUPABASE_ANON_KEY'),
         'service_key' => env('SUPABASE_SERVICE_KEY'),
-        'schema_admin_token' => env('SUPABASE_SCHEMA_ADMIN_TOKEN'),
+        'schema_admin_token' => env('SUPABASE_ANON_KEY'),
     ],
 
 ];

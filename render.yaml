@@ -61,10 +61,8 @@ services:
       - key: SESSION_SAME_SITE
         value: "lax"
 
-      # --- Supabase Schema Admin (optional, for schema update/reset feature) ---
+      # --- Supabase Schema Admin (uses SUPABASE_ANON_KEY as admin token) ---
       - key: SUPABASE_SERVICE_KEY
-        sync: false
-      - key: SUPABASE_SCHEMA_ADMIN_TOKEN
         sync: false
 
       # --- APP_KEY ---

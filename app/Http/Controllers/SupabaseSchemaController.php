@@ -83,8 +83,10 @@ class SupabaseSchemaController
 
     public function logout(): RedirectResponse
     {
+        Cookie::queue(Cookie::forget('supabase_schema_admin'));
+
         return redirect()
             ->route('schema.login')
-            ->withoutCookies('supabase_schema_admin');
+            ->with('success', 'Administrator session closed.');
     }
 }
