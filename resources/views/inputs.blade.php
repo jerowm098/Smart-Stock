@@ -172,7 +172,7 @@
             <button type="submit">Submit</button>
         </form>
 
-        <a href="info.php" class="btn-view-records">View Submitted Records &raquo;</a>
+        <a href="{{ route('info') }}" class="btn-view-records">View Submitted Records &raquo;</a>
 
         <a href="{{ route('schema.login') }}" class="btn-schema">Update database (seeded data)</a>
     </div>
