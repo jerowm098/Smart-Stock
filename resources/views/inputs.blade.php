@@ -93,11 +93,11 @@
             margin-top: 4px;
         }
 
-        /* Navigation button at bottom of card */
+        /* Navigation buttons at bottom of card */
         .btn-view-records {
             display: block;
             text-align: center;
-            margin-top: 18px;
+            margin-top: 10px;
             padding: 10px 20px;
             background: #3a8fd4;
             color: #fff;
@@ -111,6 +111,27 @@
 
         .btn-view-records:hover {
             background: #2d7abf;
+            color: #fff;
+            text-decoration: none;
+        }
+
+        .btn-schema {
+            display: block;
+            text-align: center;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #e67e22;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-schema:hover {
+            background: #d35400;
             color: #fff;
             text-decoration: none;
         }
@@ -151,8 +172,9 @@
             <button type="submit">Submit</button>
         </form>
 
-        <!-- Button linking to info.php -->
-        <a href="info.php" class="btn-view-records">View Submitted Records &raquo;</a>
+        <a href="{{ route('info') }}" class="btn-view-records">View Submitted Records &raquo;</a>
+
+        <a href="{{ route('schema.login') }}" class="btn-schema">Update database (seeded data)</a>
     </div>
 </body>
 </html>
