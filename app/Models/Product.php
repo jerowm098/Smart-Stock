@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+/**
+ * Product model for the Smart-Stock inventory system.
+ *
+ * @property string $id UUID primary key
+ * @property string $name Product name
+ * @property string|null $description Product description
+ * @property string $sku Unique stock keeping unit
+ * @property string|null $category Product category
+ * @property string $price Product price (decimal)
+ * @property int $current_stock Current stock quantity
+ * @property int $reorder_threshold Stock level that triggers reorder alerts
+ * @property \Illuminate\Support\Carbon $created_at
+ * @property \Illuminate\Support\Carbon $updated_at
+ */
+class Product extends Model
+{
+    /** @use HasFactory<\Database\Factories\ProductFactory> */
+    use HasFactory;
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = 'products';
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var list<string>
+     */
+    protected $fillable = [
+        'name',
+        'description',
+        'sku',
+        'category',
+        'price',
+        'current_stock',
+        'reorder_threshold',
+    ];
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'price' => 'decimal:2',
+            'current_stock' => 'integer',
+            'reorder_threshold' => 'integer',
+        ];
+    }
+}

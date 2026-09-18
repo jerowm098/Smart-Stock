@@ -1,24 +1,25 @@
 <?php
 
-use App\Http\Controllers\InputController;
-use App\Http\Controllers\SupabaseSchemaController;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\InventoryController;
 use Illuminate\Support\Facades\Route;
 
-// The single page of this app: inputs
-Route::get('/', [InputController::class, 'create']);
-Route::get('/inputs', [InputController::class, 'create'])->name('inputs');
-Route::post('/inputs', [InputController::class, 'store'])->name('inputs.store');
+// Auth routes
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
+Route::post('/login', [AuthController::class, 'login'])->name('login.post')->middleware('guest');
+Route::get('/register', [AuthController::class, 'showRegister'])->name('register')->middleware('guest');
+Route::post('/register', [AuthController::class, 'register'])->name('register.post')->middleware('guest');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
-// Listing page for all submitted inputs
-Route::get('/info', [InputController::class, 'index'])->name('info');
+// Dashboard (requires auth)
+Route::middleware('auth')->group(function () {
+    Route::get('/', fn () => redirect('/dashboard'));
+    Route::get('/dashboard', [InventoryController::class, 'index'])->name('dashboard');
+    Route::get('/products', [InventoryController::class, 'products'])->name('products');
 
-// Schema management (protected by SUPABASE_SCHEMA_ADMIN_TOKEN)
-Route::get('/schema/login', [SupabaseSchemaController::class, 'login'])->name('schema.login');
-Route::post('/schema/login', [SupabaseSchemaController::class, 'authenticate'])->name('schema.authenticate');
-
-Route::middleware(\App\Http\Middleware\EnsureSupabaseSchemaAdmin::class)->group(function (): void {
-    Route::get('/schema', [SupabaseSchemaController::class, 'index'])->name('schema.index');
-    Route::post('/schema/update', [SupabaseSchemaController::class, 'update'])->name('schema.update');
-    Route::post('/schema/reset', [SupabaseSchemaController::class, 'reset'])->name('schema.reset');
-    Route::post('/schema/logout', [SupabaseSchemaController::class, 'logout'])->name('schema.logout');
+    // API routes
+    Route::post('/api/inventory/add', [InventoryController::class, 'store'])->name('inventory.add');
+    Route::get('/api/inventory/alerts', [InventoryController::class, 'getAlerts'])->name('inventory.alerts');
+    Route::get('/api/inventory/products', [InventoryController::class, 'getProducts'])->name('inventory.products');
+    Route::delete('/api/inventory/{product}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
 });
