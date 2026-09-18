@@ -63,3 +63,6 @@ auth.json
 
 # PDFs
 *.pdf
+
+# Plans folder
+plans/
