@@ -26,9 +26,7 @@ services:
     # Awtomatikong madi-detect ng Render ang Dockerfile sa repo root
     dockerfilePath: ./Dockerfile
 
-    # Laravel's built-in health endpoint returns HTTP 200.
-    # Using "/" would redirect to /login (302) which fails the health check.
-    healthCheckPath: /up
+    healthCheckPath: /
     autoDeploy: true
 
     envVars:

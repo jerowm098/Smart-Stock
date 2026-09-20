@@ -247,10 +247,10 @@
                 </div>
             </div>
             <div class="header-user" id="headerUserBtn" onclick="toggleUserDropdown(event)">
-                <div class="user-avatar">{{ Auth::user()->name ? substr(Auth::user()->name, 0, 1) : 'U' }}</div>
+                <div class="user-avatar">{{ optional(Auth::user())->name ? substr(optional(Auth::user())->name, 0, 1) : 'U' }}</div>
                 <div>
-                    <div class="user-name">{{ Auth::user()->name }}</div>
-                    <div class="user-email">{{ Auth::user()->email }}</div>
+                    <div class="user-name">{{ optional(Auth::user())->name ?? 'User' }}</div>
+                    <div class="user-email">{{ optional(Auth::user())->email ?? '' }}</div>
                 </div>
                 <div class="user-dropdown" id="userDropdown">
                     <a href="#" class="user-dropdown-item" onclick="navigateToSettings(event)">
