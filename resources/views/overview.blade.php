@@ -59,9 +59,10 @@
         .stat-card h3 { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; font-weight: 600; }
         .stat-value { font-size: 28px; font-weight: 700; color: #f8fafc; }
         .stat-value.blue { color: #60a5fa; } .stat-value.green { color: #4ade80; } .stat-value.yellow { color: #fbbf24; } .stat-value.red { color: #f87171; }
-        .quick-links-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-bottom: 28px; }
-        .quick-link-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px; text-decoration: none; display: flex; align-items: center; gap: 16px; transition: all 0.2s; }
-        .quick-link-card:hover { transform: translateY(-2px); border-color: rgba(96,165,250,0.3); background: rgba(96,165,250,0.05); }
+        .quick-links-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 360px)); gap: 16px; margin-bottom: 28px; }
+        .quick-link-card { max-width: 360px; }
+        .quick-link-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; padding: 20px; text-decoration: none; display: flex; align-items: center; gap: 16px; transition: background 0.15s, border-color 0.15s, color 0.15s; will-change: unset; }
+        .quick-link-card:hover { border-color: rgba(96,165,250,0.3); background: rgba(96,165,250,0.05); }
         .quick-link-icon { width: 44px; height: 44px; border-radius: 10px; background: rgba(96,165,250,0.15); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
         .quick-link-card h4 { color: #f8fafc; font-size: 15px; font-weight: 600; margin-bottom: 4px; }
         .quick-link-card p { color: #94a3b8; font-size: 12px; line-height: 1.4; }

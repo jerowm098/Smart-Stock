@@ -9,22 +9,77 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            background: #0f172a;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
         }
+        body.light-theme { background: #f1f5f9; }
+        
+        /* THEME TOGGLE */
+        .theme-toggle-btn {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: rgba(255,255,255,0.05);
+            color: #94a3b8;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+        }
+        .theme-toggle-btn:hover { background: rgba(255,255,255,0.1); color: #e2e8f0; }
+        body.light-theme .theme-toggle-btn { border-color: rgba(15,23,42,0.1); background: rgba(15,23,42,0.05); color: #64748b; }
+        body.light-theme .theme-toggle-btn:hover { background: rgba(15,23,42,0.1); color: #0f172a; }
+        
         .login-container {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
             border-radius: 16px;
             padding: 40px;
             width: 100%;
             max-width: 420px;
-            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
         }
+        body.light-theme .login-container {
+            background: #ffffff;
+            border-color: rgba(15,23,42,0.08);
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 28px;
+        }
+        .brand .brand-mark {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            object-fit: contain;
+            display: block;
+        }
+        body:not(.light-theme) .brand-mark { filter: brightness(0) invert(1); }
+        .brand .brand-text { text-align: left; }
+        .brand .brand-name {
+            color: #f8fafc;
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+        body.light-theme .brand .brand-name { color: #0f172a; }
+        .brand .brand-subtitle {
+            color: #94a3b8;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+        body.light-theme .brand .brand-subtitle { color: #64748b; }
         .login-header {
             text-align: center;
             margin-bottom: 32px;
@@ -35,13 +90,13 @@
             font-weight: 700;
             margin-bottom: 8px;
         }
+        body.light-theme .login-header h1 { color: #0f172a; }
         .login-header p {
             color: #94a3b8;
             font-size: 14px;
         }
-        .form-group {
-            margin-bottom: 20px;
-        }
+        body.light-theme .login-header p { color: #64748b; }
+        .form-group { margin-bottom: 20px; }
         .form-group label {
             display: block;
             color: #cbd5e1;
@@ -49,42 +104,29 @@
             font-weight: 500;
             margin-bottom: 6px;
         }
+        body.light-theme .form-group label { color: #475569; }
         .form-group input {
             width: 100%;
             padding: 12px 16px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.15);
             border-radius: 8px;
             color: #f8fafc;
             font-size: 14px;
             font-family: 'Inter', sans-serif;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            transition: border-color 0.15s;
             outline: none;
+        }
+        body.light-theme .form-group input {
+            background: #f8fafc;
+            border-color: rgba(15,23,42,0.15);
+            color: #0f172a;
         }
         .form-group input:focus {
             border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
         }
-        .form-group input::placeholder {
-            color: #64748b;
-        }
-        .form-options {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 24px;
-            font-size: 13px;
-        }
-        .form-options label {
-            color: #94a3b8;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-        }
-        .form-options label input[type="checkbox"] {
-            accent-color: #3b82f6;
-        }
+        .form-group input::placeholder { color: #64748b; }
+        body.light-theme .form-group input::placeholder { color: #94a3b8; }
         .btn {
             width: 100%;
             padding: 12px;
@@ -94,19 +136,12 @@
             font-weight: 600;
             cursor: pointer;
             font-family: 'Inter', sans-serif;
-            transition: opacity 0.2s, transform 0.1s;
+            transition: opacity 0.15s;
         }
         .btn:hover { opacity: 0.9; }
-        .btn:active { transform: scale(0.98); }
         .btn-primary {
             background: linear-gradient(135deg, #3b82f6, #2563eb);
             color: #fff;
-        }
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            margin-top: 12px;
         }
         .error-message {
             background: rgba(239, 68, 68, 0.1);
@@ -123,44 +158,30 @@
             color: #64748b;
             font-size: 13px;
         }
+        body.light-theme .footer-text { color: #94a3b8; }
         .footer-text a {
             color: #3b82f6;
             text-decoration: none;
             font-weight: 500;
         }
         .footer-text a:hover { text-decoration: underline; }
-        .brand {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 12px;
-            margin-bottom: 28px;
-        }
-        .brand .brand-mark {
-            width: 44px;
-            height: 44px;
-            border-radius: 12px;
-            object-fit: contain;
-            display: block;
-        }
-        .brand .brand-text {
-            text-align: left;
-        }
-        .brand .brand-name {
-            color: #f8fafc;
-            font-size: 20px;
-            font-weight: 700;
-            line-height: 1.2;
-        }
-        .brand .brand-subtitle {
-            color: #94a3b8;
-            font-size: 12px;
-            line-height: 1.2;
-        }
     </style>
 </head>
 <body>
     <div class="login-container">
+        <button type="button" class="theme-toggle-btn" onclick="toggleTheme()" title="Toggle theme">
+            <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
         <div class="brand">
             <img src="{{ asset('assets/stock-logo.png') }}" alt="Smart-Stock Logo" class="brand-mark">
             <div class="brand-text">
@@ -189,9 +210,6 @@
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" placeholder="Enter your password" required>
             </div>
-            <div class="form-options">
-                <label><input type="checkbox" name="remember"> Remember me</label>
-            </div>
             <button type="submit" class="btn btn-primary">Sign In</button>
         </form>
 
@@ -199,5 +217,32 @@
             Don't have an account? <a href="{{ route('register') }}">Create one</a>
         </div>
     </div>
+
+    <script>
+        (function () {
+            let saved = 'dark';
+            try { saved = localStorage.getItem('smartStockTheme') || 'dark'; } catch (e) {}
+            document.body.classList.toggle('light-theme', saved === 'light');
+            updateThemeIcon(saved === 'light');
+        })();
+
+        function toggleTheme() {
+            const isLight = document.body.classList.contains('light-theme');
+            const newTheme = isLight ? 'dark' : 'light';
+            document.body.classList.toggle('light-theme', !isLight);
+            updateThemeIcon(!isLight);
+            try { localStorage.setItem('smartStockTheme', newTheme); } catch (e) {}
+        }
+
+        function updateThemeIcon(isLight) {
+            const icon = document.getElementById('themeIcon');
+            if (!icon) return;
+            if (isLight) {
+                icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+            } else {
+                icon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+            }
+        }
+    </script>
 </body>
 </html>

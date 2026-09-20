@@ -14,7 +14,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 // Dashboard (requires auth)
 Route::middleware('auth')->group(function () {
     Route::get('/', fn () => redirect('/dashboard'));
+    // Overview page (renamed from dashboard content)
     Route::get('/dashboard', [InventoryController::class, 'index'])->name('dashboard');
+    // Products page
     Route::get('/products', [InventoryController::class, 'products'])->name('products');
 
     // API routes

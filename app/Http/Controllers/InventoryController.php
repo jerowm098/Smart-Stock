@@ -9,11 +9,11 @@ use Illuminate\Http\Request;
 class InventoryController extends Controller
 {
     /**
-     * Show the dashboard.
+     * Show the overview page.
      */
     public function index()
     {
-        return view('dashboard');
+        return view('overview');
     }
 
     /**
