@@ -3,15 +3,22 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\AuthUser;
+use App\Repositories\AuthRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class AuthController extends Controller
 {
+    protected AuthRepository $authRepo;
+
+    public function __construct(AuthRepository $authRepo)
+    {
+        $this->authRepo = $authRepo;
+    }
+
     /**
      * Show the login page.
      */
@@ -34,7 +41,13 @@ class AuthController extends Controller
             'password' => 'required|string|min:6',
         ]);
 
-        if (Auth::attempt($validated, $request->boolean('remember'))) {
+        $user = $this->authRepo->authenticate($validated['email'], $validated['password']);
+
+        if ($user) {
+            // Create a proper AuthUser model instance
+            $authUser = AuthUser::fromSupabase($user);
+            
+            Auth::login($authUser, $request->boolean('remember'));
             $request->session()->regenerate();
 
             return redirect()->intended(route('dashboard'));
@@ -64,19 +77,29 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => 'required|email',
             'password' => 'required|string|confirmed|min:6',
         ]);
 
-        User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-        ]);
+        try {
+            $user = $this->authRepo->register($validated);
+            
+            // Create a proper AuthUser model instance
+            $authUser = AuthUser::fromSupabase($user);
+            
+            Auth::login($authUser);
+            $request->session()->regenerate();
 
-        Auth::login(User::where('email', $validated['email'])->first());
-
-        return redirect()->route('dashboard');
+            return redirect()->route('dashboard');
+        } catch (\Exception $e) {
+            if (str_contains($e->getMessage(), 'Email already registered')) {
+                return back()->withErrors([
+                    'email' => 'This email is already registered.',
+                ])->onlyInput('email');
+            }
+            
+            throw $e;
+        }
     }
 
     /**

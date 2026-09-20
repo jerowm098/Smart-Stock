@@ -48,12 +48,11 @@ fi
 #    view:cache         -> compiled Blade templates
 #    (|| true = huwag i-abort ang boot kung may babala lang)
 # ---------------------------------------------------------------
-# 4.5) Ensure SQLite DB exists and run migrations fresh (ephemeral storage)
+# 4.5) Ensure SQLite DB exists (for sessions only, users go to Supabase)
 # ---------------------------------------------------------------
-echo ">>> Setting up database..."
+echo ">>> Setting up SQLite for sessions..."
 touch /app/database/database.sqlite
 chmod 666 /app/database/database.sqlite
-php artisan migrate --force --no-interaction >/dev/null 2>&1 || echo ">>> Migration skipped (may already be up-to-date)"
 
 echo ">>> Running Laravel optimizations..."
 php artisan package:discover --ansi >/dev/null 2>&1 || true
