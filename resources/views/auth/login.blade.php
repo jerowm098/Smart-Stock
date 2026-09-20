@@ -165,6 +165,20 @@
             font-weight: 500;
         }
         .footer-text a:hover { text-decoration: underline; }
+        .success-message {
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            color: #4ade80;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+        body.light-theme .success-message {
+            background: rgba(22, 163, 74, 0.1);
+            border-color: rgba(22, 163, 74, 0.3);
+            color: #16a34a;
+        }
     </style>
 </head>
 <body>
@@ -198,6 +212,10 @@
             <div class="error-message">
                 {{ $errors->first() }}
             </div>
+        @endif
+
+        @if (session('success'))
+            <div class="success-message">{{ session('success') }}</div>
         @endif
 
         <form method="POST" action="{{ route('login.post') }}">
