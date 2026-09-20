@@ -48,12 +48,6 @@ fi
 #    view:cache         -> compiled Blade templates
 #    (|| true = huwag i-abort ang boot kung may babala lang)
 # ---------------------------------------------------------------
-# 4.5) Ensure SQLite DB exists (for sessions only, users go to Supabase)
-# ---------------------------------------------------------------
-echo ">>> Setting up SQLite for sessions..."
-touch /app/database/database.sqlite
-chmod 666 /app/database/database.sqlite
-
 echo ">>> Running Laravel optimizations..."
 php artisan package:discover --ansi >/dev/null 2>&1 || true
 php artisan config:cache   >/dev/null 2>&1 || true

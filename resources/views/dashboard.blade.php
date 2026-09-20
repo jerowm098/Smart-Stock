@@ -4,7 +4,7 @@
 
 @section('content')
     <h1 class="page-title">Overview</h1>
-    <p class="page-subtitle">Welcome back, {{ optional(Auth::user())->name ?? 'User' }}. Here is an overview of your inventory system.</p>
+    <p class="page-subtitle">Welcome back, {{ Auth::user()->name }}. Here is an overview of your inventory system.</p>
 
     <!-- STATS GRID -->
     <div class="stats-grid">
