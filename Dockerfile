@@ -62,7 +62,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
         gettext-base \
-        && docker-php-ext-install pdo_mysql bcmath \
+        && docker-php-ext-install pdo_mysql pdo_sqlite bcmath \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 

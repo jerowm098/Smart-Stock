@@ -60,7 +60,19 @@ php artisan config:cache   >/dev/null 2>&1 || true
 # php artisan view:cache     >/dev/null 2>&1 || true
 
 # ---------------------------------------------------------------
-# 5) Nginx config - palitan ang ${PORT} sa template
+# 5) SQLite database - i-create ang file at patakbuhin ang migrations
+#    Kailangan ito para gumana ang auth (users table) at ang
+#    Eloquent models (products table) sa Laravel.
+# ---------------------------------------------------------------
+echo ">>> Ensuring SQLite database exists..."
+touch /app/database/database.sqlite
+chmod 666 /app/database/database.sqlite
+
+echo ">>> Running migrations..."
+php artisan migrate --force --no-interaction 2>&1 || echo ">>> migrate warning: pakitingnan ang logs"
+
+# ---------------------------------------------------------------
+# 6) Nginx config - palitan ang ${PORT} sa template
 #    envsubst = tool na nagpapalit ng environment placeholders
 # ---------------------------------------------------------------
 envsubst '${PORT}' < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf
