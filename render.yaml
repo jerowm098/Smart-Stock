@@ -60,7 +60,34 @@ services:
         value: "true"
       - key: SESSION_SAME_SITE
         value: "lax"
+      # Note: SESSION_DRIVER is auto-switched to 'database' in entrypoint.sh
+      # when SUPABASE_PG_URL is set
 
+      # --- Supabase PostgreSQL (user auth & session storage) ---
+      # Format: postgresql://postgres.vxmyfozpixzbobwnfziq:YOUR_PASSWORD@aws-0-ap-southeast-1.pooler.supabase.com:5432/postgres
+      - key: SUPABASE_PG_URL
+        sync: false
+      - key: SUPABASE_PG_HOST
+        value: aws-0-ap-southeast-1.pooler.supabase.com
+      - key: SUPABASE_PG_PORT
+        value: "5432"
+      - key: SUPABASE_PG_DATABASE
+        value: postgres
+      - key: SUPABASE_PG_USER
+        value: "postgres.vxmyfozpixzbobwnfziq"
+      - key: SUPABASE_PG_PASSWORD
+        sync: false
+
+      # --- Session storage (use database for persistent sessions on ephemeral storage) ---
+      # When SUPABASE_PG_URL is set, Laravel will auto-detect and use 'database' session driver
+      # Otherwise defaults to 'file' in Dockerfile
+      - key: SESSION_DRIVER
+        value: file
+      - key: SESSION_TABLE
+        value: sessions
+      - key: SESSION_LIFETIME
+        value: "120"
+      
       # --- Supabase Schema Admin (uses SUPABASE_ANON_KEY as admin token) ---
       - key: SUPABASE_SERVICE_KEY
         sync: false

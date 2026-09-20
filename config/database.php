@@ -17,7 +17,7 @@ return [
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => env('DB_CONNECTION', env('SUPABASE_PG_URL') ? 'supabase' : 'sqlite'),
 
     /*
     |--------------------------------------------------------------------------
@@ -97,6 +97,26 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => env('DB_SSLMODE', 'prefer'),
+        ],
+
+        // Supabase PostgreSQL - used in production when SUPABASE_PG_URL is set
+        'supabase' => [
+            'driver' => 'pgsql',
+            'url' => env('SUPABASE_PG_URL'),
+            'host' => env('SUPABASE_PG_HOST', 'aws-0-ap-southeast-1.pooler.supabase.com'),
+            'port' => env('SUPABASE_PG_PORT', '5432'),
+            'database' => env('SUPABASE_PG_DATABASE', 'postgres'),
+            'username' => env('SUPABASE_PG_USER', 'postgres.vxmyfozpixzbobwnfziq'),
+            'password' => env('SUPABASE_PG_PASSWORD'),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => 'require',
+            'options' => [
+                PDO::ATTR_EMULATE_PREPARES => false,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            ],
         ],
 
         'sqlsrv' => [
