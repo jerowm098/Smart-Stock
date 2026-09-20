@@ -48,21 +48,12 @@ fi
 #    view:cache         -> compiled Blade templates
 #    (|| true = huwag i-abort ang boot kung may babala lang)
 # ---------------------------------------------------------------
-# 4.5) Set up database - use Supabase PostgreSQL if available, otherwise SQLite
+# 4.5) Ensure SQLite DB exists and run migrations fresh (ephemeral storage)
 # ---------------------------------------------------------------
 echo ">>> Setting up database..."
-if [ -n "${SUPABASE_PG_URL}" ]; then
-    echo ">>> Using Supabase PostgreSQL"
-    # Switch session driver to database for persistent sessions on ephemeral storage
-    export SESSION_DRIVER=database
-    export SESSION_TABLE=sessions
-    php artisan migrate --force --no-interaction >/dev/null 2>&1 || echo ">>> Migration skipped (may already be up-to-date)"
-else
-    echo ">>> Using SQLite (local)"
-    touch /app/database/database.sqlite
-    chmod 666 /app/database/database.sqlite
-    php artisan migrate --force --no-interaction >/dev/null 2>&1 || echo ">>> Migration skipped (may already be up-to-date)"
-fi
+touch /app/database/database.sqlite
+chmod 666 /app/database/database.sqlite
+php artisan migrate --force --no-interaction >/dev/null 2>&1 || echo ">>> Migration skipped (may already be up-to-date)"
 
 echo ">>> Running Laravel optimizations..."
 php artisan package:discover --ansi >/dev/null 2>&1 || true
