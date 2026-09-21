@@ -57,7 +57,10 @@
             justify-content: center;
             gap: 12px;
             margin-bottom: 28px;
+            text-decoration: none;
         }
+        .brand:hover .brand-name { color: #cbd5e1; }
+        body.light-theme .brand:hover .brand-name { color: #334155; }
         .brand .brand-mark {
             width: 44px;
             height: 44px;
@@ -105,7 +108,8 @@
             margin-bottom: 6px;
         }
         body.light-theme .form-group label { color: #475569; }
-        .form-group input {
+        .form-group input,
+        .form-group select {
             width: 100%;
             padding: 12px 16px;
             background: rgba(255,255,255,0.05);
@@ -117,12 +121,14 @@
             transition: border-color 0.15s;
             outline: none;
         }
-        body.light-theme .form-group input {
+        body.light-theme .form-group input,
+        body.light-theme .form-group select {
             background: #f8fafc;
             border-color: rgba(15,23,42,0.15);
             color: #0f172a;
         }
-        .form-group input:focus {
+        .form-group input:focus,
+        .form-group select:focus {
             border-color: #3b82f6;
         }
         .form-group input::placeholder { color: #64748b; }
@@ -182,13 +188,13 @@
                 <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
             </svg>
         </button>
-        <div class="brand">
+        <a href="{{ route('home') }}" class="brand">
             <img src="{{ asset('assets/stock-logo.png') }}" alt="Smart-Stock Logo" class="brand-mark">
             <div class="brand-text">
                 <div class="brand-name">Smart-Stock</div>
                 <div class="brand-subtitle">Inventory System</div>
             </div>
-        </div>
+        </a>
         <div class="login-header">
             <h1>Create Account</h1>
             <p>Get started with your inventory dashboard</p>
@@ -200,23 +206,39 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ route('register.post') }}">
+        <form method="POST" action="{{ route('register.post') }}" autocomplete="on">
             @csrf
             <div class="form-group">
-                <label for="name">Full Name</label>
-                <input type="text" id="name" name="name" value="{{ old('name') }}" placeholder="John Doe" required autofocus>
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" name="first_name" value="{{ old('first_name') }}" placeholder="John" required autofocus autocomplete="given-name">
+            </div>
+            <div class="form-group">
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" value="{{ old('last_name') }}" placeholder="Doe" required autocomplete="family-name">
+            </div>
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" value="{{ old('username') }}" placeholder="johndoe" required autocomplete="username">
             </div>
             <div class="form-group">
                 <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" value="{{ old('email') }}" placeholder="you@example.com" required>
+                <input type="email" id="email" name="email" value="{{ old('email') }}" placeholder="you@example.com" required autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label for="role">Role</label>
+                <select id="role" name="role" required>
+                    <option value="" disabled selected>Select a role</option>
+                    <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin</option>
+                    <option value="cashier" {{ old('role') == 'cashier' ? 'selected' : '' }}>Cashier</option>
+                </select>
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="At least 6 characters" required>
+                <input type="password" id="password" name="password" placeholder="At least 6 characters" required autocomplete="new-password">
             </div>
             <div class="form-group">
                 <label for="password_confirmation">Confirm Password</label>
-                <input type="password" id="password_confirmation" name="password_confirmation" placeholder="Confirm your password" required>
+                <input type="password" id="password_confirmation" name="password_confirmation" placeholder="Confirm your password" required autocomplete="new-password">
             </div>
             <button type="submit" class="btn btn-primary">Create Account</button>
         </form>

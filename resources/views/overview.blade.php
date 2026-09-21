@@ -29,7 +29,7 @@
 
     <!-- RECENT INVENTORY TABLE -->
     <div class="section-header">
-        <h2 class="section-title">Recent Inventory Snapshot</h2>
+        <h2 class="section-title">Recent Inventory List</h2>
         <a href="{{ route('products') }}" class="section-link">View All Products →</a>
     </div>
     <div class="table-wrapper" id="overviewTable">

@@ -9,7 +9,13 @@
             <p class="page-subtitle">Manage inventory items and add new products</p>
         </div>
         <div class="section-actions">
-            <input type="text" class="search-input" id="searchInput" placeholder="Search products..." oninput="filterProducts()">
+            <select class="search-column-select" id="searchColumn" onchange="filterProducts()">
+                <option value="">All Columns</option>
+                <option value="name">Name</option>
+                <option value="sku">SKU</option>
+                <option value="category">Category</option>
+            </select>
+            <input type="text" class="search-input" id="searchInput" placeholder="Search products..." oninput="filterProducts()" autocomplete="off">
             <button class="btn-add" onclick="openModal()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 <span>Add Product</span>
@@ -41,30 +47,30 @@
     <div class="modal-overlay" id="addModal">
         <div class="modal">
             <h2>Add New Product</h2>
-            <form onsubmit="handleAddProduct(event)">
+            <form onsubmit="handleAddProduct(event)" autocomplete="off">
                 <div class="form-group">
                     <label>Product Name *</label>
-                    <input type="text" name="name" id="pNameM" placeholder="e.g. Wireless Mouse" required>
+                    <input type="text" name="name" id="pNameM" placeholder="e.g. Wireless Mouse" required autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label>SKU *</label>
-                    <input type="text" name="sku" id="pSkuM" placeholder="e.g. WM-001" required>
+                    <input type="text" name="sku" id="pSkuM" placeholder="e.g. WM-001" required autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label>Category</label>
-                    <input type="text" name="category" id="pCategoryM" placeholder="e.g. Electronics">
+                    <input type="text" name="category" id="pCategoryM" placeholder="e.g. Electronics" autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label>Price (₱) *</label>
-                    <input type="number" name="price" id="pPriceM" placeholder="0.00" step="0.01" min="0" required>
+                    <input type="number" name="price" id="pPriceM" placeholder="0.00" step="0.01" min="0" required autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label>Current Stock *</label>
-                    <input type="number" name="current_stock" id="pStockM" placeholder="0" min="0" required>
+                    <input type="number" name="current_stock" id="pStockM" placeholder="0" min="0" required autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label>Reorder Threshold *</label>
-                    <input type="number" name="reorder_threshold" id="pThresholdM" placeholder="0" min="0" required>
+                    <input type="number" name="reorder_threshold" id="pThresholdM" placeholder="0" min="0" required autocomplete="off">
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-cancel" onclick="closeModal()">Cancel</button>
@@ -83,6 +89,28 @@
         .section-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .btn-add { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none; border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; display: flex; align-items: center; gap: 6px; transition: opacity 0.15s; }
         .btn-add:hover { opacity: 0.9; }
+        .search-column-select {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            padding: 8px 32px 8px 12px;
+            color: #f8fafc;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+            cursor: pointer;
+            min-width: 130px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 12px;
+        }
+        .search-column-select:focus { border-color: #3b82f6; }
+        .search-column-select option { background: #1e293b; color: #e2e8f0; }
         .search-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 8px 14px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; width: 240px; outline: none; transition: border-color 0.2s; }
         .search-input:focus { border-color: #3b82f6; } .search-input::placeholder { color: #64748b; }
         .table-wrapper { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; overflow-x: auto; }
@@ -112,6 +140,16 @@
         /* LIGHT THEME */
         body.light-theme .page-title { color: #0f172a; }
         body.light-theme .page-subtitle { color: #64748b; }
+        body.light-theme .search-column-select {
+            background: #ffffff;
+            border-color: rgba(15,23,42,0.14);
+            color: #0f172a;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 12px;
+        }
+        body.light-theme .search-column-select option { background: #ffffff; color: #0f172a; }
         body.light-theme .search-input { background: #ffffff; border-color: rgba(15,23,42,0.14); color: #0f172a; }
         body.light-theme .search-input::placeholder { color: #94a3b8; }
         body.light-theme .table-wrapper { background: #ffffff; border-color: rgba(15,23,42,0.08); }
@@ -180,11 +218,24 @@
 
         function filterProducts() {
             const t = document.getElementById('searchInput').value.toLowerCase();
-            const f = allProducts.filter(p =>
-                (p.name && p.name.toLowerCase().includes(t)) ||
-                (p.sku && p.sku.toLowerCase().includes(t)) ||
-                (p.category && p.category.toLowerCase().includes(t))
-            );
+            const col = document.getElementById('searchColumn').value;
+            
+            const f = allProducts.filter(p => {
+                if (!t) return true;
+                
+                switch(col) {
+                    case 'name':
+                        return p.name && p.name.toLowerCase().includes(t);
+                    case 'sku':
+                        return p.sku && p.sku.toLowerCase().includes(t);
+                    case 'category':
+                        return p.category && p.category.toLowerCase().includes(t);
+                    default:
+                        return (p.name && p.name.toLowerCase().includes(t)) ||
+                               (p.sku && p.sku.toLowerCase().includes(t)) ||
+                               (p.category && p.category.toLowerCase().includes(t));
+                }
+            });
             renderFullTable(f);
         }
 

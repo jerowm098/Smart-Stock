@@ -4,11 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Product model for the Smart-Stock inventory system.
  *
- * @property string $id UUID primary key
+ * @property int $id Primary key
+ * @property int|null $user_id Owner (creator) of the product
  * @property string $name Product name
  * @property string|null $description Product description
  * @property string $sku Unique stock keeping unit
@@ -18,6 +20,7 @@ use Illuminate\Database\Eloquent\Model;
  * @property int $reorder_threshold Stock level that triggers reorder alerts
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
+ * @property-read User|null $owner
  */
 class Product extends Model
 {
@@ -37,6 +40,7 @@ class Product extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'user_id',
         'name',
         'description',
         'sku',
@@ -47,7 +51,7 @@ class Product extends Model
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
      * @return array<string, string>
      */
@@ -58,5 +62,21 @@ class Product extends Model
             'current_stock' => 'integer',
             'reorder_threshold' => 'integer',
         ];
+    }
+
+    /**
+     * Get the user who owns this product.
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Scope a query to only include products owned by the given user.
+     */
+    public function scopeOwnedBy($query, int $userId)
+    {
+        return $query->where('user_id', $userId);
     }
 }

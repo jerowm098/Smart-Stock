@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('sku')->unique();
             $table->string('category')->nullable();
-            $table->decimal('price', 10, 2)->default(0);
+            $table->decimal('price', 10, 2);
             $table->integer('current_stock')->default(0);
             $table->integer('reorder_threshold')->default(0);
             $table->timestamps();

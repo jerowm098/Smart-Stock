@@ -11,7 +11,7 @@ class RedirectIfAuthenticated
     public function __invoke(Request $request, Closure $next, string $guard = null): Response
     {
         if (auth()->guard($guard)->check()) {
-            return redirect()->route('dashboard');
+            return redirect()->route('home');
         }
 
         return $next($request);

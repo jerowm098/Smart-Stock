@@ -1,5 +1,5 @@
 # ====================================================================
-#  Multi-stage Dockerfile: Laravel 12 + Supabase + Nginx + PHP-FPM
+#  Multi-stage Dockerfile: Laravel 12 + SQLite + Nginx + PHP-FPM
 #
 #  STRUCTURE (3 builds sa loob ng 1 image):
 #    stage 1 (composer)  -> installs PHP dependencies (vendor/)

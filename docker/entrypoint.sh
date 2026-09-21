@@ -7,7 +7,7 @@ set -e
 # bini-build ang image (kasi wala pa ang Render env vars noon).
 # ==================================================================
 
-echo ">>> [entrypoint] Starting Laravel container setup..."
+echo ">>> [entrypoint] Starting Laravel + SQLite container setup..."
 
 # ---------------------------------------------------------------
 # 1) PORT - inject ng Render (e.g. 10000). I-default sa 80 kung wala.
@@ -44,11 +44,20 @@ fi
 # 4) Laravel optimizations
 #    package:discover   -> i-build ang bootstrap/cache/packages.php
 #    config:cache       -> pinagsama-samang config files
+#    route:cache        -> cached routes
+#    view:cache         -> compiled Blade templates
 #    (|| true = huwag i-abort ang boot kung may babala lang)
 # ---------------------------------------------------------------
 echo ">>> Running Laravel optimizations..."
 php artisan package:discover --ansi >/dev/null 2>&1 || true
 php artisan config:cache   >/dev/null 2>&1 || true
+# WARNING: route:cache and view:cache are intentionally SKIPPED here.
+# If you run them, the compiled route list locks in the current APP_URL
+# (http://localhost from .env.example). Any later env var override for
+# APP_URL would have zero effect until you manually clear the cache.
+# Leaving them uncached = tiny cold-start penalty, correct HTTPS URLs.
+# php artisan route:cache    >/dev/null 2>&1 || true
+# php artisan view:cache     >/dev/null 2>&1 || true
 
 # ---------------------------------------------------------------
 # 5) Nginx config - palitan ang ${PORT} sa template

@@ -1,7 +1,19 @@
 # ====================================================================
 #  Render Blueprint (render.yaml)
 #
-#  Simple SQLite-based deployment
+#  Ito ay "Infrastructure as Code" - ang buong deployment setup ay
+#  nasa code form. Pag na-upload mo ito sa root ng repo, pwede mong
+#  i-deploy gamit ang "Blueprint" na option sa Render dashboard:
+#
+#     render.com -> New + -> Blueprint -> Connect your repo
+#
+#  Maaari din itong gamitin sa "Blueprints" na service ng Render
+#  (dati tinatawag na "Blueprint plan").
+#
+#  NOTE: Smart-Stock now uses a LOCAL SQLite database (no Supabase).
+#  PAMALITAN MO LANG ANG MGA SUMUSUNOD PAGKATAPOS I-COMMIT:
+#    - APP_KEY -> i-set mo para laging pareho sa bawat deploy
+#    - DB_DATABASE -> kung gusto mong iba ang SQLite file path
 # ====================================================================
 
 services:
@@ -9,9 +21,10 @@ services:
     name: Smart-Stock
     runtime: docker
     plan: free
-    region: singapore
+    region: singapore  # malapit sa Pilipinas; pwede mong palitan
     branch: main
 
+    # Awtomatikong madi-detect ng Render ang Dockerfile sa repo root
     dockerfilePath: ./Dockerfile
 
     healthCheckPath: /
@@ -26,7 +39,13 @@ services:
       - key: LOG_CHANNEL
         value: stderr
 
-      # --- SESSION/CACHE sa file (walang external DB na kailangan) ---
+      # --- Local SQLite database (walang Supabase) ---
+      - key: DB_CONNECTION
+        value: sqlite
+      - key: DB_DATABASE
+        value: /app/database/database.sqlite
+
+      # --- SESSION/CACHE sa file ---
       - key: SESSION_DRIVER
         value: file
       - key: CACHE_STORE
@@ -41,11 +60,14 @@ services:
         value: "lax"
 
       # --- APP_KEY ---
-      # MAHALAGA: para manatiling valid ang sessions/encryption
+      # MAHALAGA: para manatiling valid ang mga session/encryption
+      # sa bawat deploy, i-set ang APP_KEY sa dashboard o dito.
       # Generate: php artisan key:generate --show
       - key: APP_KEY
         sync: false
 
-      # APP_URL should match the deployed domain
+      # APP_URL should match the deployed domain so Laravel generates
+      # fully-qualified HTTPS URLs (forms, links, redirects).
+      # Change the value below to your actual Render service name.
       - key: APP_URL
         value: https://smart-stock.onrender.com
