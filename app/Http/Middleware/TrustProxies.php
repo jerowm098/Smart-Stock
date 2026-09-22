@@ -30,13 +30,15 @@ class TrustProxies
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // HEADER_X_FORWARDED_FOR_ALL covers all standard X-Forwarded-* headers
+        // including X-Forwarded-Proto which ngrok sends to signal HTTPS.
         $request->setTrustedProxies(
             $this->resolveProxies(),
-            Request::HEADER_X_FORWARDED_AWS_ELB
-                | Request::HEADER_X_FORWARDED_FOR
+            Request::HEADER_X_FORWARDED_FOR
                 | Request::HEADER_X_FORWARDED_HOST
                 | Request::HEADER_X_FORWARDED_PORT
                 | Request::HEADER_X_FORWARDED_PROTO
+                | Request::HEADER_X_FORWARDED_PREFIX
         );
 
         return $next($request);

@@ -12,13 +12,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\TrustProxies::class);
-        
-        // Register auth middleware — ensures unauthenticated users get redirected to /login
-        // without causing a 500 error from the layout trying to read Auth::user()
-        $middleware->alias([
-            'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
-            'guest' => \Illuminate\Auth\Middleware\RedirectIfAuthenticated::class,
-        ]);
+        $middleware->redirectUsersTo('home');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

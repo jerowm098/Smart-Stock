@@ -8,7 +8,8 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; display: flex; flex-direction: column; }
+        html, body { height: 100%; }
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 
         /* SIDEBAR */
         .sidebar { width: 240px; min-height: calc(100vh - 60px); background: #253347; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; position: fixed; top: 60px; left: 0; bottom: 0; z-index: 90; }
@@ -38,8 +39,10 @@
         .mobile-menu-open { overflow: auto; }
 
         /* TOP HEADER - FIXED */
-        .top-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 32px; background: #253347; border-bottom: 1px solid rgba(255,255,255,0.08); position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 60px; }
-        .header-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+        .top-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 40px; background: #253347; border-bottom: 1px solid rgba(255,255,255,0.08); position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 60px; }
+        .header-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-decoration: none; }
+        .header-brand:hover .brand-name { color: #cbd5e1; }
+        body.light-theme .header-brand:hover .brand-name { color: #334155; }
         .header-brand .brand-mark { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 10px; object-fit: contain; display: block; }
         /* Invert logo on dark theme so it's visible */
         body:not(.light-theme) .brand-mark { filter: brightness(0) invert(1); }
@@ -58,9 +61,11 @@
             background: linear-gradient(135deg, #60a5fa, #2563eb);
             display: flex; align-items: center; justify-content: center;
             color: #fff; font-size: 12px; font-weight: 700; text-transform: uppercase;
+            flex-shrink: 0;
         }
-        .user-name { font-size: 13px; font-weight: 600; color: #f8fafc; }
-        .user-email { font-size: 11px; color: #64748b; }
+        .user-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .user-name { font-size: 13px; font-weight: 600; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+        .user-email { font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
         /* ALERT WRAPPER - anchors alert dropdown */
         .header-alert-wrapper { position: relative; }
         /* ALERT BUTTON - TAB STYLE */
@@ -107,7 +112,7 @@
         body.light-theme .header-brand .brand-subtitle { color: #64748b; }
         body.light-theme .header-btn { color: #64748b; border-color: rgba(15,23,42,0.1); }
         body.light-theme .header-btn:hover { background: rgba(15,23,42,0.05); color: #0f172a; }
-        body.light-theme .header-user { border-color: rgba(15,23,42,0.1); }
+        body.light-theme .header-user { border-color: rgba(15,23,42,0.1); background: #fff; }
         body.light-theme .header-user:hover { background: rgba(15,23,42,0.03); }
         body.light-theme .user-name { color: #0f172a; }
         body.light-theme .user-email { color: #64748b; }
@@ -128,15 +133,46 @@
 
         /* MAIN CONTENT AREA - SCROLLABLE */
         .main {
-            margin-left: 240px;
-            margin-top: 60px;
-            min-height: calc(100vh - 60px);
+            position: fixed;
+            top: 60px;
+            left: 240px;
+            right: 0;
+            bottom: 0;
             background: #0f172a;
             overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
+            overflow-x: hidden;
+            scrollbar-width: thin;
         }
-        .content { padding: 32px; }
+        .main::-webkit-scrollbar { width: 12px; }
+        .main::-webkit-scrollbar-track { background: #f0f0f0; }
+        .main::-webkit-scrollbar-thumb { background: #c0c0c0; border: 2px solid #f0f0f0; }
+        .main::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
+        .main::-webkit-scrollbar-thumb:active { background: #808080; }
+        body.light-theme .main { background: #f1f5f9; }
+        body.light-theme .main::-webkit-scrollbar-track { background: #e0e0e0; }
+        body.light-theme .main::-webkit-scrollbar-thumb { background: #b0b0b0; border-color: #e0e0e0; }
+        body.light-theme .main::-webkit-scrollbar-thumb:hover { background: #909090; }
+        body.light-theme .main::-webkit-scrollbar-thumb:active { background: #707070; }
+        .content {
+            padding: 32px;
+            min-height: calc(100vh - 60px);
+        }
 
+
+        /* SPINNER (SS-48) - reusable loading indicator for inventory fetches */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.15);
+            border-top-color: #60a5fa;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        body.light-theme .spinner { border-color: rgba(15,23,42,0.12); border-top-color: #2563eb; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
         /* TOAST */
         .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; z-index: 300; display: none; animation: slideUp 0.3s ease; }
@@ -144,34 +180,13 @@
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         /* RESPONSIVE */
-        @media (max-width: 768px) {
-            .mobile-menu-button { display: inline-flex; }
-            .header-brand { display: none; }
-            .sidebar {
-                top: 60px;
-                width: min(260px, calc(100vw - 32px));
-                transform: translateX(-105%);
-                visibility: hidden;
-                transition: transform 0.22s ease, visibility 0.22s ease;
-                z-index: 90;
-            }
-            .sidebar.mobile-open {
-                transform: translateX(0);
-                visibility: visible;
-            }
-            .mobile-menu-header { display: flex; padding-top: 12px; }
-            .main {
-                margin-left: 0;
-                overflow-y: auto;
-                -webkit-overflow-scrolling: touch;
-            }
             .top-header {
-                padding: 8px 10px;
+                padding: 8px 16px;
                 gap: 8px;
                 z-index: 110;
             }
             .header-right { gap: 6px; }
-            .header-user .user-name, .header-user .user-email { display: none; }
+            /* Keep user info visible on small screens, just resize */
             .header-btn { padding: 6px 8px; }
             .alert-dropdown { width: min(280px, calc(100vw - 24px)); }
             .user-dropdown { width: min(180px, calc(100vw - 24px)); }
@@ -209,13 +224,13 @@
 <body>
     <!-- TOP HEADER (FIXED) -->
     <header class="top-header">
-        <div class="header-brand">
+        <a href="{{ route('home') }}" class="header-brand">
             <img src="{{ asset('assets/stock-logo.png') }}" alt="Smart-Stock Logo" class="brand-mark">
             <div>
                 <div class="brand-name">Smart-Stock</div>
                 <div class="brand-subtitle">Inventory System</div>
             </div>
-        </div>
+        </a>
         <button type="button" class="mobile-menu-button" id="mobileMenuButton" onclick="toggleMobileMenu(event)" aria-label="Open navigation menu" aria-controls="mobileNavigation" aria-expanded="false">
             <span class="mobile-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
         </button>
@@ -247,10 +262,10 @@
                 </div>
             </div>
             <div class="header-user" id="headerUserBtn" onclick="toggleUserDropdown(event)">
-                <div class="user-avatar">{{ optional(Auth::user())->name ? substr(optional(Auth::user())->name, 0, 1) : 'U' }}</div>
-                <div>
-                    <div class="user-name">{{ optional(Auth::user())->name ?? 'User' }}</div>
-                    <div class="user-email">{{ optional(Auth::user())->email ?? '' }}</div>
+                <div class="user-avatar">{{ Auth::user()->name ? substr(Auth::user()->name, 0, 1) : 'U' }}</div>
+                <div class="user-info">
+                    <div class="user-name">{{ Auth::user()->name }}</div>
+                    <div class="user-email">{{ Auth::user()->email }}</div>
                 </div>
                 <div class="user-dropdown" id="userDropdown">
                     <a href="#" class="user-dropdown-item" onclick="navigateToSettings(event)">
@@ -258,9 +273,9 @@
                         <span>Settings</span>
                     </a>
                     <div class="user-dropdown-divider"></div>
-                    <form method="POST" action="{{ route('logout') }}" style="margin:0;">
+                    <form method="POST" action="{{ route('logout') }}" style="margin:0;" id="logoutForm">
                         @csrf
-                        <button type="submit" class="user-dropdown-item logout">
+                        <button type="submit" class="user-dropdown-item logout" onclick="handleLogout(event)">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                             <span>Logout</span>
                         </button>
@@ -277,7 +292,7 @@
             <button type="button" class="mobile-menu-close" onclick="closeMobileMenu()" aria-label="Close navigation menu">×</button>
         </div>
         <nav class="sidebar-nav">
-            <div class="nav-label">Main</div>
+            <div class="nav-label">Navigation</div>
             <a href="{{ route('dashboard') }}" class="nav-item" id="navOverview" data-page="overview">
                 <span class="nav-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
@@ -366,6 +381,14 @@
             showToast('Settings coming soon!', 'success');
         }
 
+        // SS-60: On logout, keep smartStockLastEmail in localStorage so that
+        // the login page can auto-fill the email of the last logged-in user.
+        // Only remove it when a DIFFERENT user logs in successfully.
+        function handleLogout(e) {
+            // intentionally do NOT remove smartStockLastEmail here —
+            // the login page reads it to pre-fill the email field.
+        }
+
         // Close dropdowns when clicking outside
         document.addEventListener('click', (e) => {
             const alertWrapper = document.querySelector('.header-alert-wrapper');
@@ -387,7 +410,6 @@
                 const alerts = await res.json();
                 const badge = document.getElementById('headerAlertBadge');
                 badge.textContent = alerts.length;
-                badge.classList.toggle('hidden', alerts.length === 0);
                 const list = document.getElementById('headerAlertList');
                 if (alerts.length === 0) { list.innerHTML = '<div class="alert-empty" style="padding:20px;">No low-stock items</div>'; }
                 else { list.innerHTML = alerts.map(a => `<div class="alert-item"><span class="alert-dot ${a.current_stock <= 5 ? 'critical' : 'low'}"></span><span class="alert-text"><strong>${escapeHtml(a.name)}</strong> — ${a.current_stock} left (threshold: ${a.reorder_threshold})</span></div>`).join(''); }
@@ -397,7 +419,6 @@
         function clearAlerts(e) {
             e.stopPropagation();
             document.getElementById('headerAlertBadge').textContent = '0';
-            document.getElementById('headerAlertBadge').classList.add('hidden');
             document.getElementById('headerAlertList').innerHTML = '<div class="alert-empty" style="padding:20px;">No notifications</div>';
         }
 

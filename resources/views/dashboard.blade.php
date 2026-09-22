@@ -4,7 +4,7 @@
 
 @section('content')
     <h1 class="page-title">Overview</h1>
-    <p class="page-subtitle">Welcome back, {{ optional(Auth::user())->name ?? 'User' }}. Here is an overview of your inventory system.</p>
+    <p class="page-subtitle">Welcome back, {{ Auth::user()->name }}. Here is an overview of your inventory system.</p>
 
     <!-- STATS GRID -->
     <div class="stats-grid">
@@ -36,14 +36,16 @@
         <table>
             <thead>
                 <tr>
-                    <th>Product</th>
-                    <th>SKU</th>
-                    <th>Stock</th>
+                    <th>SKU / Code</th>
+                    <th>Item Name</th>
+                    <th>Category</th>
+                    <th>Unit Price</th>
+                    <th>Current Stock Count</th>
                     <th>Status</th>
                 </tr>
             </thead>
             <tbody id="overviewBody">
-                <tr><td colspan="4" class="empty-state">Loading dashboard data...</td></tr>
+                <tr id="overviewLoadingRow"><td colspan="6" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading dashboard data...</td></tr>
             </tbody>
         </table>
     </div>
@@ -119,12 +121,25 @@
 
 @push('scripts')
     <script>
+        function showLoadingSpinner() {
+            document.getElementById('overviewBody').innerHTML = '<tr id="overviewLoadingRow"><td colspan="6" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading dashboard data...</td></tr>';
+        }
+
+        function showTableError(message) {
+            document.getElementById('overviewBody').innerHTML = `<tr><td colspan="6" class="empty-state">${escapeHtml(message)}</td></tr>`;
+        }
+
         async function loadOverview() {
+            showLoadingSpinner();
             try {
                 const res = await fetch('/api/inventory/products');
+                if (!res.ok) throw new Error('Unable to load inventory');
                 const products = await res.json();
                 renderOverview(products);
-            } catch (e) { showToast('Failed to load', 'error'); }
+            } catch (e) {
+                showTableError('Unable to load inventory. Please try again.');
+                showToast('Failed to load', 'error');
+            }
         }
 
         function renderOverview(products) {
@@ -136,11 +151,18 @@
             const body = document.getElementById('overviewBody');
             const top = products.slice(0, 8);
             if (top.length === 0) {
-                body.innerHTML = '<tr><td colspan="4" class="empty-state">No products yet</td></tr>';
+                body.innerHTML = '<tr><td colspan="6" class="empty-state">No products yet</td></tr>';
             } else {
                 body.innerHTML = top.map(p => {
                     const s = getStatus(p.current_stock, p.reorder_threshold);
-                    return `<tr><td><strong>${escapeHtml(p.name)}</strong></td><td>${escapeHtml(p.sku)}</td><td class="stock-cell stock-${s.class}">${p.current_stock}</td><td><span class="stock-badge ${s.class}">${s.label}</span></td></tr>`;
+                    return `<tr>
+                        <td>${escapeHtml(p.sku)}</td>
+                        <td><strong>${escapeHtml(p.name)}</strong></td>
+                        <td>${escapeHtml(p.category || '—')}</td>
+                        <td>₱${parseFloat(p.price).toFixed(2)}</td>
+                        <td class="stock-cell stock-${s.class}">${p.current_stock}</td>
+                        <td><span class="stock-badge ${s.class}">${s.label}</span></td>
+                    </tr>`;
                 }).join('');
             }
         }

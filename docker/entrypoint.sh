@@ -7,7 +7,7 @@ set -e
 # bini-build ang image (kasi wala pa ang Render env vars noon).
 # ==================================================================
 
-echo ">>> [entrypoint] Starting Laravel + Supabase container setup..."
+echo ">>> [entrypoint] Starting Laravel + SQLite container setup..."
 
 # ---------------------------------------------------------------
 # 1) PORT - inject ng Render (e.g. 10000). I-default sa 80 kung wala.
@@ -48,13 +48,6 @@ fi
 #    view:cache         -> compiled Blade templates
 #    (|| true = huwag i-abort ang boot kung may babala lang)
 # ---------------------------------------------------------------
-# 4.5) Ensure SQLite DB exists and run migrations fresh (ephemeral storage)
-# ---------------------------------------------------------------
-echo ">>> Setting up database..."
-touch /app/database/database.sqlite
-chmod 666 /app/database/database.sqlite
-php artisan migrate --force --no-interaction >/dev/null 2>&1 || echo ">>> Migration skipped (may already be up-to-date)"
-
 echo ">>> Running Laravel optimizations..."
 php artisan package:discover --ansi >/dev/null 2>&1 || true
 php artisan config:cache   >/dev/null 2>&1 || true

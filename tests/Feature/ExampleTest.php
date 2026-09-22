@@ -16,7 +16,7 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/');
 
-        $response->assertRedirect('/login');
+        $response->assertRedirect('/home');
     }
 
     public function test_authenticated_user_can_access_dashboard_and_products(): void
