@@ -159,6 +159,21 @@
         }
 
 
+        /* SPINNER (SS-48) - reusable loading indicator for inventory fetches */
+        .spinner {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.15);
+            border-top-color: #60a5fa;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        body.light-theme .spinner { border-color: rgba(15,23,42,0.12); border-top-color: #2563eb; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
         /* TOAST */
         .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; z-index: 300; display: none; animation: slideUp 0.3s ease; }
         .toast.show { display: block; } .toast.success { background: #065f46; color: #a7f3d0; border: 1px solid rgba(74,222,128,0.3); } .toast.error { background: #7f1d1d; color: #fca5a5; border: 1px solid rgba(248,113,113,0.3); }

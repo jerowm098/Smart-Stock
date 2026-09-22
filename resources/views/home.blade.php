@@ -13,6 +13,8 @@
             background: #0f172a;
             color: #e2e8f0;
             min-height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
         body.light-theme { background: #f1f5f9; color: #334155; }
 
@@ -26,9 +28,9 @@
             justify-content: space-between;
             padding: 0 40px;
             height: 64px;
-            background: rgba(15,23,42,0.85);
+            background: #253347;
             backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255,255,255,0.07);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
         }
         body.light-theme .site-header {
             background: rgba(255,255,255,0.9);
@@ -197,10 +199,12 @@
         /* ── HERO ────────────────────────────────────────────────── */
         .hero {
             display: flex;
+            flex: 1;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             text-align: center;
-            padding: 80px 24px 64px;
+            padding: 72px 24px;
         }
         .hero-badge {
             display: inline-flex;
@@ -265,98 +269,27 @@
         body.light-theme .btn-secondary { border-color: rgba(15,23,42,0.15); color: #475569; }
         body.light-theme .btn-secondary:hover { background: rgba(15,23,42,0.04); border-color: rgba(15,23,42,0.25); }
 
-        /* ── FEATURES ────────────────────────────────────────────── */
-        .features { padding: 0 24px 80px; max-width: 1100px; margin: 0 auto; }
-        .features-label {
-            text-align: center;
-            font-size: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #475569;
-            margin-bottom: 12px;
-        }
-        .features-title {
-            text-align: center;
-            font-size: 30px;
-            font-weight: 700;
-            color: #f8fafc;
-            margin-bottom: 8px;
-        }
-        body.light-theme .features-title { color: #0f172a; }
-        .features-sub {
-            text-align: center;
-            font-size: 15px;
-            color: #64748b;
-            margin-bottom: 40px;
-        }
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 20px;
-        }
-        .feature-card {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 14px;
-            padding: 24px;
-            transition: border-color 0.15s, transform 0.15s;
-        }
-        .feature-card:hover { border-color: rgba(96,165,250,0.25); transform: translateY(-2px); }
-        body.light-theme .feature-card { background: #ffffff; border-color: rgba(15,23,42,0.08); }
-        body.light-theme .feature-card:hover { border-color: rgba(37,99,235,0.25); }
-        .feature-icon {
-            width: 48px; height: 48px;
-            border-radius: 12px;
-            display: flex; align-items: center; justify-content: center;
-            margin-bottom: 14px;
-        }
-        .feature-icon.blue   { background: rgba(59,130,246,0.15);  color: #60a5fa; }
-        .feature-icon.orange { background: rgba(251,146,60,0.15);   color: #fb923c; }
-        .feature-icon.green  { background: rgba(74,222,128,0.12);   color: #4ade80; }
-        .feature-icon.purple { background: rgba(168,85,247,0.15);   color: #c084fc; }
-        body.light-theme .feature-icon.blue   { background: rgba(37,99,235,0.1);  color: #2563eb; }
-        body.light-theme .feature-icon.orange { background: rgba(234,88,12,0.1);  color: #ea580c; }
-        body.light-theme .feature-icon.green  { background: rgba(22,163,74,0.1);  color: #16a34a; }
-        body.light-theme .feature-icon.purple { background: rgba(124,58,237,0.1); color: #7c3aed; }
-        .feature-title { font-size: 15px; font-weight: 700; color: #f8fafc; margin-bottom: 8px; }
-        body.light-theme .feature-title { color: #0f172a; }
-        .feature-desc { font-size: 13px; color: #64748b; line-height: 1.6; }
-
-        /* ── ABOUT STRIP ─────────────────────────────────────────── */
-        .about-strip {
-            background: rgba(255,255,255,0.02);
-            border-top: 1px solid rgba(255,255,255,0.05);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            padding: 48px 24px;
-            text-align: center;
-            margin-bottom: 0;
-        }
-        body.light-theme .about-strip { background: rgba(15,23,42,0.02); border-color: rgba(15,23,42,0.07); }
-        .about-title { font-size: 22px; font-weight: 700; color: #f8fafc; margin-bottom: 12px; }
-        body.light-theme .about-title { color: #0f172a; }
-        .about-text  { font-size: 14px; color: #94a3b8; line-height: 1.8; max-width: 680px; margin: 0 auto; }
-        body.light-theme .about-text { color: #64748b; }
-
         /* ── FOOTER ──────────────────────────────────────────────── */
         .site-footer {
             text-align: center;
             padding: 24px;
             font-size: 12px;
-            color: #475569;
-            border-top: 1px solid rgba(255,255,255,0.05);
+            color: #64748b;
+            background: #253347;
+            border-top: 1px solid rgba(255,255,255,0.08);
         }
-        body.light-theme .site-footer { border-top-color: rgba(15,23,42,0.07); }
+        body.light-theme .site-footer {
+            color: #475569;
+            background: #ffffff;
+            border-top-color: rgba(15,23,42,0.1);
+        }
 
         /* ── RESPONSIVE ──────────────────────────────────────────── */
         @media (max-width: 640px) {
             .site-header { padding: 0 16px; }
-            .hero { padding: 56px 16px 48px; }
+            .hero { padding: 56px 16px; }
             .hero-title { font-size: 34px; }
             .hero-desc  { font-size: 15px; }
-            .features   { padding: 0 16px 56px; }
-            .features-title { font-size: 24px; }
-            .about-strip { padding: 36px 16px; }
         }
     </style>
 </head>
@@ -439,7 +372,7 @@
             Web-Based Inventory System for Hardware Stores
         </div>
         <h1 class="hero-title">
-            Smart Inventory.<br><span>Effortless Control.</span>
+            Empower Your Inventory<br><span>with Smart Dashboard.</span>
         </h1>
         <p class="hero-desc">
             SMART-STOCK helps hardware stores manage products, track stock levels in real time,
@@ -455,53 +388,6 @@
             @endguest
         </div>
     </section>
-
-    <!-- FEATURES -->
-    <section class="features">
-        <div class="features-label">What's Inside</div>
-        <h2 class="features-title">Everything your hardware store needs</h2>
-        <p class="features-sub">Purpose-built tools to keep your shelves stocked and your team informed.</p>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon blue">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                </div>
-                <div class="feature-title">Product Management</div>
-                <div class="feature-desc">Add, update, and remove hardware products with SKUs, categories, prices, and stock counts in one place.</div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon orange">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                </div>
-                <div class="feature-title">Low-Stock Alerts</div>
-                <div class="feature-desc">Automatic notifications when any product hits or falls below its reorder threshold — never miss a restock.</div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon green">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-                </div>
-                <div class="feature-title">Real-Time Overview</div>
-                <div class="feature-desc">Live dashboard showing total products, in-stock counts, low-stock items, and critical alerts at a glance.</div>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon purple">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                </div>
-                <div class="feature-title">Role-Based Access</div>
-                <div class="feature-desc">Admins control the full system. Cashiers handle daily stock operations. Each role sees only what they need.</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- ABOUT STRIP -->
-    <div class="about-strip">
-        <div class="about-title">SMART-STOCK: A Web-Based Intelligent Inventory and Supply Management System for Hardware Stores</div>
-        <p class="about-text">
-            Designed to eliminate the guesswork in stock management, Smart-Stock gives hardware store owners and staff
-            the tools to track every item, respond to shortages instantly, and make data-driven purchasing decisions —
-            all through a secure, role-protected web interface.
-        </p>
-    </div>
 
     <!-- FOOTER -->
     <footer class="site-footer">

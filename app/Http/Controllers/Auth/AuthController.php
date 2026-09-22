@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Database\Seeders\ProductSeeder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -73,13 +74,18 @@ class AuthController extends Controller
             'password' => 'required|string|confirmed|min:6',
         ]);
 
-        User::create([
+        $user = User::create([
             'name' => trim($validated['first_name'].' '.$validated['last_name']),
             'username' => $validated['username'],
             'email' => $validated['email'],
             'role' => $validated['role'],
             'password' => Hash::make($validated['password']),
         ]);
+
+        // SS-49: Seed the new account with the sample hardware inventory
+        // so the catalogue (SS-17) and search/filter features (SS-18)
+        // have real data to display and test against from day one.
+        app(ProductSeeder::class)->seedForUser($user->id);
 
         return redirect()->route('login')->with('success', 'Account created! You can now sign in.');
     }
@@ -166,6 +172,11 @@ class AuthController extends Controller
             'role'     => $validated['role'],
             'password' => Hash::make($validated['password']),
         ]);
+
+        // SS-49: Seed the new account with the sample hardware inventory
+        // so the catalogue (SS-17) and search/filter features (SS-18)
+        // have real data to display and test against from day one.
+        app(ProductSeeder::class)->seedForUser($user->id);
 
         return response()->json([
             'message' => 'Account created successfully.',

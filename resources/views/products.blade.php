@@ -11,8 +11,8 @@
         <div class="section-actions">
             <select class="search-column-select" id="searchColumn" onchange="filterProducts()">
                 <option value="">All Columns</option>
-                <option value="name">Name</option>
-                <option value="sku">SKU</option>
+                <option value="sku">SKU / Code</option>
+                <option value="name">Item Name</option>
                 <option value="category">Category</option>
             </select>
             <input type="text" class="search-input" id="searchInput" placeholder="Search products..." oninput="filterProducts()" autocomplete="off">
@@ -27,22 +27,21 @@
         <table>
             <thead>
                 <tr>
-                    <th>Name</th>
-                    <th>SKU</th>
+                    <th>SKU / Code</th>
+                    <th>Item Name</th>
                     <th>Category</th>
-                    <th>Price</th>
-                    <th>Stock</th>
-                    <th>Threshold</th>
+                    <th>Unit Price</th>
+                    <th>Current Stock Count</th>
+                    <th>Reorder Threshold</th>
                     <th>Status</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody id="productTableBody">
-                <tr><td colspan="8" class="empty-state">Loading products...</td></tr>
+                <tr id="productLoadingRow"><td colspan="8" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>
             </tbody>
         </table>
     </div>
-
     <!-- ADD PRODUCT MODAL -->
     <div class="modal-overlay" id="addModal">
         <div class="modal">
@@ -187,12 +186,25 @@
     <script>
         let allProducts = [];
 
+        function showLoadingSpinner() {
+            document.getElementById('productTableBody').innerHTML = '<tr id="productLoadingRow"><td colspan="8" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>';
+        }
+
+        function showTableError(message) {
+            document.getElementById('productTableBody').innerHTML = `<tr><td colspan="8" class="empty-state">${escapeHtml(message)}</td></tr>`;
+        }
+
         async function loadProducts() {
+            showLoadingSpinner();
             try {
                 const res = await fetch('/api/inventory/products');
+                if (!res.ok) throw new Error('Unable to load products');
                 allProducts = await res.json();
                 renderFullTable(allProducts);
-            } catch (e) { showToast('Failed to load products', 'error'); }
+            } catch (e) {
+                showTableError('Unable to load products. Please try again.');
+                showToast('Failed to load products', 'error');
+            }
         }
 
         function renderFullTable(products) {
@@ -203,8 +215,8 @@
                 body.innerHTML = products.map(p => {
                     const s = getStatus(p.current_stock, p.reorder_threshold);
                     return `<tr id="row-${p.id}">
-                        <td><strong>${escapeHtml(p.name)}</strong></td>
                         <td>${escapeHtml(p.sku)}</td>
+                        <td><strong>${escapeHtml(p.name)}</strong></td>
                         <td>${escapeHtml(p.category || '—')}</td>
                         <td>₱${parseFloat(p.price).toFixed(2)}</td>
                         <td class="stock-cell stock-${s.class}">${p.current_stock}</td>
@@ -287,12 +299,20 @@
         async function deleteProduct(id) {
             if (!confirm('Are you sure you want to delete this product?')) return;
             try {
-                const res = await fetch(`/api/inventory/${id}`, { method: 'DELETE' });
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const res = await fetch(`/api/inventory/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                    },
+                });
                 if (res.ok) {
                     showToast('Product deleted', 'success');
                     loadProducts();
                 } else {
-                    showToast('Failed to delete', 'error');
+                    const errData = await res.json().catch(() => null);
+                    showToast(errData?.message || 'Failed to delete product', 'error');
                 }
             } catch (e) {
                 showToast('Failed to connect', 'error');

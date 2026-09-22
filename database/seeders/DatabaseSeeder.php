@@ -21,5 +21,10 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+
+        // SS-49: Seed the products table with a realistic hardware-store
+        // inventory dataset so the catalogue (SS-17) and search/filter
+        // features (SS-18) have real data to display and test against.
+        $this->call(ProductSeeder::class);
     }
 }

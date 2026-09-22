@@ -14,6 +14,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            padding: 24px;
         }
         body.light-theme { background: #f1f5f9; }
         
@@ -45,7 +46,7 @@
             border-radius: 16px;
             padding: 40px;
             width: 100%;
-            max-width: 420px;
+            max-width: 760px;
         }
         body.light-theme .login-container {
             background: #ffffff;
@@ -56,7 +57,7 @@
             align-items: center;
             justify-content: center;
             gap: 12px;
-            margin-bottom: 28px;
+            margin-bottom: 24px;
             text-decoration: none;
         }
         .brand:hover .brand-name { color: #cbd5e1; }
@@ -99,7 +100,7 @@
             font-size: 14px;
         }
         body.light-theme .login-header p { color: #64748b; }
-        .form-group { margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
         .form-group label {
             display: block;
             color: #cbd5e1;
@@ -133,6 +134,17 @@
         }
         .form-group input::placeholder { color: #64748b; }
         body.light-theme .form-group input::placeholder { color: #94a3b8; }
+
+        /* Two-column form layout */
+        form {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            column-gap: 18px;
+        }
+        .form-group.full,
+        form .btn {
+            grid-column: 1 / -1;
+        }
         .btn {
             width: 100%;
             padding: 12px;
@@ -171,6 +183,19 @@
             font-weight: 500;
         }
         .footer-text a:hover { text-decoration: underline; }
+
+        @media (max-width: 760px) {
+            .login-container { max-width: 520px; padding: 32px; }
+            form { grid-template-columns: 1fr; }
+            .form-group.full,
+            form .btn { grid-column: auto; }
+        }
+        @media (max-width: 480px) {
+            body { padding: 16px; }
+            .login-container { padding: 28px 20px; border-radius: 14px; }
+            .brand { margin-bottom: 20px; }
+            .login-header { margin-bottom: 24px; }
+        }
     </style>
 </head>
 <body>
@@ -236,7 +261,7 @@
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" placeholder="At least 6 characters" required autocomplete="new-password">
             </div>
-            <div class="form-group">
+            <div class="form-group full">
                 <label for="password_confirmation">Confirm Password</label>
                 <input type="password" id="password_confirmation" name="password_confirmation" placeholder="Confirm your password" required autocomplete="new-password">
             </div>
