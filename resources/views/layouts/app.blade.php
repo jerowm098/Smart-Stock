@@ -106,7 +106,7 @@
         body.light-theme .user-dropdown-divider { background: rgba(15,23,42,0.08); }
 
         /* LIGHT THEME */
-        body.light-theme { background: #f1f5f9; color: #334155; }
+        body.light-theme { background: #f3f4f6; color: #334155; }
         body.light-theme .top-header { background: #ffffff; border-bottom-color: rgba(15,23,42,0.08); }
         body.light-theme .header-brand .brand-name { color: #0f172a; }
         body.light-theme .header-brand .brand-subtitle { color: #64748b; }
@@ -129,7 +129,7 @@
         body.light-theme .nav-item { color: #64748b; }
         body.light-theme .nav-item:hover { background: rgba(15,23,42,0.05); color: #0f172a; }
         body.light-theme .nav-item.active { background: rgba(37,99,235,0.1); color: #2563eb; }
-        body.light-theme .main { background: #f1f5f9; }
+        body.light-theme .main { background: #f3f4f6; }
 
         /* MAIN CONTENT AREA - SCROLLABLE */
         .main {
@@ -148,7 +148,7 @@
         .main::-webkit-scrollbar-thumb { background: #c0c0c0; border: 2px solid #f0f0f0; }
         .main::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
         .main::-webkit-scrollbar-thumb:active { background: #808080; }
-        body.light-theme .main { background: #f1f5f9; }
+        body.light-theme .main { background: #f3f4f6; }
         body.light-theme .main::-webkit-scrollbar-track { background: #e0e0e0; }
         body.light-theme .main::-webkit-scrollbar-thumb { background: #b0b0b0; border-color: #e0e0e0; }
         body.light-theme .main::-webkit-scrollbar-thumb:hover { background: #909090; }
@@ -180,17 +180,43 @@
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
         /* RESPONSIVE */
+        @media (max-width: 768px) {
             .top-header {
                 padding: 8px 16px;
-                gap: 8px;
                 z-index: 110;
             }
-            .header-right { gap: 6px; }
-            /* Keep user info visible on small screens, just resize */
+            .header-left { display: flex; align-items: center; gap: 6px; }
+            .header-right { gap: 6px; margin-left: auto; }
             .header-btn { padding: 6px 8px; }
             .alert-dropdown { width: min(280px, calc(100vw - 24px)); }
             .user-dropdown { width: min(180px, calc(100vw - 24px)); }
-            /* Overlay sits between header and sidebar */
+            /* Show hamburger menu button on mobile */
+            .mobile-menu-button { display: flex; }
+            .header-brand { display: flex; padding: 0; }
+            .header-brand .brand-name,
+            .header-brand .brand-subtitle { display: none; }
+            .header-brand .brand-mark { width: 36px; height: 36px; }
+            /* Hide sidebar by default on mobile, slide-in when open */
+            .sidebar {
+                width: 0;
+                min-width: 0;
+                overflow: hidden;
+                transition: width 0.25s ease, visibility 0.25s ease;
+                visibility: hidden;
+            }
+            .sidebar.mobile-open {
+                width: 260px;
+                min-width: 260px;
+                overflow-y: auto;
+                visibility: visible;
+            }
+            /* Show mobile menu header when in mobile mode */
+            .mobile-menu-header { display: flex; }
+            /* Main content starts at left: 0 on mobile */
+            .main { left: 0; }
+            /* Compress user info to avatar only on mobile */
+            .user-info { display: none; }
+            .header-user { padding: 8px; }
             .mobile-menu-overlay {
                 z-index: 85;
             }
@@ -202,6 +228,15 @@
             .header-btn { padding: 6px; }
             .user-avatar { width: 30px; height: 30px; }
             .content { padding: 14px; }
+            .sidebar.mobile-open { width: calc(100vw - 40px); }
+        }
+        @media (max-width: 300px) {
+            .top-header { padding: 4px 6px; gap: 4px; }
+            .mobile-menu-button { width: 30px; height: 30px; }
+            .header-btn { padding: 4px; }
+            .user-avatar { width: 28px; height: 28px; }
+            .content { padding: 10px; }
+            .sidebar.mobile-open { width: calc(100vw - 20px); }
         }
         /* MOBILE CONTENT */
         @media (max-width: 640px) {
@@ -224,16 +259,18 @@
 <body>
     <!-- TOP HEADER (FIXED) -->
     <header class="top-header">
-        <a href="{{ route('home') }}" class="header-brand">
-            <img src="{{ asset('assets/stock-logo.png') }}" alt="Smart-Stock Logo" class="brand-mark">
-            <div>
-                <div class="brand-name">Smart-Stock</div>
-                <div class="brand-subtitle">Inventory System</div>
-            </div>
-        </a>
-        <button type="button" class="mobile-menu-button" id="mobileMenuButton" onclick="toggleMobileMenu(event)" aria-label="Open navigation menu" aria-controls="mobileNavigation" aria-expanded="false">
-            <span class="mobile-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
-        </button>
+        <div class="header-left">
+            <a href="{{ route('home') }}" class="header-brand">
+                <img src="{{ asset('assets/stock-logo.png') }}" alt="Smart-Stock Logo" class="brand-mark">
+                <div>
+                    <div class="brand-name">Smart-Stock</div>
+                    <div class="brand-subtitle">Inventory System</div>
+                </div>
+            </a>
+            <button type="button" class="mobile-menu-button" id="mobileMenuButton" onclick="toggleMobileMenu(event)" aria-label="Open navigation menu" aria-controls="mobileNavigation" aria-expanded="false">
+                <span class="mobile-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
+            </button>
+        </div>
         <div class="header-right">
             <button type="button" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme" class="header-btn">
                 <svg id="themeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
