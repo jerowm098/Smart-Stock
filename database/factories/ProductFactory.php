@@ -33,6 +33,8 @@ class ProductFactory extends Factory
             'price' => fake()->randomFloat(2, 10, 5000),
             'current_stock' => fake()->numberBetween(0, 100),
             'reorder_threshold' => fake()->numberBetween(1, 20),
+            'receiving_unit' => fake()->randomElement(['piece', 'box', 'bag', 'roll', 'pack', 'case']),
+            'pieces_per_receiving_unit' => fake()->randomElement([1, 6, 12, 24, 50, 100]),
         ];
     }
 }

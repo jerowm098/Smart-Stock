@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\StockAdjustment;
+use App\Models\StockIn;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +28,122 @@ class InventoryController extends Controller
     public function products()
     {
         return view('products');
+    }
+
+    /**
+     * SS-87: Show the standalone Stock-In / Receiving page.
+     */
+    public function stockIn()
+    {
+        return view('stock-in');
+    }
+
+    /**
+     * SS-88: Store a newly received stock-in transaction.
+     * Validates input, checks ownership, performs atomic stock update,
+     * and logs the receiving transaction with audit trail.
+     */
+    public function storeStockIn(Request $request): JsonResponse
+    {
+        $user = $this->currentUser();
+        if (! $user) {
+            return response()->json(['message' => 'Authentication required.'], 401);
+        }
+
+        $validated = $request->validate([
+            'product_id' => ['required', 'integer', 'exists:products,id'],
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'quantity_received' => ['required', 'integer', 'min:1'],
+            'unit_of_measure' => ['required', 'string', 'max:20'],
+            'note' => ['nullable', 'string', 'max:255'],
+        ]);
+        $validated['supplier_id'] = $validated['supplier_id'] ?? null;
+        $validated['note'] = $validated['note'] ?? null;
+ 
+        $transactionProduct = null;
+        $unitMismatch = false;
+        $piecesPerReceivingUnit = 0;
+        $pieceDelta = 0;
+        $stockBefore = 0;
+        $stockAfter = 0;
+
+        DB::transaction(function () use ($user, $validated, &$transactionProduct, &$unitMismatch, &$piecesPerReceivingUnit, &$pieceDelta, &$stockBefore, &$stockAfter) {
+            $query = Product::where('id', $validated['product_id'])
+                ->where('user_id', $user->id);
+
+            // SQLite does not support lockForUpdate; the transaction plus
+            // incremental update still serializes stock mutations safely.
+            if (DB::connection()->getDriverName() !== 'sqlite') {
+                $query = $query->lockForUpdate();
+            }
+
+            $product = $query->first();
+            if (! $product) {
+                return;
+            }
+
+            $transactionProduct = $product;
+
+            if ($validated['unit_of_measure'] !== $product->receiving_unit) {
+                $unitMismatch = true;
+                return;
+            }
+
+            $piecesPerReceivingUnit = (int) $product->pieces_per_receiving_unit;
+            $pieceDelta = (int) $validated['quantity_received'] * $piecesPerReceivingUnit;
+            $stockBefore = (int) $product->current_stock;
+            $stockAfter = $stockBefore + $pieceDelta;
+
+            $updatedRows = Product::where('id', $product->id)
+                ->increment('current_stock', $pieceDelta);
+
+            if ($updatedRows !== 1) {
+                throw new \RuntimeException('Unable to update product stock.');
+            }
+
+            StockIn::create([
+                'product_id' => $product->id,
+                'user_id' => $user->id,
+                'supplier_id' => $validated['supplier_id'],
+                'quantity_received' => $validated['quantity_received'],
+                'unit_of_measure' => $validated['unit_of_measure'],
+                'unit_conversion' => $piecesPerReceivingUnit,
+                'piece_delta' => $pieceDelta,
+                'stock_before' => $stockBefore,
+                'stock_after' => $stockAfter,
+                'note' => $validated['note'],
+            ]);
+        });
+
+        if (! $transactionProduct) {
+            return response()->json(['message' => 'Product not found or access denied.'], 404);
+        }
+
+        if ($unitMismatch) {
+            return response()->json([
+                'message' => 'Unit of measure must match the product\'s receiving unit (' . $transactionProduct->receiving_unit . ')',
+                'unit_of_measure' => ['The unit of measure must match the product\'s configured receiving unit.']
+            ], 422);
+        }
+
+        $updatedProduct = Product::where('id', $transactionProduct->id)->first();
+
+        return response()->json([
+            'message' => 'Stock received successfully',
+            'stock_in' => [
+                'product_id' => $transactionProduct->id,
+                'product_name' => $transactionProduct->name,
+                'quantity_received' => $validated['quantity_received'],
+                'unit_of_measure' => $validated['unit_of_measure'],
+                'unit_conversion' => $piecesPerReceivingUnit,
+                'piece_delta' => $pieceDelta,
+                'stock_before' => $stockBefore,
+                'stock_after' => $stockAfter,
+                'supplier_id' => $validated['supplier_id'],
+                'note' => $validated['note'],
+            ],
+            'product' => $updatedProduct,
+        ], 201);
     }
 
     /**
@@ -167,20 +284,38 @@ class InventoryController extends Controller
 
         return response()->json($lowStockProducts);
     }
-
-    /**
-     * Get all products sorted by latest.
-     */
-    public function getProducts(): JsonResponse
-    {
-        $user = $this->currentUser();
-        if (! $user) {
-            return response()->json([], 401);
-        }
-
-        $products = Product::ownedBy($user->id)->latest()->get();
-        return response()->json($products);
+/**
+ * Get all products sorted by latest.
+ */
+public function getProducts(): JsonResponse
+{
+    $user = $this->currentUser();
+    if (! $user) {
+        return response()->json([], 401);
     }
+
+    $products = Product::ownedBy($user->id)
+        ->addSelect([
+            'last_supplier_name' => function ($query) {
+                $query->select('suppliers.name')
+                    ->from('stock_ins')
+                    ->join('suppliers', 'stock_ins.supplier_id', '=', 'suppliers.id')
+                    ->whereColumn('stock_ins.product_id', 'products.id')
+                    ->orderByDesc('stock_ins.created_at')
+                    ->limit(1);
+            },
+            'last_received_at' => function ($query) {
+                $query->select('stock_ins.created_at')
+                    ->from('stock_ins')
+                    ->whereColumn('stock_ins.product_id', 'products.id')
+                    ->orderByDesc('stock_ins.created_at')
+                    ->limit(1);
+            }
+        ])
+        ->latest()->get();
+
+    return response()->json($products);
+}
 
     /**
      * Remove a product.

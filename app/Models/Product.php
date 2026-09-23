@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string $price Product price (decimal)
  * @property int $current_stock Current stock quantity
  * @property int $reorder_threshold Stock level that triggers reorder alerts
+ * @property string|null $receiving_unit Default receiving unit of measure (e.g. box, bag, roll)
+ * @property int $pieces_per_receiving_unit Number of base pieces contained in one receiving unit
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
  * @property-read User|null $owner
@@ -48,6 +50,8 @@ class Product extends Model
         'price',
         'current_stock',
         'reorder_threshold',
+        'receiving_unit',
+        'pieces_per_receiving_unit',
     ];
 
     /**
@@ -61,6 +65,7 @@ class Product extends Model
             'price' => 'decimal:2',
             'current_stock' => 'integer',
             'reorder_threshold' => 'integer',
+            'pieces_per_receiving_unit' => 'integer',
         ];
     }
 

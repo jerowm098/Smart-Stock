@@ -35,6 +35,9 @@ Route::middleware('auth')->group(function () {
     // Products page
     Route::get('/products', [InventoryController::class, 'products'])->name('products');
 
+    // Stock-In / Receiving page (SS-87)
+    Route::get('/stock-in', [InventoryController::class, 'stockIn'])->name('stock-in');
+
     // Suppliers directory page
     Route::get('/suppliers', [SupplierController::class, 'index'])
         ->name('suppliers')
@@ -49,6 +52,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/api/inventory/{product}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
     Route::post('/api/inventory/adjust', [InventoryController::class, 'adjustStock'])
         ->name('inventory.adjust')
+        ->middleware(EnsureUserIsAdmin::class);
+
+    // SS-88: Stock-In / Receiving API endpoint
+    Route::post('/api/inventory/stock-in', [InventoryController::class, 'storeStockIn'])
+        ->name('inventory.stock-in')
         ->middleware(EnsureUserIsAdmin::class);
 
     // POS checkout API route

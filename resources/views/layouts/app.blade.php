@@ -349,6 +349,12 @@
                 </span>
                 <span>Products</span>
             </a>
+            <a href="{{ route('stock-in') }}" class="nav-item" id="navStockIn" data-page="stock-in">
+                <span class="nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                </span>
+                <span>Stock-In</span>
+            </a>
             <a href="{{ route('suppliers') }}" class="nav-item" id="navSuppliers" data-page="suppliers">
                 <span class="nav-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -405,6 +411,8 @@
                 document.getElementById('navPos').classList.add('active');
             } else if (path.includes('/products')) {
                 document.getElementById('navProducts').classList.add('active');
+            } else if (path.includes('/stock-in')) {
+                document.getElementById('navStockIn').classList.add('active');
             } else if (path.includes('/suppliers')) {
                 document.getElementById('navSuppliers').classList.add('active');
             } else {
