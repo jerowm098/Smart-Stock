@@ -9,9 +9,6 @@
             <h1 class="pos-title">POS Checkout</h1>
             <p class="pos-subtitle">Process sales, manage cart, and handle payments</p>
         </div>
-        <div class="pos-actions">
-            <button type="button" class="btn btn-cancel" onclick="clearCart()">Clear Cart</button>
-        </div>
     </div>
 
     <div class="pos-layout">
@@ -43,6 +40,9 @@
                         <p>No items in cart</p>
                         <p class="cart-empty-hint">Select products from the catalog to add them</p>
                     </div>
+                </div>
+                <div class="cart-footer">
+                    <button type="button" class="btn btn-submit" onclick="clearCart()">Clear Cart</button>
                 </div>
             </div>
 
@@ -176,6 +176,9 @@
     .cart-items { flex: 1; overflow-y: auto; padding: 8px 12px; }
     .cart-empty { text-align: center; padding: 48px 16px; color: #475569; }
     .cart-empty-hint { font-size: 12px; margin-top: 4px; }
+    .cart-footer {
+        display: flex; justify-content: center; padding: 12px 16px;
+    }
     .cart-item {
         display: flex; align-items: center; gap: 10px;
         padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
@@ -237,14 +240,43 @@
         cursor: pointer; font-family: 'Inter', sans-serif; transition: background 0.15s;
     }
     .btn-cancel:hover { background: rgba(255,255,255,0.15); }
-    .checkout-message { margin-top: 12px; font-size: 13px; font-weight: 500; }
-    .checkout-message.success { color: #4ade80; }
-    .checkout-message.error { color: #f87171; }
+    .checkout-message {
+        margin-top: 12px;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 10px 14px;
+        border-radius: 8px;
+        border: 1px solid rgba(248,113,113,0.3);
+        background: rgba(248,113,113,0.08);
+        color: #f87171;
+        display: block;
+    }
+    .checkout-message.success {
+        color: #4ade80;
+        border-color: rgba(74,222,128,0.3);
+        background: rgba(74,222,128,0.08);
+    }
+    .checkout-message.error {
+        color: #fca5a5;
+        border-color: rgba(248,113,113,0.4);
+        background: rgba(248,113,113,0.12);
+    }
+    body.light-theme .checkout-message {
+        background: #fef2f2;
+        border-color: rgba(239,68,68,0.25);
+        color: #dc2626;
+    }
+    body.light-theme .checkout-message.success {
+        background: #f0fdf4;
+        border-color: rgba(34,197,94,0.25);
+        color: #16a34a;
+    }
 
     /* Tax on total */
     .summary-tax-row { border-bottom: 1px dashed rgba(255,255,255,0.04); }
 
     /* LIGHT THEME */
+    body.light-theme .pos-title { color: #0f172a; }
     body.light-theme .pos-page { color: #0f172a; }
     body.light-theme .pos-panel { background: #ffffff; border-color: rgba(15,23,42,0.08); }
     body.light-theme .pos-panel-header { background: #f8fafc; border-bottom-color: rgba(15,23,42,0.08); }
@@ -260,6 +292,7 @@
     body.light-theme .cart-item { border-bottom-color: rgba(15,23,42,0.04); }
     body.light-theme .cart-item-name { color: #0f172a; }
     body.light-theme .cart-item-price { color: #64748b; }
+    body.light-theme .cart-footer { background: #f8fafc; }
     body.light-theme .cart-qty-btn { background: #f1f5f9; border-color: rgba(15,23,42,0.12); color: #334155; }
     body.light-theme .cart-qty-btn:hover { background: #e2e8f0; }
     body.light-theme .cart-qty-value { color: #0f172a; }
@@ -274,6 +307,40 @@
     body.light-theme .pos-payment-form .form-control:focus { border-color: #3b82f6; }
     body.light-theme .pos-payment-form .form-control::placeholder { color: #94a3b8; }
     body.light-theme .btn-cancel { background: #e2e8f0; color: #334155; border-color: rgba(15,23,42,0.1); }
+
+    /* CHECKOUT CONFIRMATION MODAL */
+    .pos-modal-overlay {
+        position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;
+        background: rgba(15,23,42,0.62); padding: 16px;
+    }
+    .pos-modal {
+        width: min(440px, 100%); background: #ffffff; color: #0f172a; border-radius: 12px;
+        box-shadow: 0 20px 50px rgba(15,23,42,0.25); overflow: hidden;
+    }
+    .pos-modal-header {
+        display: flex; justify-content: space-between; align-items: center; padding: 16px 20px;
+        border-bottom: 1px solid rgba(15,23,42,0.08);
+    }
+    .pos-modal-header h3 { margin: 0; font-size: 18px; font-weight: 700; }
+    .pos-modal-close {
+        width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: transparent;
+        color: #64748b; font-size: 24px; line-height: 1; cursor: pointer;
+    }
+    .pos-modal-close:hover { background: rgba(15,23,42,0.06); color: #0f172a; }
+    .pos-modal-body { padding: 20px; }
+    .pos-modal-body p { margin: 0 0 16px; color: #475569; font-size: 14px; }
+    .pos-modal-summary { background: #f8fafc; border-radius: 8px; padding: 14px 16px; }
+    .pos-modal-row {
+        display: flex; justify-content: space-between; align-items: center; padding: 7px 0;
+        font-size: 14px; font-weight: 500; color: #334155;
+    }
+    .pos-modal-row span:last-child { font-weight: 600; color: #0f172a; }
+    .pos-modal-footer {
+        display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px;
+        background: #f8fafc; border-top: 1px solid rgba(15,23,42,0.08);
+    }
+    .pos-modal-footer .btn { min-width: 120px; }
+    .pos-modal-footer .btn-submit { margin-top: 0; }
 
     /* MOBILE */
     @media (max-width: 1024px) {
@@ -482,20 +549,26 @@
 
         const btn = document.getElementById('checkoutBtn');
         const msgEl = document.getElementById('checkoutMessage');
-        btn.disabled = true;
-        msgEl.textContent = 'Processing...';
-        msgEl.className = 'checkout-message';
 
         const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         const total = subtotal * 1.12;
         const paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
 
         if (paymentAmount < total) {
-            msgEl.textContent = 'Insufficient payment amount.';
+            msgEl.textContent = 'Insufficient funds.';
             msgEl.className = 'checkout-message error';
-            btn.disabled = false;
+            showToast('Insufficient funds.', 'error');
             return;
         }
+
+        // Show validation modal before processing
+        if (!await showCheckoutConfirmModal(total, paymentAmount)) {
+            return;
+        }
+
+        btn.disabled = true;
+        msgEl.textContent = 'Processing...';
+        msgEl.className = 'checkout-message';
 
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -510,7 +583,7 @@
                     'X-CSRF-TOKEN': csrfToken,
                 },
                 body: JSON.stringify({
-                    items: items,
+                    cart_items: items,
                     payment_amount: paymentAmount,
                 }),
             });
@@ -519,18 +592,72 @@
                 const data = await res.json();
                 msgEl.textContent = data.message + ' Change: ₱' + (data.change || 0).toFixed(2);
                 msgEl.className = 'checkout-message success';
+                showToast('Checkout completed!', 'success');
                 clearCart();
             } else {
                 const data = await res.json().catch(() => null);
                 msgEl.textContent = data?.message || 'Checkout failed.';
                 msgEl.className = 'checkout-message error';
+                showToast(msgEl.textContent, 'error');
             }
         } catch (e) {
             msgEl.textContent = 'Connection error. Please try again.';
             msgEl.className = 'checkout-message error';
+            showToast(msgEl.textContent, 'error');
+        } finally {
+            btn.disabled = false;
         }
+    }
 
-        btn.disabled = false;
+    // Checkout confirmation modal
+    function showCheckoutConfirmModal(total, payment) {
+        const overlay = document.createElement('div');
+        overlay.className = 'pos-modal-overlay';
+        overlay.innerHTML = `
+            <div class="pos-modal">
+                <div class="pos-modal-header">
+                    <h3>Confirm Checkout</h3>
+                    <button type="button" class="pos-modal-close" data-action="cancel">×</button>
+                </div>
+                <div class="pos-modal-body">
+                    <p>Are you sure you want to complete this transaction?</p>
+                    <div class="pos-modal-summary">
+                        <div class="pos-modal-row"><span>Total</span><span>₱${total.toFixed(2)}</span></div>
+                        <div class="pos-modal-row"><span>Payment</span><span>₱${payment.toFixed(2)}</span></div>
+                        <div class="pos-modal-row"><span>Change</span><span>₱${(payment - total).toFixed(2)}</span></div>
+                    </div>
+                </div>
+                <div class="pos-modal-footer">
+                    <button type="button" class="btn btn-cancel" data-action="cancel">Cancel</button>
+                    <button type="button" class="btn btn-submit" data-action="confirm">Confirm</button>
+                </div>
+            </div>
+        `;
+
+        return new Promise((resolve) => {
+            document.body.appendChild(overlay);
+            document.body.style.overflow = 'hidden';
+
+            const cleanup = () => {
+                overlay.remove();
+                document.body.style.overflow = '';
+            };
+
+            overlay.addEventListener('click', (e) => {
+                if (e.target === overlay) {
+                    cleanup();
+                    resolve(false);
+                }
+            });
+
+            overlay.querySelectorAll('[data-action]').forEach((el) => {
+                el.addEventListener('click', () => {
+                    const action = el.getAttribute('data-action');
+                    cleanup();
+                    resolve(action === 'confirm');
+                });
+            });
+        });
     }
 
     // Show toast notification
