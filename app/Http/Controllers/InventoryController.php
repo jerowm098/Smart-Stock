@@ -96,6 +96,59 @@ class InventoryController extends Controller
     }
 
     /**
+     * SS-84/SS-85: Update a product by ID using a SQL UPDATE query.
+     *
+     * Accepts the product ID and the fields to update, validates the input,
+     * and executes a database update for the selected product.
+     */
+    public function updateProduct(Request $request): JsonResponse
+    {
+        $user = $this->currentUser();
+        if (! $user) {
+            return response()->json(['message' => 'Authentication required.'], 401);
+        }
+
+        $validated = $request->validate([
+            'id' => ['required', 'integer'],
+            'name' => 'required|string|max:255',
+            'sku' => [
+                'required',
+                'string',
+                'max:50',
+                Rule::unique('products', 'sku')
+                    ->where(fn ($q) => $q->where('user_id', $user->id))
+                    ->ignore($request->input('id')),
+            ],
+            'category' => 'nullable|string',
+            'price' => 'required|numeric|min:0',
+            'current_stock' => 'required|integer|min:0',
+            'reorder_threshold' => 'required|integer|min:0',
+        ]);
+
+        $product = Product::where('id', $validated['id'])
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (! $product) {
+            return response()->json(['message' => 'Product not found or access denied.'], 404);
+        }
+
+        // SS-85: Execute SQL UPDATE query for the selected product ID.
+        $updateData = collect($validated)
+            ->except(['id'])
+            ->filter(fn ($value) => $value !== null)
+            ->toArray();
+
+        $updatedRows = Product::where('id', $product->id)->update($updateData);
+
+        return response()->json([
+            'message' => 'Product updated successfully',
+            'product' => $product->fresh(),
+            'updated_rows' => $updatedRows,
+        ]);
+    }
+
+    /**
      * Get products with low stock.
      */
     public function getAlerts(): JsonResponse

@@ -31,6 +31,7 @@ Route::middleware('auth')->group(function () {
 
     // API routes
     Route::post('/api/inventory/add', [InventoryController::class, 'store'])->name('inventory.add');
+    Route::put('/api/inventory/update', [InventoryController::class, 'updateProduct'])->name('inventory.update.product');
     Route::put('/api/inventory/{product}', [InventoryController::class, 'update'])->name('inventory.update');
     Route::get('/api/inventory/alerts', [InventoryController::class, 'getAlerts'])->name('inventory.alerts');
     Route::get('/api/inventory/products', [InventoryController::class, 'getProducts'])->name('inventory.products');

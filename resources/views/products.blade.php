@@ -81,6 +81,44 @@
             </form>
         </div>
     </div>
+
+    <!-- EDIT PRODUCT MODAL -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <h2>Edit Product</h2>
+            <form onsubmit="handleEditProduct(event)" autocomplete="off">
+                <input type="hidden" id="eId" name="id">
+                <div class="form-group">
+                    <label>Product Name *</label>
+                    <input type="text" name="name" id="eName" placeholder="e.g. Wireless Mouse" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>SKU *</label>
+                    <input type="text" name="sku" id="eSku" placeholder="e.g. WM-001" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <input type="text" name="category" id="eCategory" placeholder="e.g. Electronics" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Price (₱) *</label>
+                    <input type="number" name="price" id="ePrice" placeholder="0.00" step="0.01" min="0" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Current Stock *</label>
+                    <input type="number" name="current_stock" id="eStock" placeholder="0" min="0" required autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label>Reorder Threshold *</label>
+                    <input type="number" name="reorder_threshold" id="eThreshold" placeholder="0" min="0" required autocomplete="off">
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeEditModal()">Cancel</button>
+                    <button type="submit" class="btn btn-submit">Update Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
 @endsection
 
 @push('styles')
@@ -146,6 +184,8 @@
         .stock-cell { font-weight: 600; } .stock-ok { color: #4ade80; } .stock-low { color: #fbbf24; } .stock-critical { color: #f87171; }
         .stock-badge { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; }
         .stock-badge.ok { background: rgba(74,222,128,0.12); color: #4ade80; } .stock-badge.low { background: rgba(251,191,36,0.12); color: #fbbf24; } .stock-badge.critical { background: rgba(248,113,113,0.12); color: #f87171; }
+        .btn-edit { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25); color: #93c5fd; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s; margin-right: 4px; }
+        .btn-edit:hover { background: rgba(59,130,246,0.2); }
         .btn-delete { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s; }
         .btn-delete:hover { background: rgba(239,68,68,0.2); }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
@@ -276,7 +316,7 @@
                         <td class="stock-cell stock-${s.class}">${p.current_stock}</td>
                         <td>${p.reorder_threshold}</td>
                         <td><span class="stock-badge ${s.class}">${s.label}</span></td>
-                        <td><button class="btn-delete" onclick="deleteProduct(${p.id})">Delete</button></td>
+                        <td><button class="btn-edit" onclick="openEditModal(${p.id})">Edit</button> <button class="btn-delete" onclick="deleteProduct(${p.id})">Delete</button></td>
                     </tr>`;
                 }).join('');
             }
@@ -382,6 +422,88 @@
             if (stock <= threshold) return { label: 'Critical', class: 'critical' };
             if (stock <= threshold * 1.5) return { label: 'Low', class: 'low' };
             return { label: 'OK', class: 'ok' };
+        }
+
+        // --- SS-82: Edit Product modal helpers ---
+
+        function openEditModal(id) {
+            const product = allProducts.find(p => p.id === id);
+            if (!product) {
+                showToast('Product not found', 'error');
+                return;
+            }
+
+            document.getElementById('eId').value = product.id;
+            document.getElementById('eName').value = product.name || '';
+            document.getElementById('eSku').value = product.sku || '';
+            document.getElementById('eCategory').value = product.category || '';
+            document.getElementById('ePrice').value = product.price || '';
+            document.getElementById('eStock').value = product.current_stock || '';
+            document.getElementById('eThreshold').value = product.reorder_threshold || '';
+
+            document.getElementById('editModal').classList.add('active');
+            document.getElementById('eName').focus();
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('active');
+            document.getElementById('editModal').querySelector('form').reset();
+        }
+
+        document.getElementById('editModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('editModal')) closeEditModal();
+        });
+
+        // --- SS-83: Frontend field validations ---
+
+        function validateEditForm() {
+            const name = document.getElementById('eName').value.trim();
+            const sku = document.getElementById('eSku').value.trim();
+            const price = parseFloat(document.getElementById('ePrice').value);
+            const stock = parseInt(document.getElementById('eStock').value, 10);
+            const threshold = parseInt(document.getElementById('eThreshold').value, 10);
+
+            if (!name) { showToast('Product name is required', 'error'); return false; }
+            if (!sku) { showToast('SKU is required', 'error'); return false; }
+            if (isNaN(price) || price < 0) { showToast('Price must be a non-negative number', 'error'); return false; }
+            if (isNaN(stock) || stock < 0) { showToast('Current stock must be a non-negative integer', 'error'); return false; }
+            if (isNaN(threshold) || threshold < 0) { showToast('Reorder threshold must be a non-negative integer', 'error'); return false; }
+
+            return true;
+        }
+
+        async function handleEditProduct(e) {
+            e.preventDefault();
+            if (!validateEditForm()) return;
+
+            const fd = new FormData(e.target);
+            const data = Object.fromEntries(fd);
+            data.price = parseFloat(data.price);
+            data.current_stock = parseInt(data.current_stock);
+            data.reorder_threshold = parseInt(data.reorder_threshold);
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const res = await fetch('/api/inventory/update', {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    closeEditModal();
+                    showToast('Product updated successfully!', 'success');
+                    loadProducts();
+                } else {
+                    const errData = await res.json().catch(() => null);
+                    showToast(errData?.message || 'Error updating product', 'error');
+                }
+            } catch (e) {
+                showToast('Connection error', 'error');
+            }
         }
 
         loadProducts();
