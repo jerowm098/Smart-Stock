@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\PosCheckoutController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,9 @@ Route::middleware('auth')->group(function () {
     // Overview / dashboard
     Route::get('/dashboard', [InventoryController::class, 'index'])->name('dashboard');
 
+    // POS checkout page
+    Route::get('/pos', [PosCheckoutController::class, 'index'])->name('pos');
+
     // Products page
     Route::get('/products', [InventoryController::class, 'products'])->name('products');
 
@@ -43,6 +47,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/inventory/alerts', [InventoryController::class, 'getAlerts'])->name('inventory.alerts');
     Route::get('/api/inventory/products', [InventoryController::class, 'getProducts'])->name('inventory.products');
     Route::delete('/api/inventory/{product}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+
+    // POS checkout API route
+    Route::post('/api/pos/checkout', [PosCheckoutController::class, 'checkout'])
+        ->name('pos.checkout');
 
     // Supplier directory API routes
     Route::get('/api/suppliers/active', [SupplierController::class, 'getActive'])
