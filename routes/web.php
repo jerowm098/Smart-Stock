@@ -3,6 +3,8 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InventoryController;
+use App\Http\Controllers\SupplierController;
+use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Support\Facades\Route;
 
 // Web auth routes
@@ -29,6 +31,11 @@ Route::middleware('auth')->group(function () {
     // Products page
     Route::get('/products', [InventoryController::class, 'products'])->name('products');
 
+    // Suppliers directory page
+    Route::get('/suppliers', [SupplierController::class, 'index'])
+        ->name('suppliers')
+        ->middleware(EnsureUserIsAdmin::class);
+
     // API routes
     Route::post('/api/inventory/add', [InventoryController::class, 'store'])->name('inventory.add');
     Route::put('/api/inventory/update', [InventoryController::class, 'updateProduct'])->name('inventory.update.product');
@@ -36,4 +43,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/inventory/alerts', [InventoryController::class, 'getAlerts'])->name('inventory.alerts');
     Route::get('/api/inventory/products', [InventoryController::class, 'getProducts'])->name('inventory.products');
     Route::delete('/api/inventory/{product}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+
+    // Supplier directory API routes
+    Route::get('/api/suppliers/active', [SupplierController::class, 'getActive'])
+        ->name('suppliers.active')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::post('/api/suppliers', [SupplierController::class, 'store'])
+        ->name('suppliers.store')
+        ->middleware(EnsureUserIsAdmin::class);
 });

@@ -89,7 +89,7 @@
         body.light-theme .alert-text { color: #475569; }
         body.light-theme .alert-text strong { color: #0f172a; }
         body.light-theme .alert-empty { color: #64748b; }
-        
+
         /* USER DROPDOWN */
         .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 180px; z-index: 150; display: none; overflow: hidden; }
         .user-dropdown.active { display: block; }
@@ -343,6 +343,12 @@
                 </span>
                 <span>Products</span>
             </a>
+            <a href="{{ route('suppliers') }}" class="nav-item" id="navSuppliers" data-page="suppliers">
+                <span class="nav-icon">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </span>
+                <span>Suppliers</span>
+            </a>
         </nav>
     </aside>
     <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
@@ -391,6 +397,8 @@
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
             if (path.includes('/products')) {
                 document.getElementById('navProducts').classList.add('active');
+            } else if (path.includes('/suppliers')) {
+                document.getElementById('navSuppliers').classList.add('active');
             } else {
                 document.getElementById('navOverview').classList.add('active');
             }
