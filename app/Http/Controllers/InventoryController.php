@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\StockAdjustment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class InventoryController extends Controller
 {
@@ -191,5 +194,73 @@ class InventoryController extends Controller
 
         $product->delete();
         return response()->json(['message' => 'Product deleted successfully']);
+    }
+
+    /**
+     * SS-38 / SS-97: Manual stock adjustment.
+     *
+     * Accepts a product ID, a reason (damaged/lost/internal_transfer/correction),
+     * an optional note, and a non-zero delta. Updates the product's current_stock
+     * and records an audit-trail entry (SS-24) in the `stock_adjustments` table
+     * with the timestamp and the responsible admin.
+     */
+    public function adjustStock(Request $request): JsonResponse
+    {
+        $user = $this->currentUser();
+        if (! $user) {
+            return response()->json(['message' => 'Authentication required.'], 401);
+        }
+
+        $validated = $request->validate([
+            'product_id' => ['required', 'integer'],
+            'reason' => ['required', 'string', 'in:damaged,lost,internal_transfer,correction'],
+            'reason_note' => ['nullable', 'string', 'max:255'],
+            'delta' => ['required', 'integer', 'not_in:0'],
+        ]);
+
+        $product = Product::where('id', $validated['product_id'])
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (! $product) {
+            return response()->json(['message' => 'Product not found or access denied.'], 404);
+        }
+
+        $delta = (int) $validated['delta'];
+        $stockBefore = (int) $product->current_stock;
+        $stockAfter = $stockBefore + $delta;
+
+        if ($stockAfter < 0) {
+            throw ValidationException::withMessages([
+                'delta' => 'Insufficient stock. Current stock is ' . $stockBefore . '.',
+            ]);
+        }
+
+        DB::transaction(function () use ($product, $user, $validated, $delta, $stockBefore, $stockAfter) {
+            Product::where('id', $product->id)->update([
+                'current_stock' => $stockAfter,
+            ]);
+
+            StockAdjustment::create([
+                'product_id' => $product->id,
+                'user_id' => $user->id,
+                'reason' => $validated['reason'],
+                'reason_note' => $validated['reason_note'] ?? null,
+                'delta' => $delta,
+                'stock_before' => $stockBefore,
+                'stock_after' => $stockAfter,
+            ]);
+        });
+
+        return response()->json([
+            'message' => 'Stock adjusted successfully',
+            'product' => $product->fresh(),
+            'adjustment' => [
+                'reason' => $validated['reason'],
+                'delta' => $delta,
+                'stock_before' => $stockBefore,
+                'stock_after' => $stockAfter,
+            ],
+        ]);
     }
 }

@@ -119,6 +119,47 @@
             </form>
         </div>
     </div>
+
+    <!-- STOCK ADJUSTMENT MODAL -->
+    <div class="modal-overlay" id="adjustModal">
+        <div class="modal">
+            <h2>Adjust Stock</h2>
+            <form onsubmit="handleAdjustStock(event)" autocomplete="off">
+                <input type="hidden" id="aId" name="product_id">
+                <div class="form-group">
+                    <label>Product</label>
+                    <div class="form-static" id="aProductName">—</div>
+                </div>
+                <div class="form-group">
+                    <label>Current Stock</label>
+                    <div class="form-static" id="aCurrentStock">0</div>
+                </div>
+                <div class="form-group">
+                    <label>Reason *</label>
+                    <select name="reason" id="aReason" required>
+                        <option value="" disabled selected>Select a reason</option>
+                        <option value="damaged">Damaged</option>
+                        <option value="lost">Lost</option>
+                        <option value="internal_transfer">Internal Transfer</option>
+                        <option value="correction">Stock Correction</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Stock Delta *</label>
+                    <input type="number" name="delta" id="aDelta" placeholder="-2" step="1" required>
+                    <small class="form-hint">Use a negative value to reduce stock or a positive value to add stock.</small>
+                </div>
+                <div class="form-group">
+                    <label>Reason / Note</label>
+                    <textarea name="reason_note" id="aReasonNote" rows="3" maxlength="255" placeholder="e.g. 2 units damaged during inspection"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-cancel" onclick="closeAdjustModal()">Cancel</button>
+                    <button type="submit" class="btn btn-submit">Adjust Stock</button>
+                </div>
+            </form>
+        </div>
+    </div>
 @endsection
 
 @push('styles')
@@ -188,6 +229,8 @@
         .btn-edit:hover { background: rgba(59,130,246,0.2); }
         .btn-delete { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s; }
         .btn-delete:hover { background: rgba(239,68,68,0.2); }
+        .btn-adjust { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.25); color: #fcd34d; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s; margin-right: 4px; }
+        .btn-adjust:hover { background: rgba(251,191,36,0.2); }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
         /* MODAL */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; }
@@ -201,6 +244,14 @@
         .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
         .modal-actions .btn { padding: 9px 18px; border: none; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: opacity 0.15s; }
         .modal-actions .btn:hover { opacity: 0.9; } .btn-cancel { background: rgba(255,255,255,0.1); color: #e2e8f0; } .btn-submit { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+        .modal select { width: 100%; padding: 9px 32px 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 12px; }
+        .modal select:focus { border-color: #3b82f6; }
+        .modal select option { background: #1e293b; color: #e2e8f0; }
+        .modal textarea { width: 100%; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; resize: vertical; }
+        .modal textarea:focus { border-color: #3b82f6; }
+        .modal textarea::placeholder { color: #64748b; }
+        .modal .form-static { color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; }
+        .form-hint { color: #475569; font-size: 11px; margin-top: 4px; display: block; }
         /* LIGHT THEME */
         body.light-theme .page-title { color: #0f172a; }
         body.light-theme .page-subtitle { color: #64748b; }
@@ -259,6 +310,7 @@
 
 @push('scripts')
     <script>
+        const canAdjustStock = {{ Auth::user()->isAdmin() ? 'true' : 'false' }};
         let allProducts = [];
 
         function showLoadingSpinner() {
@@ -316,7 +368,7 @@
                         <td class="stock-cell stock-${s.class}">${p.current_stock}</td>
                         <td>${p.reorder_threshold}</td>
                         <td><span class="stock-badge ${s.class}">${s.label}</span></td>
-                        <td><button class="btn-edit" onclick="openEditModal(${p.id})">Edit</button> <button class="btn-delete" onclick="deleteProduct(${p.id})">Delete</button></td>
+                        <td><button class="btn-edit" onclick="openEditModal(${p.id})">Edit</button>${canAdjustStock ? '<button class="btn-adjust" onclick="openAdjustModal(' + p.id + ', ' + p.current_stock + ')">Adjust</button> ' : ''}<button class="btn-delete" onclick="deleteProduct(${p.id})">Delete</button></td>
                     </tr>`;
                 }).join('');
             }
@@ -500,6 +552,78 @@
                 } else {
                     const errData = await res.json().catch(() => null);
                     showToast(errData?.message || 'Error updating product', 'error');
+                }
+            } catch (e) {
+                showToast('Connection error', 'error');
+            }
+        }
+
+        // --- SS-96: Stock Adjustment modal helpers ---
+
+        function openAdjustModal(id, currentStock) {
+            const product = allProducts.find(p => p.id === id);
+            if (!product) {
+                showToast('Product not found', 'error');
+                return;
+            }
+
+            document.getElementById('aId').value = product.id;
+            document.getElementById('aProductName').textContent = `${product.name} (${product.sku})`;
+            document.getElementById('aCurrentStock').textContent = product.current_stock;
+            document.getElementById('aDelta').value = '';
+            document.getElementById('aReason').value = '';
+            document.getElementById('aReasonNote').value = '';
+
+            document.getElementById('adjustModal').classList.add('active');
+            document.getElementById('aReason').focus();
+        }
+
+        function closeAdjustModal() {
+            document.getElementById('adjustModal').classList.remove('active');
+            document.getElementById('adjustModal').querySelector('form').reset();
+        }
+
+        document.getElementById('adjustModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('adjustModal')) closeAdjustModal();
+        });
+
+        function validateAdjustForm() {
+            const reason = document.getElementById('aReason').value;
+            const delta = parseInt(document.getElementById('aDelta').value, 10);
+
+            if (!reason) { showToast('Please select a reason', 'error'); return false; }
+            if (isNaN(delta) || delta === 0) { showToast('Please enter a non-zero stock delta', 'error'); return false; }
+
+            return true;
+        }
+
+        async function handleAdjustStock(e) {
+            e.preventDefault();
+            if (!validateAdjustForm()) return;
+
+            const fd = new FormData(e.target);
+            const data = Object.fromEntries(fd);
+            data.product_id = parseInt(data.product_id, 10);
+            data.delta = parseInt(data.delta, 10);
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                const res = await fetch('/api/inventory/adjust', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    closeAdjustModal();
+                    showToast('Stock adjusted successfully!', 'success');
+                    loadProducts();
+                } else {
+                    const errData = await res.json().catch(() => null);
+                    showToast(errData?.message || 'Error adjusting stock', 'error');
                 }
             } catch (e) {
                 showToast('Connection error', 'error');

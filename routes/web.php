@@ -43,6 +43,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/inventory/alerts', [InventoryController::class, 'getAlerts'])->name('inventory.alerts');
     Route::get('/api/inventory/products', [InventoryController::class, 'getProducts'])->name('inventory.products');
     Route::delete('/api/inventory/{product}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+    Route::post('/api/inventory/adjust', [InventoryController::class, 'adjustStock'])
+        ->name('inventory.adjust')
+        ->middleware(EnsureUserIsAdmin::class);
 
     // Supplier directory API routes
     Route::get('/api/suppliers/active', [SupplierController::class, 'getActive'])
