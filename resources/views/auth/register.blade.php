@@ -16,7 +16,7 @@
             justify-content: center;
             padding: 24px;
         }
-        body.light-theme { background: #f1f5f9; }
+        body.light-theme { background: #f3f4f6; }
         
         /* THEME TOGGLE */
         .theme-toggle-btn {

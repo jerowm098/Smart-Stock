@@ -15,6 +15,9 @@
                 <option value="name">Item Name</option>
                 <option value="category">Category</option>
             </select>
+            <select class="category-select" id="categoryFilter" onchange="filterProducts()">
+                <option value="">All Categories</option>
+            </select>
             <input type="text" class="search-input" id="searchInput" placeholder="Search products..." oninput="filterProducts()" autocomplete="off">
             <button class="btn-add" onclick="openModal()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -110,6 +113,28 @@
         }
         .search-column-select:focus { border-color: #3b82f6; }
         .search-column-select option { background: #1e293b; color: #e2e8f0; }
+        .category-select {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            padding: 8px 32px 8px 12px;
+            color: #f8fafc;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+            cursor: pointer;
+            min-width: 150px;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 12px;
+        }
+        .category-select:focus { border-color: #3b82f6; }
+        .category-select option { background: #1e293b; color: #e2e8f0; }
         .search-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 8px 14px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; width: 240px; outline: none; transition: border-color 0.2s; }
         .search-input:focus { border-color: #3b82f6; } .search-input::placeholder { color: #64748b; }
         .table-wrapper { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; overflow-x: auto; }
@@ -149,6 +174,16 @@
             background-size: 12px;
         }
         body.light-theme .search-column-select option { background: #ffffff; color: #0f172a; }
+        body.light-theme .category-select {
+            background: #ffffff;
+            border-color: rgba(15,23,42,0.14);
+            color: #0f172a;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 12px;
+        }
+        body.light-theme .category-select option { background: #ffffff; color: #0f172a; }
         body.light-theme .search-input { background: #ffffff; border-color: rgba(15,23,42,0.14); color: #0f172a; }
         body.light-theme .search-input::placeholder { color: #94a3b8; }
         body.light-theme .table-wrapper { background: #ffffff; border-color: rgba(15,23,42,0.08); }
@@ -200,11 +235,30 @@
                 const res = await fetch('/api/inventory/products');
                 if (!res.ok) throw new Error('Unable to load products');
                 allProducts = await res.json();
-                renderFullTable(allProducts);
+                populateCategoryFilter();
+                filterProducts();
             } catch (e) {
                 showTableError('Unable to load products. Please try again.');
                 showToast('Failed to load products', 'error');
             }
+        }
+
+        function populateCategoryFilter() {
+            const select = document.getElementById('categoryFilter');
+            const selectedCategory = select.value;
+            const categories = [
+                ...new Set(
+                    allProducts
+                        .map(product => (product.category || '').trim())
+                        .filter(category => category)
+                )
+            ].sort((a, b) => a.localeCompare(b));
+
+            select.innerHTML = '<option value="">All Categories</option>' + categories.map(category =>
+                `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`
+            ).join('');
+
+            select.value = categories.includes(selectedCategory) ? selectedCategory : '';
         }
 
         function renderFullTable(products) {
@@ -231,10 +285,15 @@
         function filterProducts() {
             const t = document.getElementById('searchInput').value.toLowerCase();
             const col = document.getElementById('searchColumn').value;
-            
+            const category = document.getElementById('categoryFilter').value;
+
             const f = allProducts.filter(p => {
+                if (category && (p.category || '').trim().toLowerCase() !== category.toLowerCase()) {
+                    return false;
+                }
+
                 if (!t) return true;
-                
+
                 switch(col) {
                     case 'name':
                         return p.name && p.name.toLowerCase().includes(t);
