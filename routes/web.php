@@ -6,6 +6,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PosCheckoutController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Middleware\EnsureUserIsAdmin;
+use App\Http\Middleware\EnsureUserIsCashier;
 use Illuminate\Support\Facades\Route;
 
 // Web auth routes
@@ -29,14 +30,18 @@ Route::middleware('auth')->group(function () {
     // Overview / dashboard
     Route::get('/dashboard', [InventoryController::class, 'index'])->name('dashboard');
 
-    // POS checkout page
-    Route::get('/pos', [PosCheckoutController::class, 'index'])->name('pos');
+    // POS checkout page (cashier-only)
+    Route::get('/pos', [PosCheckoutController::class, 'index'])
+        ->name('pos')
+        ->middleware(EnsureUserIsCashier::class);
 
     // Products page
     Route::get('/products', [InventoryController::class, 'products'])->name('products');
 
     // Stock-In / Receiving page (SS-87)
-    Route::get('/stock-in', [InventoryController::class, 'stockIn'])->name('stock-in');
+    Route::get('/stock-in', [InventoryController::class, 'stockIn'])
+        ->name('stock-in')
+        ->middleware(EnsureUserIsAdmin::class);
 
     // Suppliers directory page
     Route::get('/suppliers', [SupplierController::class, 'index'])
@@ -59,9 +64,10 @@ Route::middleware('auth')->group(function () {
         ->name('inventory.stock-in')
         ->middleware(EnsureUserIsAdmin::class);
 
-    // POS checkout API route
+    // POS checkout API route (cashier-only)
     Route::post('/api/pos/checkout', [PosCheckoutController::class, 'checkout'])
-        ->name('pos.checkout');
+        ->name('pos.checkout')
+        ->middleware(EnsureUserIsCashier::class);
 
     // Supplier directory API routes
     Route::get('/api/suppliers/active', [SupplierController::class, 'getActive'])

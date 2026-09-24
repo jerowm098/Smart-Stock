@@ -22,6 +22,16 @@ class PosCheckoutTest extends TestCase
     }
 
     #[Test]
+    public function admin_cannot_access_pos_checkout_page(): void
+    {
+        $user = User::factory()->create(['role' => 'admin']);
+
+        $response = $this->actingAs($user)->get('/pos');
+        $response->assertForbidden();
+        $response->assertJsonPath('message', 'Cashier access required.');
+    }
+
+    #[Test]
     public function authenticated_user_can_access_pos_checkout_page(): void
     {
         $user = User::factory()->create(['role' => 'cashier']);

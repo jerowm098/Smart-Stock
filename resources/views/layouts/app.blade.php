@@ -343,12 +343,14 @@
                 </span>
                 <span>Products</span>
             </a>
-            <a href="{{ route('stock-in') }}" class="nav-item" id="navStockIn" data-page="stock-in">
-                <span class="nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
-                </span>
-                <span>Stock-In</span>
-            </a>
+            @if(auth()->user()?->isAdmin())
+                <a href="{{ route('stock-in') }}" class="nav-item" id="navStockIn" data-page="stock-in">
+                    <span class="nav-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                    </span>
+                    <span>Stock-In</span>
+                </a>
+            @endif
             @if(auth()->user()?->isAdmin())
                 <a href="{{ route('suppliers') }}" class="nav-item" id="navSuppliers" data-page="suppliers">
                     <span class="nav-icon">
@@ -357,13 +359,15 @@
                     <span>Suppliers</span>
                 </a>
             @endif
-            <div class="nav-label">Sale</div>
-            <a href="{{ route('pos') }}" class="nav-item" id="navPos" data-page="pos">
-                <span class="nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
-                </span>
-                <span>POS Checkout</span>
-            </a>
+            @if(auth()->user()?->isCashier())
+                <div class="nav-label">Sale</div>
+                <a href="{{ route('pos') }}" class="nav-item" id="navPos" data-page="pos">
+                    <span class="nav-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                    </span>
+                    <span>POS Checkout</span>
+                </a>
+            @endif
         </nav>
     </aside>
     <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
@@ -411,11 +415,11 @@
             const path = window.location.pathname;
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
             if (path.includes('/pos')) {
-                document.getElementById('navPos').classList.add('active');
+                document.getElementById('navPos')?.classList.add('active');
             } else if (path.includes('/products')) {
                 document.getElementById('navProducts').classList.add('active');
             } else if (path.includes('/stock-in')) {
-                document.getElementById('navStockIn').classList.add('active');
+                document.getElementById('navStockIn')?.classList.add('active');
             } else if (path.includes('/suppliers')) {
                 document.getElementById('navSuppliers')?.classList.add('active');
             } else {

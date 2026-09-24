@@ -337,6 +337,70 @@ class ProductUpdateTest extends TestCase
     }
 
     // -------------------------------------------------------------------------
+    // Role-based action button visibility on the Products page.
+    // -------------------------------------------------------------------------
+
+    #[Test]
+    public function admin_products_page_hides_edit_and_delete_buttons(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $this->createProduct($admin);
+
+        $response = $this->actingAs($admin)->get('/products');
+
+        $response->assertOk();
+        $html = $response->getContent();
+
+        // Admin role flag: adjustment allowed, product management disabled.
+        $this->assertStringContainsString("const canAdjustStock = true;", $html);
+        $this->assertStringContainsString("const canManageProducts = false;", $html);
+
+        // Admin rows must only render the Adjust button.
+        $this->assertStringContainsString(
+            "canManageProducts ? '<button class=\"btn-edit\" onclick=\"openEditModal(' + p.id + ')\">Edit</button>' : ''",
+            $html
+        );
+        $this->assertStringContainsString(
+            "canAdjustStock ? '<button class=\"btn-adjust\" onclick=\"openAdjustModal(' + p.id + ', ' + p.current_stock + ')\">Adjust</button>' : ''",
+            $html
+        );
+        $this->assertStringContainsString(
+            "canManageProducts ? '<button class=\"btn-delete\" onclick=\"deleteProduct(' + p.id + ')\">Delete</button>' : ''",
+            $html
+        );
+    }
+
+    #[Test]
+    public function cashier_products_page_hides_adjust_button(): void
+    {
+        $cashier = User::factory()->create(['role' => 'cashier']);
+        $this->createProduct($cashier);
+
+        $response = $this->actingAs($cashier)->get('/products');
+
+        $response->assertOk();
+        $html = $response->getContent();
+
+        // Cashier role flag: product management allowed, adjustment disabled.
+        $this->assertStringContainsString("const canAdjustStock = false;", $html);
+        $this->assertStringContainsString("const canManageProducts = true;", $html);
+
+        // Cashier rows must only render Edit and Delete buttons.
+        $this->assertStringContainsString(
+            "canManageProducts ? '<button class=\"btn-edit\" onclick=\"openEditModal(' + p.id + ')\">Edit</button>' : ''",
+            $html
+        );
+        $this->assertStringContainsString(
+            "canAdjustStock ? '<button class=\"btn-adjust\" onclick=\"openAdjustModal(' + p.id + ', ' + p.current_stock + ')\">Adjust</button>' : ''",
+            $html
+        );
+        $this->assertStringContainsString(
+            "canManageProducts ? '<button class=\"btn-delete\" onclick=\"deleteProduct(' + p.id + ')\">Delete</button>' : ''",
+            $html
+        );
+    }
+
+    // -------------------------------------------------------------------------
     // SS-86: Successful edit flow refreshes the catalogue table
     // -------------------------------------------------------------------------
 

@@ -317,6 +317,7 @@
 @push('scripts')
     <script>
         const canAdjustStock = {{ Auth::user()->isAdmin() ? 'true' : 'false' }};
+        const canManageProducts = {{ Auth::user()->isCashier() ? 'true' : 'false' }};
         let allProducts = [];
 
         function showLoadingSpinner() {
@@ -374,7 +375,7 @@
                         <td class="stock-cell stock-${s.class}">${p.current_stock}</td>
                         <td>${p.reorder_threshold}</td>
                         <td><span class="stock-badge ${s.class}">${s.label}</span></td>
-                        <td><button class="btn-edit" onclick="openEditModal(${p.id})">Edit</button>${canAdjustStock ? '<button class="btn-adjust" onclick="openAdjustModal(' + p.id + ', ' + p.current_stock + ')">Adjust</button> ' : ''}<button class="btn-delete" onclick="deleteProduct(${p.id})">Delete</button></td>
+                        <td>${canManageProducts ? '<button class="btn-edit" onclick="openEditModal(' + p.id + ')">Edit</button>' : ''}${canAdjustStock ? '<button class="btn-adjust" onclick="openAdjustModal(' + p.id + ', ' + p.current_stock + ')">Adjust</button>' : ''}${canManageProducts ? '<button class="btn-delete" onclick="deleteProduct(' + p.id + ')">Delete</button>' : ''}</td>
                     </tr>`;
                 }).join('');
             }

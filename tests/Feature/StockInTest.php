@@ -61,13 +61,24 @@ class StockInTest extends TestCase
     }
 
     #[Test]
-    public function authenticated_user_can_access_stock_in_page(): void
+    public function admin_can_access_stock_in_page(): void
     {
-        $user = $this->createRegularUser();
+        $user = $this->createAdminUser();
         $response = $this->actingAs($user)->get('/stock-in');
         $response->assertStatus(200);
         $response->assertSee('Stock-In / Receiving');
         $response->assertSee('Receive Stock');
+        $response->assertSee('navStockIn');
+    }
+
+    #[Test]
+    public function cashier_cannot_access_stock_in_page(): void
+    {
+        $user = $this->createRegularUser();
+        $response = $this->actingAs($user)->get('/stock-in');
+        $response->assertStatus(403);
+        $response->assertJsonPath('message', 'Administrator access required.');
+        $response->assertDontSee('navStockIn');
     }
 
     #[Test]
