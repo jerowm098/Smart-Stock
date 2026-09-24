@@ -23,7 +23,6 @@
                     <th>Product</th>
                     <th>SKU</th>
                     <th>Category</th>
-                    <th>Supplier / Sender</th>
                     <th>Current Stock</th>
                     <th>Receiving Unit</th>
                     <th>Latest Received</th>
@@ -31,7 +30,7 @@
                 </tr>
             </thead>
             <tbody id="stockInTableBody">
-                <tr id="stockInLoadingRow"><td colspan="8" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>
+                <tr id="stockInLoadingRow"><td colspan="7" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>
             </tbody>
         </table>
     </div>
@@ -193,11 +192,11 @@
         let allSuppliers = [];
 
         function showLoadingSpinner() {
-            document.getElementById('stockInTableBody').innerHTML = '<tr id="stockInLoadingRow"><td colspan="8" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>';
+            document.getElementById('stockInTableBody').innerHTML = '<tr id="stockInLoadingRow"><td colspan="7" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>';
         }
 
         function showTableError(message) {
-            document.getElementById('stockInTableBody').innerHTML = `<tr><td colspan="8" class="empty-state">${escapeHtml(message)}</td></tr>`;
+            document.getElementById('stockInTableBody').innerHTML = `<tr><td colspan="7" class="empty-state">${escapeHtml(message)}</td></tr>`;
         }
 
         async function loadProducts() {
@@ -229,7 +228,7 @@
         function renderStockInTable(products) {
             const body = document.getElementById('stockInTableBody');
             if (products.length === 0) {
-                body.innerHTML = '<tr><td colspan="8" class="empty-state">No products found</td></tr>';
+                body.innerHTML = '<tr><td colspan="7" class="empty-state">No products found</td></tr>';
             } else {
                 body.innerHTML = products.map(p => {
                     // Determine stock status
@@ -243,11 +242,6 @@
                         stockLabel = 'Low';
                     }
 
-                    // Latest supplier / sender from the most recent stock-in record
-                    const lastSupplier = p.last_supplier_name
-                        ? `<span title="Last supplier">${escapeHtml(p.last_supplier_name)}</span>`
-                        : '<span class="text-muted">—</span>';
-
                     // Latest received timestamp (formatted for display)
                     const lastReceived = p.last_received_at
                         ? `<span title="${escapeHtml(p.last_received_at)}">${formatReceivedDate(p.last_received_at)}</span>`
@@ -257,7 +251,6 @@
                         <td><strong>${escapeHtml(p.name)}</strong></td>
                         <td>${escapeHtml(p.sku)}</td>
                         <td>${escapeHtml(p.category || '—')}</td>
-                        <td>${lastSupplier}</td>
                         <td class="stock-cell stock-${stockClass}">${p.current_stock}</td>
                         <td>${escapeHtml(p.receiving_unit || 'piece')}</td>
                         <td>${lastReceived}</td>
