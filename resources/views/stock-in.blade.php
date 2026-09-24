@@ -103,11 +103,17 @@
         .stock-cell { font-weight: 600; } .stock-ok { color: #4ade80; } .stock-low { color: #fbbf24; } .stock-critical { color: #f87171; }
         .stock-badge { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; }
         .stock-badge.ok { background: rgba(74,222,128,0.12); color: #4ade80; } .stock-badge.low { background: rgba(251,191,36,0.12); color: #fbbf24; } .stock-badge.critical { background: rgba(248,113,113,0.12); color: #f87171; }
-        .btn-edit { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.25); color: #93c5fd; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s; margin-right: 4px; }
-        .btn-edit:hover { background: rgba(59,130,246,0.2); }
-        .btn-delete { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.25); color: #fca5a5; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s; }
-        .btn-adjust { background: rgba(251,191,36,0.1); border: 1px solid rgba(251,191,36,0.25); color: #fcd34d; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s; margin-right: 4px; }
-        .btn-adjust:hover { background: rgba(251,191,36,0.2); }
+        .btn-edit { background: #3b82f6; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s, opacity 0.15s; margin-right: 4px; }
+        .btn-edit:hover { background: #2563eb; }
+        .btn-delete { background: #ef4444; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s, opacity 0.15s; }
+        .btn-adjust { background: #f59e0b; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s, opacity 0.15s; margin-right: 4px; }
+        .btn-adjust:hover { background: #d97706; }
+        body.light-theme .btn-edit { background: #3b82f6; color: #fff; }
+        body.light-theme .btn-delete { background: #ef4444; color: #fff; }
+        body.light-theme .btn-adjust { background: #f59e0b; color: #fff; }
+        body.light-theme .btn-edit:hover { background: #2563eb; }
+        body.light-theme .btn-delete:hover { background: #dc2626; }
+        body.light-theme .btn-adjust:hover { background: #d97706; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
         /* MODAL */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; }
