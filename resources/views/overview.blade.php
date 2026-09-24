@@ -30,7 +30,6 @@
     <!-- RECENT INVENTORY TABLE -->
     <div class="section-header">
         <h2 class="section-title">Recent Inventory List</h2>
-        <a href="{{ route('products') }}" class="section-link">View All Products →</a>
     </div>
     <div class="table-wrapper" id="overviewTable">
         <table>
@@ -79,8 +78,7 @@
         tbody tr:hover { background: rgba(255,255,255,0.02); }
         tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; }
         .stock-cell { font-weight: 600; } .stock-ok { color: #4ade80; } .stock-low { color: #fbbf24; } .stock-critical { color: #f87171; }
-        .stock-badge { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; }
-        .stock-badge.ok { background: rgba(74,222,128,0.12); color: #4ade80; } .stock-badge.low { background: rgba(251,191,36,0.12); color: #fbbf24; } .stock-badge.critical { background: rgba(248,113,113,0.12); color: #f87171; }
+        .status-text { font-size: 13px; font-weight: 500; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
         body.light-theme .page-title { color: #0f172a; }
         body.light-theme .page-subtitle { color: #64748b; }
@@ -162,7 +160,7 @@
                         <td>${escapeHtml(p.category || '—')}</td>
                         <td>₱${parseFloat(p.price).toFixed(2)}</td>
                         <td class="stock-cell stock-${s.class}">${p.current_stock}</td>
-                        <td><span class="stock-badge ${s.class}">${s.label}</span></td>
+                        <td><span class="status-text stock-${s.class}">${s.label}</span></td>
                     </tr>`;
                 }).join('');
             }

@@ -43,9 +43,10 @@
         .header-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-decoration: none; }
         .header-brand:hover .brand-name { color: #cbd5e1; }
         body.light-theme .header-brand:hover .brand-name { color: #334155; }
-        .header-brand .brand-mark { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 10px; object-fit: contain; display: block; }
+        .header-brand .brand-mark { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 10px; object-fit: contain; display: block; background: rgba(255,255,255,0.1); padding: 6px; }
         /* Invert logo on dark theme so it's visible */
         body:not(.light-theme) .brand-mark { filter: brightness(0) invert(1); }
+        body.light-theme .brand-mark { background: rgba(0,0,0,0.06); }
         .header-brand .brand-name { color: #f8fafc; font-size: 18px; font-weight: 700; line-height: 1.2; }
         .header-brand .brand-subtitle { color: #94a3b8; font-size: 11px; line-height: 1.2; }
         .header-right { display: flex; align-items: center; gap: 12px; }
@@ -70,25 +71,48 @@
         .header-alert-wrapper { position: relative; }
         /* ALERT BUTTON - TAB STYLE */
         .header-btn-icon { padding: 8px !important; min-width: 40px; justify-content: center; }
-        .alert-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 340px; max-height: 360px; overflow-y: auto; z-index: 150; display: none; }
+        .alert-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 380px; max-height: 420px; overflow-y: auto; z-index: 150; display: none; box-shadow: 0 16px 48px rgba(0,0,0,0.35); }
         .alert-dropdown.active { display: block; }
-        .alert-dropdown-header { padding: 12px 14px; font-size: 13px; font-weight: 600; color: #f8fafc; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
-        .alert-dropdown-clear { font-size: 11px; color: #64748b; cursor: pointer; font-weight: 500; }
+        .alert-dropdown-header { padding: 14px 16px; font-size: 13px; font-weight: 600; color: #f8fafc; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; }
+        .alert-dropdown-clear { font-size: 11px; color: #64748b; cursor: pointer; font-weight: 500; transition: color 0.15s; }
         .alert-dropdown-clear:hover { color: #f8fafc; }
-        .alert-item { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 8px; }
-        .alert-item:last-child { border-bottom: none; }
-        .alert-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-        .alert-dot.critical { background: #f87171; } .alert-dot.low { background: #fbbf24; }
-        .alert-text { font-size: 12px; color: #cbd5e1; } .alert-text strong { color: #f8fafc; }
-        .alert-empty { padding: 20px; text-align: center; color: #64748b; font-size: 12px; }
-        body.light-theme .alert-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); }
-        body.light-theme .alert-dropdown-header { background: #f8fafc; color: #0f172a; border-bottom-color: rgba(15,23,42,0.1); }
+        .alert-empty { padding: 32px 16px; text-align: center; color: #475569; font-size: 13px; }
+        /* Alert card items */
+        .alert-card { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; gap: 10px; transition: background 0.15s; position: relative; }
+        .alert-card:last-child { border-bottom: none; }
+        .alert-card:hover { background: rgba(255,255,255,0.03); }
+        .alert-card-severity { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+        .alert-card-severity.critical { background: #f87171; box-shadow: 0 0 6px rgba(248,113,113,0.5); }
+        .alert-card-severity.low { background: #fbbf24; box-shadow: 0 0 6px rgba(251,191,36,0.4); }
+        .alert-card-body { flex: 1; min-width: 0; }
+        .alert-card-top-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px; }
+        .alert-card-name { font-size: 13px; font-weight: 600; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .alert-card-sku { font-size: 10px; color: #64748b; font-family: monospace; white-space: nowrap; }
+        .alert-card-stock { font-size: 11px; color: #94a3b8; margin-bottom: 5px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+        .alert-stock-pill { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+        .alert-stock-pill.critical { background: rgba(248,113,113,0.12); color: #f87171; }
+        .alert-stock-pill.low { background: rgba(251,191,36,0.12); color: #fbbf24; }
+        .alert-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .alert-date-tag { font-size: 10px; color: #475569; }
+        .alert-dismiss-btn { position: absolute; top: 8px; right: 8px; background: none; border: none; color: #475569; cursor: pointer; font-size: 14px; line-height: 1; padding: 2px 5px; border-radius: 4px; transition: all 0.15s; }
+        .alert-dismiss-btn:hover { color: #f87171; background: rgba(248,113,113,0.1); }
+        .alert-card { animation: alertSlideIn 0.2s ease; }
+        @keyframes alertSlideIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+        .alert-card.removing { animation: alertSlideOut 0.2s ease forwards; }
+        @keyframes alertSlideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(12px); } }
+        body.light-theme .alert-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); box-shadow: 0 16px 48px rgba(0,0,0,0.1); }
+        body.light-theme .alert-dropdown-header { background: #f8fafc; color: #0f172a; border-bottom-color: rgba(15,23,42,0.08); }
         body.light-theme .alert-dropdown-clear { color: #64748b; }
         body.light-theme .alert-dropdown-clear:hover { color: #0f172a; }
-        body.light-theme .alert-item { border-bottom-color: rgba(15,23,42,0.06); }
-        body.light-theme .alert-text { color: #475569; }
-        body.light-theme .alert-text strong { color: #0f172a; }
-        body.light-theme .alert-empty { color: #64748b; }
+        body.light-theme .alert-empty { color: #94a3b8; }
+        body.light-theme .alert-card { border-bottom-color: rgba(15,23,42,0.06); }
+        body.light-theme .alert-card:hover { background: rgba(15,23,42,0.025); }
+        body.light-theme .alert-card-name { color: #0f172a; }
+        body.light-theme .alert-card-sku { color: #94a3b8; }
+        body.light-theme .alert-card-stock { color: #64748b; }
+        body.light-theme .alert-date-tag { color: #94a3b8; }
+        body.light-theme .alert-dismiss-btn { color: #94a3b8; }
+        body.light-theme .alert-dismiss-btn:hover { color: #ef4444; background: rgba(239,68,68,0.08); }
 
         /* USER DROPDOWN */
         .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 180px; z-index: 150; display: none; overflow: hidden; }
@@ -128,7 +152,7 @@
         body.light-theme .nav-label { color: #94a3b8; }
         body.light-theme .nav-item { color: #64748b; }
         body.light-theme .nav-item:hover { background: rgba(15,23,42,0.05); color: #0f172a; }
-        body.light-theme .nav-item.active { background: rgba(37,99,235,0.1); color: #2563eb; }
+        body.light-theme .nav-item.active { background: rgba(15,23,42,0.08); color: #1e293b; }
         body.light-theme .main { background: #f3f4f6; }
 
         /* MAIN CONTENT AREA - SCROLLABLE */
@@ -292,7 +316,7 @@
                 </button>
                 <div class="alert-dropdown" id="headerAlertDropdown">
                     <div class="alert-dropdown-header">
-                        <span>Notifications</span>
+                        <span>Low Stock Alerts</span>
                         <span class="alert-dropdown-clear" onclick="clearAlerts(event)">Clear all</span>
                     </div>
                     <div id="headerAlertList"></div>
@@ -472,6 +496,9 @@
             }
         });
 
+        // Dismissed alert product IDs (client-side only)
+        let dismissedAlertIds = new Set(JSON.parse(localStorage.getItem('dismissedAlertIds') || '[]'));
+
         async function loadAlerts() {
             try {
                 const res = await fetch('/api/inventory/alerts');
@@ -479,15 +506,102 @@
                 const badge = document.getElementById('headerAlertBadge');
                 badge.textContent = alerts.length;
                 const list = document.getElementById('headerAlertList');
-                if (alerts.length === 0) { list.innerHTML = '<div class="alert-empty" style="padding:20px;">No low-stock items</div>'; }
-                else { list.innerHTML = alerts.map(a => `<div class="alert-item"><span class="alert-dot ${a.current_stock <= 5 ? 'critical' : 'low'}"></span><span class="alert-text"><strong>${escapeHtml(a.name)}</strong> — ${a.current_stock} left (threshold: ${a.reorder_threshold})</span></div>`).join(''); }
+                if (alerts.length === 0) {
+                    list.innerHTML = '<div class="alert-empty">No low-stock items</div>';
+                    return;
+                }
+                list.innerHTML = alerts.map(a => {
+                    const severity = a.current_stock <= 5 ? 'critical' : 'low';
+                    const sku = escapeHtml(a.sku || '—');
+                    const name = escapeHtml(a.name);
+                    const stockLeft = a.current_stock;
+                    const threshold = a.reorder_threshold;
+                    const lastDate = getLastActivityDate(a);
+                    return `<div class="alert-card" id="alert-card-${a.id}">
+                        <div class="alert-card-severity ${severity}"></div>
+                        <div class="alert-card-body">
+                            <div class="alert-card-top-row">
+                                <span class="alert-card-name">${name}</span>
+                                <span class="alert-card-sku">${sku}</span>
+                            </div>
+                            <div class="alert-card-stock">
+                                <span class="alert-stock-pill ${severity}">${stockLeft} left</span>
+                                <span>threshold: ${threshold}</span>
+                            </div>
+                            <div class="alert-card-meta">
+                                <span class="alert-date-tag">${lastDate}</span>
+                            </div>
+                        </div>
+                        <button class="alert-dismiss-btn" onclick="dismissAlert(${a.id}, event)" title="Dismiss">×</button>
+                    </div>`;
+                }).join('');
             } catch (e) { console.error(e); }
+        }
+
+        function getLastActivityDate(alert) {
+            // Prefer last_received_at from stock_ins, fall back to last_adjusted_at, then updated_at
+            const dateStr = alert.last_received_at || alert.last_adjusted_at || alert.updated_at;
+            if (!dateStr) return 'Never';
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return formatRelativeDate(dateStr);
+            return formatDateShort(d);
+        }
+
+        function formatDateShort(d) {
+            const now = new Date();
+            const diffMs = now - d;
+            const diffDay = Math.floor(diffMs / 86400000);
+            if (diffDay === 0) return 'Today';
+            if (diffDay === 1) return 'Yesterday';
+            if (diffDay < 7) return diffDay + ' days ago';
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function formatRelativeDate(isoStr) {
+            const d = new Date(isoStr);
+            if (isNaN(d.getTime())) return isoStr;
+            const now = new Date();
+            const diffMs = now - d;
+            const diffMin = Math.floor(diffMs / 60000);
+            const diffHr = Math.floor(diffMs / 3600000);
+            const diffDay = Math.floor(diffMs / 86400000);
+            if (diffMin < 1) return 'Just now';
+            if (diffMin < 60) return diffMin + ' min ago';
+            if (diffHr < 24) return diffHr + ' hr ago';
+            if (diffDay < 7) return diffDay + ' day ago';
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        }
+
+        function dismissAlert(productId, event) {
+            event.stopPropagation();
+            const card = document.getElementById('alert-card-' + productId);
+            if (card) {
+                card.classList.add('removing');
+                setTimeout(() => {
+                    card.remove();
+                    dismissedAlertIds.add(productId);
+                    try { localStorage.setItem('dismissedAlertIds', JSON.stringify([...dismissedAlertIds])); } catch(e) {}
+                    // Recount visible alerts after dismiss
+                    updateBadgeCount();
+                }, 200);
+            }
+        }
+
+        function updateBadgeCount() {
+            // Count currently visible alert cards
+            const count = document.querySelectorAll('.alert-card:not(.removing)').length;
+            document.getElementById('headerAlertBadge').textContent = count;
+            if (count === 0) {
+                document.getElementById('headerAlertList').innerHTML = '<div class="alert-empty">All caught up!</div>';
+            }
         }
 
         function clearAlerts(e) {
             e.stopPropagation();
             document.getElementById('headerAlertBadge').textContent = '0';
-            document.getElementById('headerAlertList').innerHTML = '<div class="alert-empty" style="padding:20px;">No notifications</div>';
+            document.getElementById('headerAlertList').innerHTML = '<div class="alert-empty">All caught up!</div>';
+            dismissedAlertIds.clear();
+            try { localStorage.removeItem('dismissedAlertIds'); } catch(e) {}
         }
 
         function escapeHtml(str) { if (!str) return ''; const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }

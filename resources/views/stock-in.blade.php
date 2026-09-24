@@ -106,17 +106,16 @@
         .stock-cell { font-weight: 600; } .stock-ok { color: #4ade80; } .stock-low { color: #fbbf24; } .stock-critical { color: #f87171; }
         .stock-badge { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; }
         .stock-badge.ok { background: rgba(74,222,128,0.12); color: #4ade80; } .stock-badge.low { background: rgba(251,191,36,0.12); color: #fbbf24; } .stock-badge.critical { background: rgba(248,113,113,0.12); color: #f87171; }
-        .btn-edit { background: #3b82f6; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s, opacity 0.15s; margin-right: 4px; }
-        .btn-edit:hover { background: #2563eb; }
-        .btn-delete { background: #ef4444; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s, opacity 0.15s; }
-        .btn-adjust { background: #f59e0b; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s, opacity 0.15s; margin-right: 4px; }
-        .btn-adjust:hover { background: #d97706; }
-        body.light-theme .btn-edit { background: #3b82f6; color: #fff; }
-        body.light-theme .btn-delete { background: #ef4444; color: #fff; }
-        body.light-theme .btn-adjust { background: #f59e0b; color: #fff; }
-        body.light-theme .btn-edit:hover { background: #2563eb; }
-        body.light-theme .btn-delete:hover { background: #dc2626; }
-        body.light-theme .btn-adjust:hover { background: #d97706; }
+        .action-link { background: none; border: 1px solid transparent; padding: 4px 10px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; color: #60a5fa; text-decoration: none; transition: all 0.15s; margin-right: 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; }
+        .action-link:last-child { margin-right: 0; }
+        .action-link:hover { border-color: rgba(96,165,250,0.4); background: rgba(96,165,250,0.08); color: #93c5fd; }
+        .action-link svg { width: 13px; height: 13px; flex-shrink: 0; }
+        .action-link.danger { color: #f87171; }
+        .action-link.danger:hover { border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.08); color: #fca5a5; }
+        body.light-theme .action-link { color: #1e293b; }
+        body.light-theme .action-link:hover { border-color: rgba(37,99,235,0.3); background: rgba(37,99,235,0.06); color: #1d4ed8; }
+        body.light-theme .action-link.danger { color: #dc2626; }
+        body.light-theme .action-link.danger:hover { border-color: rgba(220,38,38,0.3); background: rgba(220,38,38,0.06); color: #b91c1c; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
         /* MODAL */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; }
@@ -278,7 +277,7 @@
                         <td>${escapeHtml(p.receiving_unit || 'piece')}</td>
                         <td>${lastReceived}</td>
                         <td>
-                            ${canReceiveStock ? '<button class="btn-edit" onclick="openReceiveModalForProduct(' + p.id + ')">Receive</button>' : ''}
+                            ${canReceiveStock ? '<button class="action-link" onclick="openReceiveModalForProduct(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>Receive</button>' : ''}
                         </td>
                     </tr>`;
                 }).join('');

@@ -280,6 +280,22 @@ class InventoryController extends Controller
 
         $lowStockProducts = Product::ownedBy($user->id)
             ->whereColumn('current_stock', '<=', 'reorder_threshold')
+            ->addSelect([
+                'last_received_at' => function ($query) {
+                    $query->select('stock_ins.created_at')
+                        ->from('stock_ins')
+                        ->whereColumn('stock_ins.product_id', 'products.id')
+                        ->orderByDesc('stock_ins.created_at')
+                        ->limit(1);
+                },
+                'last_adjusted_at' => function ($query) {
+                    $query->select('stock_adjustments.created_at')
+                        ->from('stock_adjustments')
+                        ->whereColumn('stock_adjustments.product_id', 'products.id')
+                        ->orderByDesc('stock_adjustments.created_at')
+                        ->limit(1);
+                }
+            ])
             ->get();
 
         return response()->json($lowStockProducts);

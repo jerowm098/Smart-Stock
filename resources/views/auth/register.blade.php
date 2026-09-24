@@ -68,8 +68,11 @@
             border-radius: 12px;
             object-fit: contain;
             display: block;
+            background: rgba(255,255,255,0.1);
+            padding: 8px;
         }
         body:not(.light-theme) .brand-mark { filter: brightness(0) invert(1); }
+        body.light-theme .brand-mark { background: rgba(0,0,0,0.06); }
         .brand .brand-text { text-align: left; }
         .brand .brand-name {
             color: #f8fafc;
