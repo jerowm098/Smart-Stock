@@ -42,7 +42,9 @@
                     </div>
                 </div>
                 <div class="cart-footer">
-                    <button type="button" class="btn btn-submit" onclick="clearCart()">Clear Cart</button>
+                    <button type="button" class="action-link action-link-lg" onclick="clearCart()">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>Clear Cart
+                    </button>
                 </div>
             </div>
 
@@ -77,7 +79,9 @@
                             <span>Change</span>
                             <span id="summaryChange" class="change-amount">₱0.00</span>
                         </div>
-                        <button type="submit" class="btn btn-submit" id="checkoutBtn">Process Payment</button>
+                        <button type="submit" class="action-link action-link-lg" id="checkoutBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>Process Payment
+                        </button>
                     </form>
                     <div class="checkout-message" id="checkoutMessage"></div>
                 </div>
@@ -162,6 +166,17 @@
     .pos-product-stock.low { color: #fbbf24; }
     .pos-product-stock.critical { color: #f87171; }
     .pos-product-stock.ok { color: #4ade80; }
+    .action-link { background: none; border: 1px solid transparent; padding: 6px 14px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; color: #60a5fa; text-decoration: none; transition: all 0.15s; margin-right: 10px; margin-left: 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 6px; }
+    .action-link-lg { padding: 10px 16px; font-size: 14px; border-radius: 8px; width: 100%; justify-content: center; }
+    .action-link:last-child { margin-right: 0; }
+    .action-link:hover { border-color: rgba(96,165,250,0.4); background: rgba(96,165,250,0.08); color: #93c5fd; }
+    .action-link svg { width: 13px; height: 13px; flex-shrink: 0; }
+    .action-link.danger { color: #f87171; }
+    .action-link.danger:hover { border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.08); color: #fca5a5; }
+    body.light-theme .action-link { color: #1e293b; }
+    body.light-theme .action-link:hover { border-color: rgba(37,99,235,0.3); background: rgba(37,99,235,0.06); color: #1d4ed8; }
+    body.light-theme .action-link.danger { color: #dc2626; }
+    body.light-theme .action-link.danger:hover { border-color: rgba(220,38,38,0.3); background: rgba(220,38,38,0.06); color: #b91c1c; }
     .pos-add-btn {
         background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none;
         border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600;
@@ -234,6 +249,7 @@
     }
     .btn-submit:hover { opacity: 0.9; }
     .btn-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+    body.light-theme .btn-submit { background: linear-gradient(135deg, #3b82f6, #2563eb); }
     .btn-cancel {
         background: rgba(255,255,255,0.1); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.12);
         border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 500;
@@ -413,8 +429,8 @@
                         </div>
                     </div>
                     <div class="pos-product-price">₱${parseFloat(p.price).toFixed(2)}</div>
-                    <button type="button" class="pos-add-btn" onclick="addToCart(${p.id})" ${disabled ? 'disabled' : ''}>
-                        ${isInCart ? 'Added' : 'Add'}
+                    <button type="button" class="action-link" onclick="addToCart(${p.id})" ${disabled ? 'disabled style="opacity:0.4;cursor:not-allowed"' : ''}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add
                     </button>
                 </div>
             `;
@@ -628,8 +644,8 @@
                     </div>
                 </div>
                 <div class="pos-modal-footer">
-                    <button type="button" class="btn btn-cancel" data-action="cancel">Cancel</button>
-                    <button type="button" class="btn btn-submit" data-action="confirm">Confirm</button>
+                    <button type="button" class="action-link" data-action="cancel">Cancel</button>
+                    <button type="button" class="action-link" data-action="confirm">Confirm</button>
                 </div>
             </div>
         `;

@@ -223,20 +223,17 @@
         tbody tr:hover { background: rgba(255,255,255,0.02); }
         tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; }
         .stock-cell { font-weight: 600; } .stock-ok { color: #4ade80; } .stock-low { color: #fbbf24; } .stock-critical { color: #f87171; }
-        .stock-badge { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; }
-        .stock-badge.ok { background: rgba(74,222,128,0.12); color: #4ade80; } .stock-badge.low { background: rgba(251,191,36,0.12); color: #fbbf24; } .stock-badge.critical { background: rgba(248,113,113,0.12); color: #f87171; }
-        .btn-edit { background: #3b82f6; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s, opacity 0.15s; margin-right: 4px; }
-        .btn-edit:hover { background: #2563eb; }
-        .btn-delete { background: #ef4444; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s, opacity 0.15s; }
-        .btn-delete:hover { background: #dc2626; }
-        .btn-adjust { background: #f59e0b; color: #fff; border: none; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-family: 'Inter', sans-serif; transition: background 0.15s, opacity 0.15s; margin-right: 4px; }
-        .btn-adjust:hover { background: #d97706; }
-        body.light-theme .btn-edit { background: #3b82f6; color: #fff; }
-        body.light-theme .btn-delete { background: #ef4444; color: #fff; }
-        body.light-theme .btn-adjust { background: #f59e0b; color: #fff; }
-        body.light-theme .btn-edit:hover { background: #2563eb; }
-        body.light-theme .btn-delete:hover { background: #dc2626; }
-        body.light-theme .btn-adjust:hover { background: #d97706; }
+        .status-text { font-size: 13px; font-weight: 500; }
+        .action-link { background: none; border: 1px solid transparent; padding: 4px 10px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; color: #60a5fa; text-decoration: none; transition: all 0.15s; margin-right: 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; }
+        .action-link:last-child { margin-right: 0; }
+        .action-link:hover { border-color: rgba(96,165,250,0.4); background: rgba(96,165,250,0.08); color: #93c5fd; }
+        .action-link svg { width: 13px; height: 13px; flex-shrink: 0; }
+        .action-link.danger { color: #f87171; }
+        .action-link.danger:hover { border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.08); color: #fca5a5; }
+        body.light-theme .action-link { color: #1e293b; }
+        body.light-theme .action-link:hover { border-color: rgba(37,99,235,0.3); background: rgba(37,99,235,0.06); color: #1d4ed8; }
+        body.light-theme .action-link.danger { color: #dc2626; }
+        body.light-theme .action-link.danger:hover { border-color: rgba(220,38,38,0.3); background: rgba(220,38,38,0.06); color: #b91c1c; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
         /* MODAL */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; }
@@ -374,8 +371,8 @@
                         <td>₱${parseFloat(p.price).toFixed(2)}</td>
                         <td class="stock-cell stock-${s.class}">${p.current_stock}</td>
                         <td>${p.reorder_threshold}</td>
-                        <td><span class="stock-badge ${s.class}">${s.label}</span></td>
-                        <td>${canManageProducts ? '<button class="btn-edit" onclick="openEditModal(' + p.id + ')">Edit</button>' : ''}${canAdjustStock ? '<button class="btn-adjust" onclick="openAdjustModal(' + p.id + ', ' + p.current_stock + ')">Adjust</button>' : ''}${canManageProducts ? '<button class="btn-delete" onclick="deleteProduct(' + p.id + ')">Delete</button>' : ''}</td>
+                        <td><span class="status-text stock-${s.class}">${s.label}</span></td>
+                        <td>${canManageProducts ? '<button class="action-link" onclick="openEditModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Edit</button>' : ''}${canAdjustStock ? '<button class="action-link" onclick="openAdjustModal(' + p.id + ', ' + p.current_stock + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Adjust</button>' : ''}${canManageProducts ? '<button class="action-link danger" onclick="deleteProduct(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>Delete</button>' : ''}</td>
                     </tr>`;
                 }).join('');
             }

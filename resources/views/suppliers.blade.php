@@ -77,8 +77,8 @@
         tbody tr { border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
         tbody tr:hover { background: rgba(255,255,255,0.02); }
         tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; }
-        .stock-badge { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; }
-        .stock-badge.ok { background: rgba(74,222,128,0.12); color: #4ade80; }
+        .status-text { font-size: 13px; font-weight: 500; }
+        .status-text.stock-ok { color: #4ade80; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
         .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
@@ -166,7 +166,7 @@
                         <td>${escapeHtml(s.contact_person || '—')}</td>
                         <td>${escapeHtml(s.phone || '—')}</td>
                         <td>${escapeHtml(s.email || '—')}</td>
-                        <td><span class="stock-badge ok">Active</span></td>
+                        <td><span class="status-text stock-ok">Active</span></td>
                     </tr>
                 `).join('');
             }
