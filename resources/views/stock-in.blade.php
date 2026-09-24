@@ -39,7 +39,7 @@
     <div class="modal-overlay" id="receiveModal">
         <div class="modal">
             <h2>Receive Stock</h2>
-            <form onsubmit="handleReceiveStock(event)" autocomplete="off">
+            <form onsubmit="handleReceiveStock(event)" autocomplete="off" class="receive-form-grid">
                 <div class="form-group">
                     <label>Product *</label>
                     <select name="product_id" id="rProductId" required>
@@ -53,6 +53,9 @@
                 <div class="form-group">
                     <label>Receiving Unit</label>
                     <div class="form-static" id="rReceivingUnit">—</div>
+                </div>
+                <div class="form-group">
+                    <label>Pieces per Unit</label>
                     <div class="form-static" id="rPiecesPerUnit">—</div>
                 </div>
                 <div class="form-group">
@@ -62,6 +65,10 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Effective Piece Delta (auto-calculated)</label>
+                    <div class="form-static" id="rPieceDelta">0</div>
+                </div>
+                <div class="form-group">
                     <label>Quantity Received *</label>
                     <input type="number" name="quantity_received" id="rQuantity" placeholder="e.g. 5" min="1" required>
                 </div>
@@ -69,13 +76,9 @@
                     <label>Unit of Measure *</label>
                     <input type="text" name="unit_of_measure" id="rUnitMeasure" placeholder="e.g. box, bag, roll, piece" required>
                 </div>
-                <div class="form-group">
-                    <label>Effective Piece Delta (auto-calculated)</label>
-                    <div class="form-static" id="rPieceDelta">0</div>
-                </div>
-                <div class="form-group">
+                <div class="form-group full-width">
                     <label>Note / Reference</label>
-                    <textarea name="note" id="rNote" rows="3" maxlength="255" placeholder="e.g. PO #1234, received from warehouse"></textarea>
+                    <textarea name="note" id="rNote" rows="2" maxlength="255" placeholder="e.g. PO #1234, received from warehouse"></textarea>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-cancel" onclick="closeReceiveModal()">Cancel</button>
@@ -118,22 +121,26 @@
         /* MODAL */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; }
         .modal-overlay.active { display: flex; }
-        .modal { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 28px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.4); }
+        .modal { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 28px; width: 100%; max-width: 520px; box-shadow: 0 25px 50px rgba(0,0,0,0.4); }
         .modal h2 { color: #f8fafc; font-size: 18px; font-weight: 700; margin-bottom: 20px; }
-        .modal .form-group { margin-bottom: 14px; }
-        .modal .form-group label { display: block; color: #cbd5e1; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
-        .modal .form-group input { width: 100%; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; }
-        .modal .form-group input:focus { border-color: #3b82f6; } .modal .form-group input::placeholder { color: #64748b; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+        #receiveModal .modal .form-group { margin-bottom: 14px; }
+        /* RECEIVE FORM GRID */
+        .receive-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+        .receive-form-grid .form-group.full-width { grid-column: 1 / -1; }
+        #receiveModal .modal .form-group label { display: block; color: #cbd5e1; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+        #receiveModal .modal .form-group input { width: 100%; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+        #receiveModal .modal .form-group input:focus { border-color: #3b82f6; }
+        #receiveModal .modal .form-group input::placeholder { color: #64748b; }
+        #receiveModal .modal .form-group select { width: 100%; padding: 9px 32px 9px 12px; background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 12px; box-sizing: border-box; }
+        #receiveModal .modal .form-group select:focus { border-color: #3b82f6; }
+        #receiveModal .modal .form-group select option { background: #1e293b; color: #e2e8f0; }
+        #receiveModal .modal .form-group textarea { width: 100%; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; resize: vertical; box-sizing: border-box; }
+        #receiveModal .modal .form-group textarea:focus { border-color: #3b82f6; }
+        #receiveModal .modal .form-group textarea::placeholder { color: #64748b; }
+        #receiveModal .modal .form-group .form-static { color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; box-sizing: border-box; }
+        #receiveModal .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
         .modal-actions .btn { padding: 9px 18px; border: none; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: opacity 0.15s; }
         .modal-actions .btn:hover { opacity: 0.9; } .btn-cancel { background: rgba(255,255,255,0.1); color: #e2e8f0; } .btn-submit { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
-        .modal select { width: 100%; padding: 9px 32px 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 12px; }
-        .modal select:focus { border-color: #3b82f6; }
-        .modal select option { background: #1e293b; color: #e2e8f0; }
-        .modal textarea { width: 100%; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; resize: vertical; }
-        .modal textarea:focus { border-color: #3b82f6; }
-        .modal textarea::placeholder { color: #64748b; }
-        .modal .form-static { color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; }
         .form-hint { color: #475569; font-size: 11px; margin-top: 4px; display: block; }
         /* LIGHT THEME */
         body.light-theme .page-title { color: #0f172a; }
@@ -169,7 +176,16 @@
         body.light-theme .modal h2 { color: #0f172a; }
         body.light-theme .modal .form-group label { color: #475569; }
         body.light-theme .modal .form-group input { background: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a; }
+        body.light-theme #receiveModal .modal .form-group label { color: #475569; }
+        body.light-theme #receiveModal .modal .form-group input { background-color: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a; }
+        body.light-theme #receiveModal .modal .form-group input::placeholder { color: #94a3b8; }
+        body.light-theme #receiveModal .modal .form-group select { background-color: #ffffff; border-color: rgba(15,23,42,0.14); color: #0f172a; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 12px; }
+        body.light-theme #receiveModal .modal .form-group select option { background: #ffffff; color: #0f172a; }
+        body.light-theme #receiveModal .modal .form-group textarea { background-color: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a; }
+        body.light-theme #receiveModal .modal .form-group textarea::placeholder { color: #94a3b8; }
+        body.light-theme #receiveModal .modal .form-group .form-static { background-color: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a; }
         body.light-theme .modal-actions .btn-cancel { background: #e2e8f0; color: #334155; }
+        body.light-theme .modal-actions .btn-submit { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
         /* MOBILE */
         @media (max-width: 640px) {
             .page-title { font-size: 20px; }
@@ -182,9 +198,10 @@
             table { min-width: 600px; }
             thead th, tbody td { padding: 10px 10px; font-size: 12px; }
             .empty-state { padding: 32px 16px; font-size: 13px; }
-            .modal { width: calc(100vw - 24px); padding: 20px; max-height: 95vh; }
+            .modal { width: calc(100vw - 24px); padding: 20px; }
             .modal h2 { font-size: 16px; }
             .modal .form-group input { padding: 10px 12px; font-size: 14px; }
+            .receive-form-grid { grid-template-columns: 1fr; gap: 14px; }
             .modal-actions { flex-direction: column; gap: 8px; }
             .modal-actions .btn { width: 100%; text-align: center; }
         }

@@ -293,6 +293,38 @@
         body.light-theme .modal .form-group label { color: #475569; }
         body.light-theme .modal .form-group input { background: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a; }
         body.light-theme .modal-actions .btn-cancel { background: #e2e8f0; color: #334155; }
+
+        /* STOCK ADJUSTMENT MODAL - LIGHT THEME */
+        body.light-theme #adjustModal .modal { background: #ffffff; border-color: rgba(15,23,42,0.1); }
+        body.light-theme #adjustModal .modal h2 { color: #0f172a; }
+        body.light-theme #adjustModal .modal .form-group label { color: #475569; }
+        body.light-theme #adjustModal .modal .form-static {
+            color: #0f172a;
+            background: #f8fafc;
+            border-color: rgba(15,23,42,0.14);
+        }
+        body.light-theme #adjustModal .modal .form-group input {
+            background: #f8fafc;
+            border-color: rgba(15,23,42,0.14);
+            color: #0f172a;
+        }
+        body.light-theme #adjustModal .modal .form-group input::placeholder { color: #94a3b8; }
+        body.light-theme #adjustModal .modal select {
+            background-color: #ffffff;
+            border-color: rgba(15,23,42,0.14);
+            color: #0f172a;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        }
+        body.light-theme #adjustModal .modal select:focus { border-color: #2563eb; }
+        body.light-theme #adjustModal .modal select option { background: #ffffff; color: #0f172a; }
+        body.light-theme #adjustModal .modal textarea {
+            background: #f8fafc;
+            border-color: rgba(15,23,42,0.14);
+            color: #0f172a;
+        }
+        body.light-theme #adjustModal .modal textarea::placeholder { color: #94a3b8; }
+        body.light-theme #adjustModal .modal .form-hint { color: #64748b; }
+        body.light-theme #adjustModal .modal .btn-cancel { background: #e2e8f0; color: #334155; }
         /* MOBILE */
         @media (max-width: 640px) {
             .page-title { font-size: 20px; }
