@@ -55,6 +55,27 @@ class SupplierController extends Controller
     }
 
     /**
+     * Soft-delete (deactivate) a supplier.
+     */
+    public function destroy(int $id): JsonResponse
+    {
+        $user = $this->currentUser();
+        if (! $user) {
+            return response()->json(['message' => 'Authentication required.'], 401);
+        }
+
+        $supplier = Supplier::find($id);
+
+        if (! $supplier) {
+            return response()->json(['message' => 'Supplier not found.'], 404);
+        }
+
+        $supplier->update(['is_active' => false]);
+
+        return response()->json(['message' => 'Supplier deleted successfully.']);
+    }
+
+    /**
      * Resolve the authenticated user used for ownership checks.
      */
     protected function currentUser(): ?\App\Models\User

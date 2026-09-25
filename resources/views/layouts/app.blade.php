@@ -12,7 +12,7 @@
         body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 
         /* SIDEBAR */
-        .sidebar { width: 240px; min-height: calc(100vh - 60px); background: #253347; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; position: fixed; top: 60px; left: 0; bottom: 0; z-index: 90; }
+        .sidebar { width: 240px; min-height: calc(100vh - 64px); background: #253347; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; position: fixed; top: 64px; left: 0; bottom: 0; z-index: 90; }
         .sidebar-nav { flex: 1; padding: 12px; overflow-y: auto; }
         .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; padding: 12px 12px 6px; font-weight: 600; }
         .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; margin-bottom: 6px; }
@@ -39,7 +39,19 @@
         .mobile-menu-open { overflow: auto; }
 
         /* TOP HEADER - FIXED */
-        .top-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 40px; background: #253347; border-bottom: 1px solid rgba(255,255,255,0.08); position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 60px; }
+        .top-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 40px; background: #253347; border-bottom: 1px solid rgba(255,255,255,0.08); position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 64px; }
+        .header-center { display: flex; align-items: center; gap: 4px; margin-left: 12px; }
+        .header-center-btn {
+            display: inline-flex; align-items: center; padding: 0 16px; height: 36px; border-radius: 8px;
+            border: none; color: #1e293b; font-size: 14px; font-weight: 500;
+            text-decoration: none; transition: color 0.15s; background: none; cursor: pointer;
+            font-family: 'Inter', sans-serif;
+        }
+        .header-center-btn:hover { color: #0f172a; }
+        .header-center-btn.active { color: #94a3b8; }
+        body.light-theme .header-center-btn { color: #1e293b; }
+        body.light-theme .header-center-btn:hover { color: #0f172a; }
+        body.light-theme .header-center-btn.active { color: #94a3b8; }
         .header-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-decoration: none; }
         .header-brand:hover .brand-name { color: #cbd5e1; }
         body.light-theme .header-brand:hover .brand-name { color: #334155; }
@@ -158,7 +170,7 @@
         /* MAIN CONTENT AREA - SCROLLABLE */
         .main {
             position: fixed;
-            top: 60px;
+            top: 64px;
             left: 240px;
             right: 0;
             bottom: 0;
@@ -179,7 +191,7 @@
         body.light-theme .main::-webkit-scrollbar-thumb:active { background: #707070; }
         .content {
             padding: 32px;
-            min-height: calc(100vh - 60px);
+            min-height: calc(100vh - 64px);
         }
 
 
@@ -210,6 +222,7 @@
                 z-index: 110;
             }
             .header-left { display: flex; align-items: center; gap: 6px; }
+            .header-center { display: none; }
             .header-right { gap: 6px; margin-left: auto; }
             .header-btn { padding: 6px 8px; }
             .alert-dropdown { width: min(280px, calc(100vw - 24px)); }
@@ -294,6 +307,10 @@
             <button type="button" class="mobile-menu-button" id="mobileMenuButton" onclick="toggleMobileMenu(event)" aria-label="Open navigation menu" aria-controls="mobileNavigation" aria-expanded="false">
                 <span class="mobile-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
             </button>
+        </div>
+        <div class="header-center" id="headerNav">
+            <a href="{{ route('home') }}" class="header-center-btn {{ request()->routeIs('home') ? 'active' : '' }}">Home</a>
+            <a href="{{ route('dashboard') }}" class="header-center-btn {{ !request()->routeIs('home') ? 'active' : '' }}">Dashboard</a>
         </div>
         <div class="header-right">
             <button type="button" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme" class="header-btn">

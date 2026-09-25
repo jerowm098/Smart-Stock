@@ -61,8 +61,8 @@ Homestead.json
 Homestead.yaml
 auth.json
 
-# PDFs
 *.pdf
-
-# Plans folder
 plans/
+tmp_extract.py
+tmp_frames/
+*.mp4

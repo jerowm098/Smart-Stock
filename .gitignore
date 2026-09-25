@@ -23,8 +23,8 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
-# PDFs
 *.pdf
-
-# Plans folder
 plans/
+tmp_extract.py
+tmp_frames/
+*.mp4

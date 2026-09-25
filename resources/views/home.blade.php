@@ -32,6 +32,7 @@
             backdrop-filter: blur(12px);
             border-bottom: 1px solid rgba(255,255,255,0.08);
         }
+        .header-left { display: flex; align-items: center; gap: 0; }
         body.light-theme .site-header {
             background: rgba(255,255,255,0.9);
             border-bottom-color: rgba(15,23,42,0.08);
@@ -60,6 +61,20 @@
         body.light-theme .header-brand-sub  { color: #64748b; }
 
         .header-right { display: flex; align-items: center; gap: 12px; }
+
+        /* ── NAV BAR ─────────────────────────────────────────────── */
+        .header-center { display: flex; align-items: center; gap: 4px; margin-left: 12px; }
+        .header-center-btn {
+            display: inline-flex; align-items: center; padding: 0 16px; height: 36px; border-radius: 8px;
+            border: none; color: #1e293b; font-size: 14px; font-weight: 500;
+            text-decoration: none; transition: color 0.15s; background: none; cursor: pointer;
+            font-family: 'Inter', sans-serif;
+        }
+        .header-center-btn:hover { color: #0f172a; }
+        .header-center-btn.active { color: #94a3b8; }
+        body.light-theme .header-center-btn { color: #1e293b; }
+        body.light-theme .header-center-btn:hover { color: #0f172a; }
+        body.light-theme .header-center-btn.active { color: #94a3b8; }
 
         /* Theme toggle - matches dashboard header-btn style */
         .header-btn { cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 14px; font-weight: 500; transition: background 0.15s; user-select: none; background: none; min-height: 40px; }
@@ -225,55 +240,96 @@
         /* ── HERO ────────────────────────────────────────────────── */
         .hero {
             display: flex;
-            flex: 1;
-            flex-direction: column;
             align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 72px 24px;
+            justify-content: space-between;
+            gap: 170px;
+            padding: 80px 40px 64px;
+            max-width: 1100px;
+            margin: 0 auto;
+            position: relative;
         }
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 5px 14px;
-            border-radius: 20px;
-            background: rgba(59,130,246,0.12);
-            border: 1px solid rgba(59,130,246,0.25);
-            color: #93c5fd;
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100vw;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .hero-bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            border: 1.5px solid rgba(96,165,250,0.35);
+            background: rgba(96,165,250,0.08);
+            animation: heroFloat 6s ease-in-out infinite;
+        }
+        .hero-bg-circle:nth-child(1) { width: 340px; height: 340px; top: -80px; right: -60px; animation-delay: 0s; border-color: rgba(96,165,250,0.4); background: rgba(96,165,250,0.1); }
+        .hero-bg-circle:nth-child(2) { width: 240px; height: 240px; bottom: -50px; left: -40px; animation-delay: 2s; border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.08); }
+        .hero-bg-circle:nth-child(3) { width: 180px; height: 180px; top: 15%; right: 28%; animation-delay: 4s; border-color: rgba(147,197,253,0.25); background: rgba(147,197,253,0.06); }
+        body.light-theme .hero-bg-circle { border-color: rgba(37,99,235,0.2); background: rgba(37,99,235,0.06); }
+        @keyframes heroFloat {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-14px) scale(1.04); }
+        }
+        .hero-bg-dots {
+            position: absolute;
+            inset: 0;
+            background-image: radial-gradient(circle, rgba(96,165,250,0.3) 1.2px, transparent 1.2px);
+            background-size: 24px 24px;
+        }
+        body.light-theme .hero-bg-dots { background-image: radial-gradient(circle, rgba(37,99,235,0.15) 1.2px, transparent 1.2px); }
+        /* Horizontal line accent */
+        .hero-bg::after {
+            content: '';
+            position: absolute;
+            top: 40%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent 5%, rgba(96,165,250,0.35) 30%, rgba(96,165,250,0.35) 70%, transparent 95%);
+        }
+        body.light-theme .hero-bg::after { background: linear-gradient(90deg, transparent 5%, rgba(37,99,235,0.2) 30%, rgba(37,99,235,0.2) 70%, transparent 95%); }
+        .hero-left { flex: 1; min-width: 0; position: relative; z-index: 1; }
+        .hero-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
             font-size: 12px;
             font-weight: 600;
-            letter-spacing: 0.3px;
-            margin-bottom: 24px;
-        }
-        body.light-theme .hero-badge { background: rgba(37,99,235,0.07); border-color: rgba(37,99,235,0.2); color: #2563eb; }
-        .hero-title {
-            font-size: 52px;
-            font-weight: 800;
-            line-height: 1.1;
-            color: #f8fafc;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
             margin-bottom: 20px;
-            max-width: 700px;
+            background: rgba(255,255,255,0.06);
+            color: #94a3b8;
         }
-        .hero-title span { color: #60a5fa; }
+        body.light-theme .hero-tag { background: rgba(0,0,0,0.04); color: #64748b; }
+        .hero-title {
+            font-size: 42px;
+            font-weight: 700;
+            line-height: 1.15;
+            color: #f8fafc;
+            margin-bottom: 16px;
+        }
         body.light-theme .hero-title { color: #0f172a; }
-        body.light-theme .hero-title span { color: #2563eb; }
         .hero-desc {
-            font-size: 17px;
+            font-size: 16px;
             color: #94a3b8;
             line-height: 1.7;
-            max-width: 580px;
-            margin-bottom: 36px;
+            margin-bottom: 32px;
+            max-width: 480px;
         }
         body.light-theme .hero-desc { color: #64748b; }
-        .hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
+        .hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
         .btn-primary {
             display: inline-flex; align-items: center; gap: 8px;
-            padding: 13px 28px;
-            border-radius: 10px;
+            padding: 12px 24px;
+            border-radius: 8px;
             background: linear-gradient(135deg, #3b82f6, #2563eb);
             color: #fff;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
             text-decoration: none;
             transition: opacity 0.15s, transform 0.1s;
@@ -281,11 +337,11 @@
         .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
         .btn-secondary {
             display: inline-flex; align-items: center; gap: 8px;
-            padding: 13px 28px;
-            border-radius: 10px;
+            padding: 12px 24px;
+            border-radius: 8px;
             border: 1px solid rgba(255,255,255,0.12);
             color: #cbd5e1;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 600;
             text-decoration: none;
             background: transparent;
@@ -294,21 +350,188 @@
         .btn-secondary:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
         body.light-theme .btn-secondary { border-color: rgba(15,23,42,0.15); color: #475569; }
         body.light-theme .btn-secondary:hover { background: rgba(15,23,42,0.04); border-color: rgba(15,23,42,0.25); }
+        .hero-right { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
+        .hero-illustration {
+            width: 420px;
+            height: 360px;
+            position: relative;
+            animation: heroFloatSvg 5s ease-in-out infinite;
+        }
+        @keyframes heroFloatSvg {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-14px); }
+        }
+        .hero-illustration svg { width: 100%; height: 100%; }
+        .hero-counter-row {
+            display: flex;
+            gap: 32px;
+            margin-top: 36px;
+        }
+        .hero-counter-item { display: flex; flex-direction: column; gap: 2px; }
+        .hero-counter-value { font-size: 28px; font-weight: 700; color: #f8fafc; }
+        body.light-theme .hero-counter-value { color: #0f172a; }
+        .hero-counter-label { font-size: 12px; color: #64748b; font-weight: 500; }
+
+        /* ── ABOUT ────────────────────────────────────────────────── */
+        .about-section {
+            padding: 80px 40px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .about-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+        .section-tag {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            margin-bottom: 12px;
+            background: rgba(255,255,255,0.06);
+            color: #94a3b8;
+        }
+        body.light-theme .section-tag { background: rgba(0,0,0,0.04); color: #64748b; }
+        .section-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #f8fafc;
+            margin-bottom: 12px;
+        }
+        body.light-theme .section-title { color: #0f172a; }
+        .section-subtitle {
+            font-size: 15px;
+            color: #94a3b8;
+            max-width: 520px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        body.light-theme .section-subtitle { color: #64748b; }
+        .about-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        .about-card {
+            padding: 28px 24px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            text-align: center;
+        }
+        body.light-theme .about-card { background: #ffffff; border-color: rgba(15,23,42,0.08); }
+        .about-card-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background: rgba(96,165,250,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+        body.light-theme .about-card-icon { background: rgba(37,99,235,0.08); }
+        .about-card h4 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #f8fafc;
+            margin-bottom: 8px;
+        }
+        body.light-theme .about-card h4 { color: #0f172a; }
+        .about-card p {
+            font-size: 13px;
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+        body.light-theme .about-card p { color: #64748b; }
+
+        /* ── REVIEWS ─────────────────────────────────────────────── */
+        .reviews-section {
+            padding: 80px 40px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        .reviews-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 48px;
+        }
+        .review-card {
+            padding: 24px;
+            border-radius: 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        body.light-theme .review-card { background: #ffffff; border-color: rgba(15,23,42,0.08); }
+        .review-stars {
+            display: flex;
+            gap: 2px;
+            margin-bottom: 12px;
+        }
+        .review-star { color: #fbbf24; font-size: 14px; }
+        .review-text {
+            font-size: 14px;
+            color: #94a3b8;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        body.light-theme .review-text { color: #64748b; }
+        .review-author {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .review-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(96,165,250,0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #60a5fa;
+        }
+        body.light-theme .review-avatar { background: rgba(37,99,235,0.1); color: #2563eb; }
+        .review-name { font-size: 13px; font-weight: 600; color: #f8fafc; }
+        body.light-theme .review-name { color: #0f172a; }
+        .review-role { font-size: 11px; color: #64748b; }
+        .reviews-stats {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            justify-content: center;
+            margin-top: 40px;
+        }
+        .reviews-rating {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+        .reviews-rating-value {
+            font-size: 48px;
+            font-weight: 800;
+            color: #f8fafc;
+        }
+        body.light-theme .reviews-rating-value { color: #0f172a; }
+        .reviews-rating-max { font-size: 18px; color: #64748b; font-weight: 500; }
+        .reviews-rating-stars { color: #fbbf24; font-size: 18px; letter-spacing: 1px; }
+        .reviews-count { font-size: 13px; color: #64748b; }
 
         /* ── FOOTER ──────────────────────────────────────────────── */
         .site-footer {
             text-align: center;
-            padding: 24px;
+            padding: 20px 40px;
             font-size: 12px;
-            color: #64748b;
-            background: #253347;
-            border-top: 1px solid rgba(255,255,255,0.08);
-        }
-        body.light-theme .site-footer {
             color: #475569;
-            background: #ffffff;
-            border-top-color: rgba(15,23,42,0.1);
+            border-top: 1px solid rgba(255,255,255,0.06);
         }
+        body.light-theme .site-footer { border-top-color: rgba(15,23,42,0.08); color: #94a3b8; }
 
         /* ── RESPONSIVE ──────────────────────────────────────────── */
         body { overflow-x: hidden; }
@@ -467,6 +690,7 @@
         @media (max-width: 768px) {
             .site-header { padding: 0 16px; }
             .header-left { display: flex; align-items: center; gap: 6px; }
+            .header-center { display: none; }
             .mobile-menu-button { display: flex; }
             .mobile-menu-header { display: flex; }
             .mobile-sidebar { top: 64px; }
@@ -484,14 +708,29 @@
             .user-dropdown { width: min(180px, calc(100vw - 24px)); }
         }
 
+        @media (max-width: 768px) {
+            .hero { flex-direction: column; padding: 48px 20px; text-align: center; }
+            .hero-left { display: flex; flex-direction: column; align-items: center; }
+            .hero-desc { margin-left: auto; margin-right: auto; }
+            .hero-actions { justify-content: center; }
+            .hero-counter-row { justify-content: center; }
+            .hero-illustration { width: 280px; height: 220px; }
+            .about-grid, .reviews-grid { grid-template-columns: 1fr; }
+            .about-section, .reviews-section { padding: 48px 20px; }
+        }
+
         @media (max-width: 480px) {
             .site-header { padding: 6px 8px; gap: 6px; }
             .mobile-menu-button { width: 34px; height: 34px; }
             .header-btn { padding: 6px; }
             .user-avatar { width: 30px; height: 30px; }
-            .hero { padding: 56px 16px; }
-            .hero-title { font-size: 34px; }
-            .hero-desc  { font-size: 15px; }
+            .hero { padding: 32px 16px; }
+            .hero-title { font-size: 28px; }
+            .hero-desc { font-size: 14px; }
+            .hero-counter-row { gap: 20px; }
+            .hero-counter-value { font-size: 22px; }
+            .section-title { font-size: 24px; }
+            .reviews-rating-value { font-size: 36px; }
             .mobile-sidebar.mobile-open { width: calc(100vw - 40px); min-width: calc(100vw - 40px); }
         }
 
@@ -500,9 +739,6 @@
             .mobile-menu-button { width: 30px; height: 30px; }
             .header-btn { padding: 4px; }
             .user-avatar { width: 28px; height: 28px; }
-            .hero { padding: 48px 12px; }
-            .hero-title { font-size: 28px; }
-            .hero-desc { font-size: 14px; }
             .mobile-sidebar.mobile-open { width: calc(100vw - 20px); min-width: calc(100vw - 20px); }
             .mobile-menu-header { padding: 10px 8px; }
             .mobile-sidebar-nav { padding: 8px; }
@@ -525,6 +761,13 @@
             <button type="button" class="mobile-menu-button" id="mobileMenuButton" onclick="toggleMobileMenu(event)" aria-label="Open navigation menu" aria-controls="mobileNavigation" aria-expanded="false">
                 <span class="mobile-menu-icon" aria-hidden="true"><span></span><span></span><span></span></span>
             </button>
+        </div>
+
+        <div class="header-center" id="headerNav">
+            <a href="{{ route('home') }}" class="header-center-btn active">Home</a>
+            @auth
+                <a href="{{ route('dashboard') }}" class="header-center-btn">Dashboard</a>
+            @endauth
         </div>
 
         <div class="header-right">
@@ -626,27 +869,223 @@
     </aside>
     <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
 
-    <!-- HERO -->
+    <!-- HERO SECTION -->
     <section class="hero">
-        <div class="hero-badge">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
-            Web-Based Inventory System for Hardware Stores
+        <!-- 2D animated background -->
+        <div class="hero-bg">
+            <div class="hero-bg-circle"></div>
+            <div class="hero-bg-circle"></div>
+            <div class="hero-bg-circle"></div>
+            <div class="hero-bg-dots"></div>
         </div>
-        <h1 class="hero-title">
-            Empower Your Inventory<br><span>with Smart Dashboard.</span>
-        </h1>
-        <p class="hero-desc">
-            SMART-STOCK helps hardware stores manage products, track stock levels in real time,
-            and get instant alerts before running out — all from a single, easy-to-use dashboard.
-        </p>
-        <div class="hero-actions">
-            @guest
-                <a href="{{ route('login') }}" class="btn-primary">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
-                    Get Started — Sign In
-                </a>
-                <a href="{{ route('register') }}" class="btn-secondary">Create an Account</a>
-            @endguest
+
+        <div class="hero-left">
+            <span class="hero-tag">Smart Inventory System</span>
+            <h1 class="hero-title">Manage Your Inventory<br>with Smart Dashboard.</h1>
+            <p class="hero-desc">
+                Smart-Stock helps hardware stores track products, monitor stock levels in real time,
+                and get instant alerts — all from one easy-to-use dashboard.
+            </p>
+            <div class="hero-actions">
+                @guest
+                    <a href="{{ route('login') }}" class="btn-primary">Get Started</a>
+                    <a href="{{ route('register') }}" class="btn-secondary">Create Account</a>
+                @else
+                    <a href="{{ route('dashboard') }}" class="btn-primary">Open Dashboard</a>
+                @endguest
+            </div>
+            <div class="hero-counter-row">
+                <div class="hero-counter-item">
+                    <span class="hero-counter-value" data-count="500">0</span>
+                    <span class="hero-counter-label">Products Tracked</span>
+                </div>
+                <div class="hero-counter-item">
+                    <span class="hero-counter-value" data-count="50">0</span>
+                    <span class="hero-counter-label">Active Stores</span>
+                </div>
+                <div class="hero-counter-item">
+                    <span class="hero-counter-value" data-count="99">0</span>
+                    <span class="hero-counter-label">% Uptime</span>
+                </div>
+            </div>
+        </div>
+        <div class="hero-right">
+            <div class="hero-illustration">
+                <svg viewBox="0 0 440 360" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Monitor / Screen - isometric -->
+                    <g transform="translate(80, 30)">
+                        <!-- Screen body (3D depth) -->
+                        <path d="M20 20 L280 20 L300 40 L40 40 Z" fill="#1e293b" opacity="0.5"/>
+                        <path d="M280 20 L280 210 L300 230 L300 40 Z" fill="#1a2332" opacity="0.5"/>
+                        <!-- Screen frame -->
+                        <rect x="16" y="16" width="268" height="198" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1.5"/>
+                        <!-- Screen display area -->
+                        <rect x="24" y="24" width="252" height="170" rx="4" fill="#0c1425"/>
+                        <!-- Chart grid lines -->
+                        <line x1="24" y1="64" x2="276" y2="64" stroke="#1e3a5f" stroke-width="0.5" opacity="0.4"/>
+                        <line x1="24" y1="104" x2="276" y2="104" stroke="#1e3a5f" stroke-width="0.5" opacity="0.4"/>
+                        <line x1="24" y1="144" x2="276" y2="144" stroke="#1e3a5f" stroke-width="0.5" opacity="0.4"/>
+                        <line x1="24" y1="184" x2="276" y2="184" stroke="#1e3a5f" stroke-width="0.5" opacity="0.4"/>
+                        <!-- Candlestick bars -->
+                        <rect x="40" y="120" width="6" height="40" rx="1" fill="#22c55e" opacity="0.8"/>
+                        <rect x="56" y="100" width="6" height="55" rx="1" fill="#22c55e" opacity="0.8"/>
+                        <rect x="72" y="130" width="6" height="30" rx="1" fill="#ef4444" opacity="0.8"/>
+                        <rect x="88" y="110" width="6" height="50" rx="1" fill="#22c55e" opacity="0.8"/>
+                        <rect x="104" y="90" width="6" height="60" rx="1" fill="#22c55e" opacity="0.8"/>
+                        <rect x="120" y="105" width="6" height="40" rx="1" fill="#ef4444" opacity="0.8"/>
+                        <rect x="136" y="80" width="6" height="55" rx="1" fill="#22c55e" opacity="0.8"/>
+                        <rect x="152" y="95" width="6" height="45" rx="1" fill="#ef4444" opacity="0.8"/>
+                        <rect x="168" y="70" width="6" height="65" rx="1" fill="#22c55e" opacity="0.8"/>
+                        <rect x="184" y="60" width="6" height="50" rx="1" fill="#22c55e" opacity="0.8"/>
+                        <rect x="200" y="75" width="6" height="35" rx="1" fill="#ef4444" opacity="0.8"/>
+                        <rect x="216" y="55" width="6" height="60" rx="1" fill="#22c55e" opacity="0.8"/>
+                        <rect x="232" y="45" width="6" height="55" rx="1" fill="#22c55e" opacity="0.8"/>
+                        <rect x="248" y="50" width="6" height="40" rx="1" fill="#ef4444" opacity="0.8"/>
+                        <!-- Trend line -->
+                        <polyline class="chart-line" points="43,135 59,118 75,140 91,120 107,98 123,115 139,85 155,100 171,72 187,62 203,80 219,58 235,48 251,55"
+                            stroke="#60a5fa" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"
+                            stroke-dasharray="200" opacity="0.9"/>
+                        <!-- Glow on trend line -->
+                        <polyline points="43,135 59,118 75,140 91,120 107,98 123,115 139,85 155,100 171,72 187,62 203,80 219,58 235,48 251,55"
+                            stroke="#60a5fa" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.15"/>
+                        <!-- Small notification dot -->
+                        <circle cx="260" cy="32" r="4" fill="#22c55e"/>
+                    </g>
+                    <!-- Monitor stand -->
+                    <g transform="translate(80, 30)">
+                        <path d="M130 214 L130 240 L190 240 L190 214" fill="#1a2332" opacity="0.6"/>
+                        <rect x="110" y="238" width="100" height="6" rx="3" fill="#1e293b" opacity="0.7"/>
+                    </g>
+                    <!-- BUY badge - green -->
+                    <g transform="translate(160, 300)">
+                        <rect x="0" y="0" width="56" height="26" rx="13" fill="#22c55e" opacity="0.9"/>
+                        <text x="28" y="17" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="Inter, sans-serif">BUY</text>
+                    </g>
+                    <!-- SELL badge - red -->
+                    <g transform="translate(226, 300)">
+                        <rect x="0" y="0" width="56" height="26" rx="13" fill="#ef4444" opacity="0.9"/>
+                        <text x="28" y="17" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="Inter, sans-serif">SELL</text>
+                    </g>
+                    <!-- Small floating document / spreadsheet card -->
+                    <g transform="translate(20, 190)">
+                        <rect x="0" y="0" width="120" height="80" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" opacity="0.8"/>
+                        <!-- Mini grid lines -->
+                        <line x1="10" y1="20" x2="110" y2="20" stroke="#334155" stroke-width="0.5"/>
+                        <line x1="10" y1="36" x2="110" y2="36" stroke="#334155" stroke-width="0.5"/>
+                        <line x1="10" y1="52" x2="110" y2="52" stroke="#334155" stroke-width="0.5"/>
+                        <line x1="10" y1="68" x2="110" y2="68" stroke="#334155" stroke-width="0.5"/>
+                        <line x1="45" y1="10" x2="45" y2="75" stroke="#334155" stroke-width="0.5"/>
+                        <line x1="80" y1="10" x2="80" y2="75" stroke="#334155" stroke-width="0.5"/>
+                        <!-- Mini data cells -->
+                        <rect x="12" y="24" width="30" height="8" rx="2" fill="#22c55e" opacity="0.5"/>
+                        <rect x="48" y="24" width="28" height="8" rx="2" fill="#334155" opacity="0.5"/>
+                        <rect x="82" y="24" width="24" height="8" rx="2" fill="#60a5fa" opacity="0.4"/>
+                        <rect x="12" y="40" width="30" height="8" rx="2" fill="#ef4444" opacity="0.4"/>
+                        <rect x="48" y="40" width="28" height="8" rx="2" fill="#334155" opacity="0.5"/>
+                        <rect x="82" y="40" width="24" height="8" rx="2" fill="#60a5fa" opacity="0.4"/>
+                        <rect x="12" y="56" width="30" height="8" rx="2" fill="#22c55e" opacity="0.5"/>
+                        <rect x="48" y="56" width="28" height="8" rx="2" fill="#334155" opacity="0.5"/>
+                        <!-- Mini chart on card -->
+                        <polyline points="16,66 30,60 44,64" stroke="#60a5fa" stroke-width="1" fill="none" stroke-linecap="round"/>
+                    </g>
+                    <!-- Floating sparkle dots -->
+                    <circle cx="380" cy="60" r="3" fill="#60a5fa" opacity="0.4">
+                        <animate attributeName="opacity" values="0.4;0.8;0.4" dur="2s" repeatCount="indefinite"/>
+                    </circle>
+                    <circle cx="400" cy="180" r="2" fill="#a855f7" opacity="0.3">
+                        <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2.5s" repeatCount="indefinite"/>
+                    </circle>
+                    <circle cx="50" cy="50" r="2.5" fill="#22c55e" opacity="0.3">
+                        <animate attributeName="opacity" values="0.3;0.6;0.3" dur="3s" repeatCount="indefinite"/>
+                    </circle>
+                </svg>
+            </div>
+        </div>
+    </section>
+
+    <!-- ABOUT SECTION -->
+    <section class="about-section">
+        <div class="about-header">
+            <span class="section-tag">Why Smart-Stock</span>
+            <h2 class="section-title">Built for Trust</h2>
+            <p class="section-subtitle">Trusted by hardware store owners for reliable, real-time inventory management that keeps your business running smoothly.</p>
+        </div>
+        <div class="about-grid">
+            <div class="about-card">
+                <div class="about-card-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #60a5fa;"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                </div>
+                <h4>Secure & Reliable</h4>
+                <p>Your data is protected with enterprise-grade security. Count on 99.9% uptime for your daily operations.</p>
+            </div>
+            <div class="about-card">
+                <div class="about-card-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #60a5fa;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                </div>
+                <h4>Real-Time Tracking</h4>
+                <p>Monitor stock levels as they change. Get instant alerts before items run out so you never miss a sale.</p>
+            </div>
+            <div class="about-card">
+                <div class="about-card-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #60a5fa;"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </div>
+                <h4>Multi-User Access</h4>
+                <p>Assign roles to staff members. Admins manage inventory while cashiers handle point-of-sale efficiently.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- REVIEWS SECTION -->
+    <section class="reviews-section">
+        <div class="about-header">
+            <span class="section-tag">Testimonials</span>
+            <h2 class="section-title">What Our Users Say</h2>
+            <p class="section-subtitle">Hear from store owners who trust Smart-Stock for their daily inventory needs.</p>
+        </div>
+        <div class="reviews-stats">
+            <div class="reviews-rating">
+                <span class="reviews-rating-value" data-count="4.5">0</span>
+                <span class="reviews-rating-max">/5</span>
+            </div>
+            <div>
+                <div class="reviews-rating-stars">★★★★★</div>
+                <div class="reviews-count">Based on 120+ reviews</div>
+            </div>
+        </div>
+        <div class="reviews-grid">
+            <div class="review-card">
+                <div class="review-stars">★★★★★</div>
+                <p class="review-text">"Smart-Stock completely changed how we manage our hardware store. Low stock alerts alone saved us from dozens of lost sales."</p>
+                <div class="review-author">
+                    <div class="review-avatar">JM</div>
+                    <div>
+                        <div class="review-name">Jerome M.</div>
+                        <div class="review-role">Store Owner</div>
+                    </div>
+                </div>
+            </div>
+            <div class="review-card">
+                <div class="review-stars">★★★★★</div>
+                <p class="review-text">"Easy to use and very reliable. Our staff learned it in minutes. The POS integration makes checkout seamless."</p>
+                <div class="review-author">
+                    <div class="review-avatar">AR</div>
+                    <div>
+                        <div class="review-name">Ana R.</div>
+                        <div class="review-role">Manager</div>
+                    </div>
+                </div>
+            </div>
+            <div class="review-card">
+                <div class="review-stars">★★★★☆</div>
+                <p class="review-text">"Finally a system built for small businesses. The dashboard gives me a clear picture of everything at a glance."</p>
+                <div class="review-author">
+                    <div class="review-avatar">MC</div>
+                    <div>
+                        <div class="review-name">Mark C.</div>
+                        <div class="review-role">Owner</div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
@@ -717,7 +1156,9 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', setActiveMobileNav);
+        document.addEventListener('DOMContentLoaded', function() {
+            setActiveMobileNav();
+        });
         document.querySelectorAll('.mobile-sidebar .mobile-nav-item').forEach(item => {
             item.addEventListener('click', closeMobileMenu);
         });
@@ -863,6 +1304,44 @@
         function clearRememberEmail() {
             // intentionally kept — email stays for pre-fill on next login visit
         }
+
+        // Counter animation
+        function animateCounters() {
+            document.querySelectorAll('[data-count]').forEach(function(el) {
+                if (el.dataset.animated) return;
+                el.dataset.animated = '1';
+                var target = parseFloat(el.dataset.count);
+                var isDecimal = target % 1 !== 0;
+                var duration = 1500;
+                var startTime = performance.now();
+                function update(currentTime) {
+                    var elapsed = currentTime - startTime;
+                    var progress = Math.min(elapsed / duration, 1);
+                    var eased = 1 - Math.pow(1 - progress, 3);
+                    var current = eased * target;
+                    el.textContent = isDecimal ? current.toFixed(1) : Math.floor(current);
+                    if (progress < 1) requestAnimationFrame(update);
+                }
+                requestAnimationFrame(update);
+            });
+        }
+
+        // Intersection Observer for counter animation
+        var counterObserver = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    animateCounters();
+                    counterObserver.disconnect();
+                }
+            });
+        }, { threshold: 0.3 });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var heroCounters = document.querySelector('.hero-counter-row');
+            if (heroCounters) counterObserver.observe(heroCounters);
+            var reviewsStats = document.querySelector('.reviews-stats');
+            if (reviewsStats) counterObserver.observe(reviewsStats);
+        });
 
         loadAlerts();
         setInterval(loadAlerts, 30000);

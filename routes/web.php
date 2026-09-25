@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PosCheckoutController;
@@ -76,4 +77,19 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/suppliers', [SupplierController::class, 'store'])
         ->name('suppliers.store')
         ->middleware(EnsureUserIsAdmin::class);
+    Route::delete('/api/suppliers/{id}', [SupplierController::class, 'destroy'])
+        ->name('suppliers.destroy')
+        ->middleware(EnsureUserIsAdmin::class);
+
+    // Dashboard API endpoints (admin overview)
+    Route::get('/api/dashboard/stats', [DashboardController::class, 'stats'])
+        ->name('dashboard.stats');
+    Route::get('/api/dashboard/revenue-chart', [DashboardController::class, 'revenueChart'])
+        ->name('dashboard.revenueChart');
+    Route::get('/api/dashboard/top-products', [DashboardController::class, 'topProducts'])
+        ->name('dashboard.topProducts');
+    Route::get('/api/dashboard/recent-stockins', [DashboardController::class, 'recentStockIns'])
+        ->name('dashboard.recentStockIns');
+    Route::get('/api/dashboard/recent-sales', [DashboardController::class, 'recentSales'])
+        ->name('dashboard.recentSales');
 });

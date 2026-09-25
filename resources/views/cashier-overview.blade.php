@@ -8,11 +8,7 @@
 
     <!-- ====== STAT CARDS (clickable) ====== -->
     <div class="stats-grid">
-        @if(Auth::user()->isCashier())
         <a href="{{ route('pos') }}" class="stat-card stat-clickable" title="View POS">
-        @else
-        <div class="stat-card stat-clickable" title="View POS" onclick="showRevenueNote()" style="cursor:pointer;">
-        @endif
             <div class="stat-card-header">
                 <h3>Total Revenue</h3>
                 <span class="stat-icon blue">
@@ -21,11 +17,7 @@
             </div>
             <div class="stat-value blue" id="statRevenue">₱0.00</div>
             <div class="stat-subtext">All time sales</div>
-        @if(Auth::user()->isCashier())
         </a>
-        @else
-        </div>
-        @endif
         <a href="{{ route('products') }}" class="stat-card stat-clickable" title="View Products">
             <div class="stat-card-header">
                 <h3>Total Products</h3>
@@ -46,21 +38,21 @@
             <div class="stat-value red" id="statLowStock">0</div>
             <div class="stat-subtext">Items below threshold</div>
         </a>
-        <a href="{{ route('suppliers') }}" class="stat-card stat-clickable" title="View Suppliers">
+        <a href="{{ route('pos') }}" class="stat-card stat-clickable" title="View POS">
             <div class="stat-card-header">
-                <h3>Suppliers</h3>
+                <h3>Total Sales</h3>
                 <span class="stat-icon yellow">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                 </span>
             </div>
-            <div class="stat-value yellow" id="statSuppliers">0</div>
-            <div class="stat-subtext">Active suppliers</div>
+            <div class="stat-value yellow" id="statTotalSales">0</div>
+            <div class="stat-subtext">Completed transactions</div>
         </a>
     </div>
 
     <!-- ====== CHART + TOP SELLING ROW ====== -->
     <div class="chart-top-row">
-        <!-- Revenue Chart (75%) -->
+        <!-- Revenue Chart (with 2 lines: Revenue + Tax) -->
         <div class="chart-panel">
             <div class="section-header">
                 <h2 class="section-title">Revenue Overview</h2>
@@ -71,7 +63,7 @@
                 <div class="chart-loading" id="chartLoading"><span class="spinner"></span> Loading chart data...</div>
             </div>
         </div>
-        <!-- Top Selling Products (25%) -->
+        <!-- Top Selling Products -->
         <div class="top-products-panel">
             <div class="section-header">
                 <h2 class="section-title">Top Selling</h2>
@@ -83,130 +75,31 @@
         </div>
     </div>
 
-    <!-- ====== RECENT STOCK-IN ACTIVITY ====== -->
+    <!-- ====== RECENT SALES ACTIVITY ====== -->
     <div class="section-header" style="margin-top: 28px;">
-        <h2 class="section-title">Recent Stock-In Activity</h2>
-        <a href="{{ route('stock-in') }}" class="section-link">View All →</a>
+        <h2 class="section-title">Recent Sales Activity</h2>
     </div>
-    <div class="table-wrapper" id="stockInTable">
+    <div class="table-wrapper" id="recentSalesTable">
         <table>
             <thead>
                 <tr>
                     <th>Date</th>
                     <th>Product</th>
-                    <th>Supplier</th>
-                    <th>Qty Received</th>
-                    <th>Unit</th>
-                    <th>Staff</th>
+                    <th>Quantity</th>
+                    <th>Unit Price</th>
+                    <th>Line Total</th>
                 </tr>
             </thead>
-            <tbody id="stockInBody">
+            <tbody id="recentSalesBody">
                 <tr>
-                    <td colspan="6" class="empty-state">
-                        <span class="spinner" aria-hidden="true"></span> Loading recent stock-ins...
+                    <td colspan="5" class="empty-state">
+                        <span class="spinner" aria-hidden="true"></span> Loading recent sales...
                     </td>
                 </tr>
             </tbody>
         </table>
     </div>
-
-    <!-- Revenue Note Modal -->
-    <div class="note-overlay" id="revenueNoteModal">
-        <div class="note-card">
-            <div class="note-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-            </div>
-            <h3 class="note-title">POS Access Restricted</h3>
-            <p class="note-message">The Point of Sale (POS) system is exclusively available for cashier accounts. As an admin, you can monitor revenue from this dashboard or assign a cashier to process transactions.</p>
-            <button class="note-btn" onclick="closeRevenueNote()">Okay, Got It</button>
-        </div>
-    </div>
 @endsection
-
-@push('styles')
-    <style>
-        .note-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            backdrop-filter: blur(4px);
-            z-index: 300;
-            align-items: center;
-            justify-content: center;
-        }
-        .note-overlay.active { display: flex; }
-        .note-card {
-            background: #1e293b;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 16px;
-            padding: 32px;
-            max-width: 400px;
-            width: 90%;
-            text-align: center;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.4);
-            animation: noteIn 0.2s ease-out;
-        }
-        @keyframes noteIn {
-            from { opacity: 0; transform: scale(0.95) translateY(10px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        body.light-theme .note-card { background: #ffffff; border-color: rgba(15,23,42,0.1); }
-        .note-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            background: rgba(59,130,246,0.12);
-            color: #60a5fa;
-            margin-bottom: 16px;
-        }
-        body.light-theme .note-icon { background: rgba(59,130,246,0.1); color: #3b82f6; }
-        .note-title {
-            font-size: 17px;
-            font-weight: 700;
-            color: #f8fafc;
-            margin: 0 0 10px 0;
-        }
-        body.light-theme .note-title { color: #0f172a; }
-        .note-message {
-            font-size: 13px;
-            color: #94a3b8;
-            line-height: 1.6;
-            margin: 0 0 24px 0;
-        }
-        body.light-theme .note-message { color: #64748b; }
-        .note-btn {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 10px 28px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            font-family: 'Inter', sans-serif;
-            transition: opacity 0.15s;
-        }
-        .note-btn:hover { opacity: 0.9; }
-    </style>
-@endpush
-
-@push('scripts')
-    <script>
-        function showRevenueNote() {
-            document.getElementById('revenueNoteModal').classList.add('active');
-        }
-        function closeRevenueNote() {
-            document.getElementById('revenueNoteModal').classList.remove('active');
-        }
-        document.getElementById('revenueNoteModal').addEventListener('click', function(e) {
-            if (e.target === this) closeRevenueNote();
-        });
-    </script>
-@endpush
 
 @push('styles')
     <style>
@@ -259,10 +152,10 @@
             justify-content: center;
             flex-shrink: 0;
         }
-        .stat-icon.blue  { background: rgba(96,165,250,0.15);  color: #60a5fa; }
-        .stat-icon.green { background: rgba(74,222,128,0.15);  color: #4ade80; }
-        .stat-icon.yellow{ background: rgba(251,191,36,0.15);  color: #fbbf24; }
-        .stat-icon.red   { background: rgba(248,113,113,0.15); color: #f87171; }
+        .stat-icon.blue   { background: rgba(96,165,250,0.15);  color: #60a5fa; }
+        .stat-icon.green  { background: rgba(74,222,128,0.15);  color: #4ade80; }
+        .stat-icon.yellow { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+        .stat-icon.red    { background: rgba(248,113,113,0.15); color: #f87171; }
         .stat-value { font-size: 26px; font-weight: 700; color: #f8fafc; margin-bottom: 4px; }
         .stat-value.blue   { color: #60a5fa; }
         .stat-value.green  { color: #4ade80; }
@@ -374,7 +267,7 @@
             border-radius: 12px;
             overflow-x: auto;
         }
-        table { width: 100%; min-width: 680px; border-collapse: collapse; }
+        table { width: 100%; min-width: 600px; border-collapse: collapse; }
         thead th {
             background: rgba(255,255,255,0.03);
             padding: 12px 16px;
@@ -467,13 +360,13 @@
                 document.getElementById('statRevenue').textContent = '₱' + Number(d.total_revenue).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                 document.getElementById('statProducts').textContent = d.total_products;
                 document.getElementById('statLowStock').textContent = d.low_stock_count;
-                document.getElementById('statSuppliers').textContent = d.supplier_count;
+                document.getElementById('statTotalSales').textContent = d.total_sales;
             } catch (e) {
                 console.error('Stats load error:', e);
             }
         }
 
-        // ── Revenue Chart ───────────────────────────────────────
+        // ── Revenue Chart (2 lines: Revenue + Tax) ──────────────
         async function loadRevenueChart() {
             const loading = document.getElementById('chartLoading');
             try {
@@ -481,14 +374,16 @@
                 if (!res.ok) throw new Error('Failed to load chart');
                 const d = await res.json();
                 if (loading) loading.style.display = 'none';
-                renderChart(d.labels, d.values);
+                // Compute tax line (12% of revenue)
+                const taxValues = d.values.map(v => Math.round(v * 0.12 * 100) / 100);
+                renderChart(d.labels, d.values, taxValues);
             } catch (e) {
                 if (loading) loading.innerHTML = '<span style="color:#f87171;font-size:13px;">Unable to load chart</span>';
                 console.error('Chart load error:', e);
             }
         }
 
-        function renderChart(labels, values) {
+        function renderChart(labels, revenueValues, taxValues) {
             const ctx = document.getElementById('revenueChart').getContext('2d');
             const textColor = isLight() ? '#64748b' : '#94a3b8';
             const gridColor  = isLight() ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.06)';
@@ -499,26 +394,53 @@
                 type: 'line',
                 data: {
                     labels,
-                    datasets: [{
-                        label: 'Revenue (₱)',
-                        data: values,
-                        borderColor: '#60a5fa',
-                        backgroundColor: 'rgba(96,165,250,0.08)',
-                        borderWidth: 2.5,
-                        pointRadius: 3,
-                        pointBackgroundColor: '#60a5fa',
-                        pointBorderColor: '#60a5fa',
-                        pointHoverRadius: 6,
-                        fill: true,
-                        tension: 0.35,
-                    }]
+                    datasets: [
+                        {
+                            label: 'Revenue (₱)',
+                            data: revenueValues,
+                            borderColor: '#60a5fa',
+                            backgroundColor: 'rgba(96,165,250,0.08)',
+                            borderWidth: 2.5,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#60a5fa',
+                            pointBorderColor: '#60a5fa',
+                            pointHoverRadius: 6,
+                            fill: true,
+                            tension: 0.35,
+                        },
+                        {
+                            label: 'Tax (₱)',
+                            data: taxValues,
+                            borderColor: '#4ade80',
+                            backgroundColor: 'rgba(74,222,128,0.06)',
+                            borderWidth: 2,
+                            pointRadius: 2,
+                            pointBackgroundColor: '#4ade80',
+                            pointBorderColor: '#4ade80',
+                            pointHoverRadius: 5,
+                            fill: true,
+                            tension: 0.35,
+                            borderDash: [5, 3],
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
                     plugins: {
-                        legend: { display: false },
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                color: textColor,
+                                font: { size: 11, family: 'Inter' },
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                padding: 16,
+                            }
+                        },
                         tooltip: {
                             backgroundColor: '#1e293b',
                             titleColor: '#f8fafc',
@@ -527,7 +449,7 @@
                             borderWidth: 1,
                             padding: 10,
                             callbacks: {
-                                label: ctx => '₱' + ctx.parsed.y.toLocaleString('en-PH', { minimumFractionDigits: 2 })
+                                label: ctx => ctx.dataset.label + ': ₱' + ctx.parsed.y.toLocaleString('en-PH', { minimumFractionDigits: 2 })
                             }
                         }
                     },
@@ -587,29 +509,28 @@
             }
         }
 
-        // ── Recent Stock-Ins ────────────────────────────────────
-        async function loadRecentStockIns() {
-            const body = document.getElementById('stockInBody');
+        // ── Recent Sales Activity ──────────────────────────────
+        async function loadRecentSales() {
+            const body = document.getElementById('recentSalesBody');
             try {
-                const res = await fetch('/api/dashboard/recent-stockins');
+                const res = await fetch('/api/dashboard/recent-sales');
                 if (!res.ok) throw new Error('Failed');
                 const items = await res.json();
                 if (items.length === 0) {
-                    body.innerHTML = '<tr><td colspan="6" class="empty-state">No stock-in records yet</td></tr>';
+                    body.innerHTML = '<tr><td colspan="5" class="empty-state">No sales records yet</td></tr>';
                     return;
                 }
                 body.innerHTML = items.map(s => `
                     <tr>
                         <td>${escapeHtml(s.date)}</td>
                         <td><strong>${escapeHtml(s.product_name)}</strong></td>
-                        <td>${escapeHtml(s.supplier_name)}</td>
                         <td>${s.quantity}</td>
-                        <td>${escapeHtml(s.unit)}</td>
-                        <td>${escapeHtml(s.staff_name)}</td>
+                        <td>₱${Number(s.unit_price).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+                        <td>₱${Number(s.line_total).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
                     </tr>`).join('');
             } catch (e) {
-                body.innerHTML = '<tr><td colspan="6" class="empty-state">Unable to load stock-in data</td></tr>';
-                console.error('Stock-in load error:', e);
+                body.innerHTML = '<tr><td colspan="5" class="empty-state">Unable to load recent sales</td></tr>';
+                console.error('Recent sales load error:', e);
             }
         }
 
@@ -624,7 +545,7 @@
         loadStats();
         loadRevenueChart();
         loadTopProducts();
-        loadRecentStockIns();
+        loadRecentSales();
     })();
     </script>
 @endpush

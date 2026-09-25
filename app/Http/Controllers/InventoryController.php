@@ -16,10 +16,17 @@ class InventoryController extends Controller
 {
     /**
      * Show the overview page.
+     * Admin sees the full analytics dashboard; cashier sees the simpler inventory overview.
      */
     public function index()
     {
-        return view('overview');
+        $user = Auth::user();
+
+        if ($user && $user->isAdmin()) {
+            return view('overview');
+        }
+
+        return view('cashier-overview');
     }
 
     /**
