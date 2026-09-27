@@ -7,13 +7,11 @@
 #
 #     render.com -> New + -> Blueprint -> Connect your repo
 #
-#  Maaari din itong gamitin sa "Blueprints" na service ng Render
-#  (dati tinatawag na "Blueprint plan").
-#
-#  NOTE: Smart-Stock now uses a LOCAL SQLite database (no Supabase).
-#  PAMALITAN MO LANG ANG MGA SUMUSUNOD PAGKATAPOS I-COMMIT:
-#    - APP_KEY -> i-set mo para laging pareho sa bawat deploy
-#    - DB_DATABASE -> kung gusto mong iba ang SQLite file path
+#  NOTE: Smart-Stock now uses Supabase PostgreSQL (no SQLite).
+#  Kailangan mong i-set sa Render Dashboard > Environment:
+#    - APP_KEY (sync false, secret)
+#    - DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD, DB_SSLMODE
+#  Huwag i-commit ang DB_PASSWORD sa repo.
 # ====================================================================
 
 services:
@@ -39,11 +37,22 @@ services:
       - key: LOG_CHANNEL
         value: stderr
 
-      # --- Local SQLite database (walang Supabase) ---
+      # --- Supabase PostgreSQL (primary, walang SQLite) ---
+      # Kunin sa Supabase Dashboard > Settings > Database > Connection string
       - key: DB_CONNECTION
-        value: sqlite
+        value: pgsql
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
       - key: DB_DATABASE
-        value: /app/database/database.sqlite
+        value: postgres
+      - key: DB_USERNAME
+        value: postgres
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSLMODE
+        value: require
 
       # --- SESSION/CACHE sa file ---
       - key: SESSION_DRIVER

@@ -1,11 +1,6 @@
 # ------------------------------------------------------------------
 # .dockerignore - mga file na HINDI isasama sa Docker build context
-#
-# Bakit mahalaga?
-#   1. Mas mabilis ang build (maliit na context na ipapadala)
-#   2. Hindi ma-leak ang mga sikreto (hal. .env file!)
-#   3. Hindi magkakasalungat ang build artifacts (vendor/ mula sa
-#      container vs. vendor/ sa lokal mong machine)
+# Database: Supabase PostgreSQL only (walang SQLite file).
 # ------------------------------------------------------------------
 
 # Git
@@ -37,8 +32,9 @@ npm-debug.log*
 !/storage/framework/views/.gitignore
 !/storage/logs/.gitignore
 
-# Database (walang lokal na db - game ang Supabase)
-/database/database.sqlite
+# Supabase only: walang local sqlite file na isasama
+/database/*.sqlite
+/database/*.sqlite-journal
 
 # Tests & ci
 /tests

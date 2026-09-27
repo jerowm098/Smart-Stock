@@ -10,32 +10,66 @@ return [
     | Default Database Connection Name
     |--------------------------------------------------------------------------
     |
-    | Here you may specify which of the database connections below you wish
-    | to use as your default connection for database operations. This is
-    | the connection which will be utilized unless another connection
-    | is explicitly specified when you execute a query / statement.
+    | Smart-Stock primary database is Supabase PostgreSQL (pgsql).
+    | Set via .env: DB_CONNECTION=pgsql + DB_HOST/DB_PORT/DB_DATABASE/
+    | DB_USERNAME/DB_PASSWORD/DB_SSLMODE=require
+    | Kunin sa Supabase Dashboard > Settings > Database > Connection string.
+    | Hindi ito SUPABASE_URL + ANON_KEY (pang-JS client lang yun).
+    |
+    | DALAWANG MODE (parehong Supabase, magkaibang host/user/port):
+    |  1) DIRECT (pang-migrate sa IPv6-ready network):
+    |     DB_HOST=db.xxxxx.supabase.co  DB_PORT=5432  DB_USERNAME=postgres
+    |  2) POOLER (pang-Globe IPv4 / pang-prod Render):
+    |     DB_HOST=aws-0-ap-southeast-1.pooler.supabase.com
+    |     DB_PORT=6543 (Transaction) o 5432 (Session)
+    |     DB_USERNAME=postgres.xxxxx  (may tuldok + project ref!)
     |
     */
 
-    'default' => env('DB_CONNECTION', 'sqlite'),
+    'default' => env('DB_CONNECTION', 'pgsql'),
 
     /*
     |--------------------------------------------------------------------------
     | Database Connections
     |--------------------------------------------------------------------------
     |
-    | Below are all of the database connections defined for your application.
-    | An example configuration is provided for each database system which
-    | is supported by Laravel. You're free to add / remove connections.
+    | pgsql = live Supabase (primary).
+    | sqlite = testing only (phpunit :memory:), hindi primary.
     |
     */
 
     'connections' => [
 
+        'pgsql' => [
+            'driver' => 'pgsql',
+            // Kung may DB_URL (full postgres://... URI galing Supabase Connect modal),
+            // yun ang priority. Kung wala, gamitin ang hiwa-hiwalay na DB_HOST/PORT/etc.
+            'url' => env('DB_URL'),
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '5432'),
+            'database' => env('DB_DATABASE', 'postgres'),
+            'username' => env('DB_USERNAME', 'postgres'),
+            'password' => env('DB_PASSWORD', ''),
+            'charset' => env('DB_CHARSET', 'utf8'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('DB_SSLMODE', 'require'),
+            // Supabase pooler (Supavisor) fix:
+            // Transaction/Session pooler ayaw sa native PREPARE,
+            // kaya emulate prepares + maikling timeout.
+            'options' => extension_loaded('pdo_pgsql') ? array_filter([
+                PDO::ATTR_EMULATE_PREPARES => true,
+                PDO::ATTR_TIMEOUT => 10,
+            ]) : [],
+        ],
+
         'sqlite' => [
+            // Testing only: ginagamit ng phpunit.xml (DB_DATABASE=:memory:).
+            // Hindi ito primary database. Huwag gamitin sa .env o render.yaml.
             'driver' => 'sqlite',
             'url' => env('DB_URL'),
-            'database' => env('DB_DATABASE', database_path('database.sqlite')),
+            'database' => env('DB_DATABASE', ':memory:'),
             'prefix' => '',
             'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
             'busy_timeout' => null,
@@ -84,21 +118,6 @@ return [
             ]) : [],
         ],
 
-        'pgsql' => [
-            'driver' => 'pgsql',
-            'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'laravel'),
-            'username' => env('DB_USERNAME', 'root'),
-            'password' => env('DB_PASSWORD', ''),
-            'charset' => env('DB_CHARSET', 'utf8'),
-            'prefix' => '',
-            'prefix_indexes' => true,
-            'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'prefer'),
-        ],
-
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),
@@ -110,8 +129,6 @@ return [
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
-            // 'encrypt' => env('DB_ENCRYPT', 'yes'),
-            // 'trust_server_certificate' => env('DB_TRUST_SERVER_CERTIFICATE', 'false'),
         ],
 
     ],
@@ -120,11 +137,6 @@ return [
     |--------------------------------------------------------------------------
     | Migration Repository Table
     |--------------------------------------------------------------------------
-    |
-    | This table keeps track of all the migrations that have already run for
-    | your application. Using this information, we can determine which of
-    | the migrations on disk haven't actually been run on the database.
-    |
     */
 
     'migrations' => [
@@ -136,11 +148,6 @@ return [
     |--------------------------------------------------------------------------
     | Redis Databases
     |--------------------------------------------------------------------------
-    |
-    | Redis is an open source, fast, and advanced key-value store that also
-    | provides a richer body of commands than a typical key-value system
-    | such as Memcached. You may define your connection settings here.
-    |
     */
 
     'redis' => [

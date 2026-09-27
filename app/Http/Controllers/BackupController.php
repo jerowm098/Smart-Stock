@@ -13,10 +13,11 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  *
  * BRD Should: "The system shall create backups regularly."
  *
+ * - Primary: Supabase PostgreSQL only (walang SQLite).
  * - Page: GET /backups → resources/views/backups.blade.php (Admin Dashboard side)
  * - Auto-schedule: daily 02:00 via routes/console.php → backup:run --keep=7
  * - Manual: POST /api/backups/run (Admin clicks "Run Backup Now")
- * - Files live in storage/app/private/backups (never public).
+ * - Files live in storage/app/private/backups (never public, JSON dump).
  */
 class BackupController extends Controller
 {
@@ -32,8 +33,8 @@ class BackupController extends Controller
 
     protected function isValidName(string $name): bool
     {
-        // Only allow files this feature creates: smart-stock-backup-YYYYMMDD-HHMMSS.(sqlite|json)
-        return (bool) preg_match('/^smart-stock-backup-\d{8}-\d{6}\.(sqlite|json)$/', $name);
+        // Only allow files this feature creates: smart-stock-backup-YYYYMMDD-HHMMSS.json
+        return (bool) preg_match('/^smart-stock-backup-\d{8}-\d{6}\.json$/', $name);
     }
 
     /**
@@ -64,7 +65,7 @@ class BackupController extends Controller
                 'size_bytes' => filesize($path),
                 'size_human' => $this->humanSize((int) filesize($path)),
                 'modified' => date('M d, Y g:i A', (int) filemtime($path)),
-                'type' => str_ends_with($path, '.sqlite') ? 'SQLite copy' : 'JSON dump',
+                'type' => 'PostgreSQL dump',
             ];
         }, $files);
 

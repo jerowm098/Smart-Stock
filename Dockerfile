@@ -1,5 +1,5 @@
 # ====================================================================
-#  Multi-stage Dockerfile: Laravel 12 + SQLite + Nginx + PHP-FPM
+#  Multi-stage Dockerfile: Laravel 12 + Supabase PostgreSQL + Nginx + PHP-FPM
 #
 #  STRUCTURE (3 builds sa loob ng 1 image):
 #    stage 1 (composer)  -> installs PHP dependencies (vendor/)
@@ -10,6 +10,9 @@
 #    Ang Render ay nagpapadala ng HTTP traffic. Kailangan ng web
 #    server (nginx) na makakarinig sa $PORT at mag-proxy papunta sa
 #    php-fpm, na siyang nagpapatakbo ng Laravel PHP code.
+#
+#  Database: Supabase PostgreSQL only (walang SQLite).
+#  Kailangan ng pdo_pgsql extension + libpq-dev.
 # ====================================================================
 
 # ------------------------------------------------------------------
@@ -54,15 +57,17 @@ FROM php:8.3-fpm
 
 # ============ System dependencies ============
 # NOTE: ctype, fileinfo, session, pdo ay naka-built-in na sa
-# php:8.3-fpm image - kaya pdo_mysql at bcmath lang ang i-install
+# php:8.3-fpm image - kaya pdo_pgsql at bcmath ang i-install.
+# libpq-dev kailangan para ma-compile ang pdo_pgsql.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         nginx \
         supervisor \
+        libpq-dev \
         libssl-dev \
         ca-certificates \
         curl \
         gettext-base \
-        && docker-php-ext-install pdo_mysql bcmath \
+        && docker-php-ext-install pdo_pgsql bcmath \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 

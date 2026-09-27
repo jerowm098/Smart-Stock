@@ -1,1 +1,4 @@
+# Supabase PostgreSQL only - walang local sqlite file na kailangan.
+# Kung mag-test offline gamit ang sqlite memory, hindi ito naka-commit.
 *.sqlite*
+!/.gitignore

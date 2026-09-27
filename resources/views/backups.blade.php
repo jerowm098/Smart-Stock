@@ -10,7 +10,7 @@
     <div class="policy-card">
         <div>
             <div class="policy-title">Backup Policy (SS-39)</div>
-            <div class="policy-text" id="policyText">Auto daily 02:00 (Asia/Manila) · keep newest 7 · SQLite file copy o JSON dump</div>
+            <div class="policy-text" id="policyText">Auto daily 02:00 (Asia/Manila) · keep newest 7 · Supabase PostgreSQL JSON dump</div>
             <div class="policy-sub" id="driverText">Loading driver...</div>
         </div>
         <button class="btn-primary" id="runBtn" onclick="runBackup()">▶ Run Backup Now</button>
