@@ -8,9 +8,11 @@
 #     render.com -> New + -> Blueprint -> Connect your repo
 #
 #  NOTE: Smart-Stock now uses Supabase PostgreSQL (no SQLite).
+#  Project region = Tokyo (ap-northeast-1), kaya pooler host ay
+#  aws-0-ap-northeast-1.pooler.supabase.com (hindi southeast).
 #  Kailangan mong i-set sa Render Dashboard > Environment:
 #    - APP_KEY (sync false, secret)
-#    - DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD, DB_SSLMODE
+#    - DB_HOST, DB_USERNAME, DB_PASSWORD (sync false, secret)
 #  Huwag i-commit ang DB_PASSWORD sa repo.
 # ====================================================================
 
@@ -37,18 +39,19 @@ services:
       - key: LOG_CHANNEL
         value: stderr
 
-      # --- Supabase PostgreSQL (primary, walang SQLite) ---
-      # Kunin sa Supabase Dashboard > Settings > Database > Connection string
+      # --- Supabase PostgreSQL Tokyo (primary, walang SQLite) ---
+      # Kunin sa Supabase Dashboard > Connect > Transaction Pooler > URI
+      # PROD runtime = Transaction pooler 6543 (hindi Session, hindi Direct)
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
         sync: false
       - key: DB_PORT
-        value: "5432"
+        value: "6543"
       - key: DB_DATABASE
         value: postgres
       - key: DB_USERNAME
-        value: postgres
+        sync: false
       - key: DB_PASSWORD
         sync: false
       - key: DB_SSLMODE
@@ -77,6 +80,6 @@ services:
 
       # APP_URL should match the deployed domain so Laravel generates
       # fully-qualified HTTPS URLs (forms, links, redirects).
-      # Change the value below to your actual Render service name.
+      # Palitan kung iba ang service name mo (katulad ng smart-stock-4lav).
       - key: APP_URL
-        value: https://smart-stock.onrender.com
+        value: https://smart-stock-4lav.onrender.com
