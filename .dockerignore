@@ -62,7 +62,9 @@ Homestead.yaml
 auth.json
 
 *.pdf
+myFiles/
 plans/
 tmp_extract.py
 tmp_frames/
 *.mp4
+tests/

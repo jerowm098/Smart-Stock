@@ -5,8 +5,19 @@
 @section('content')
     <div class="page-header">
         <h1 class="page-title">Products</h1>
-        <p class="page-subtitle">Manage inventory items and add new products</p>
+        @if(Auth::user()?->isAdmin())
+            <p class="page-subtitle">Manage inventory items and add new products</p>
+        @else
+            <p class="page-subtitle">Browse catalogue — read-only for cashier. Use POS Checkout for sales.</p>
+        @endif
     </div>
+    @if(Auth::user()?->isCashier())
+        <div class="section-card" style="border-left: 4px solid #f59e0b; margin-bottom: 16px;">
+            <div style="padding: 12px 16px; font-size: 13px; color: #fbbf24;">
+                Read-only mode: you can view products here, but only Admin can add, edit, or delete. Go to POS Checkout to process sales.
+            </div>
+        </div>
+    @endif
     <div class="section-card">
         <div class="section-card-header">
             <h2 class="section-card-title">Search & Filter</h2>
@@ -59,10 +70,12 @@
                     <h2 class="section-card-title">Product Inventory</h2>
                     <p class="section-card-desc">Overview of all registered products and their current stock levels</p>
                 </div>
+                @if(Auth::user()?->isAdmin())
                 <button class="btn-add" onclick="openModal()">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                     <span>Add Product</span>
                 </button>
+                @endif
             </div>
         </div>
         <div class="section-card-toolbar">
@@ -690,8 +703,10 @@
 
 @push('scripts')
     <script>
+        // BRD: Staff restricted to sales interface only — only Admin can manage products.
+        // Cashier gets read-only catalogue here; POS page is the sales interface.
         const canAdjustStock = {{ Auth::user()->isAdmin() ? 'true' : 'false' }};
-        const canManageProducts = {{ Auth::user()->isCashier() ? 'true' : 'false' }};
+        const canManageProducts = {{ Auth::user()->isAdmin() ? 'true' : 'false' }};
         let allProducts = [];
         let currentView = 'table';
 

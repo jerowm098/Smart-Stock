@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InventoryController;
@@ -44,18 +45,28 @@ Route::middleware('auth')->group(function () {
         ->name('stock-in')
         ->middleware(EnsureUserIsAdmin::class);
 
+    // SS-24: Transaction History page (Admin only per BRD)
+    Route::get('/transactions', [DashboardController::class, 'transactions'])
+        ->name('transactions')
+        ->middleware(EnsureUserIsAdmin::class);
+
+    // SS-39: Backups page (Admin only per BRD)
+    Route::get('/backups', [BackupController::class, 'index'])
+        ->name('backups')
+        ->middleware(EnsureUserIsAdmin::class);
+
     // Suppliers directory page
     Route::get('/suppliers', [SupplierController::class, 'index'])
         ->name('suppliers')
         ->middleware(EnsureUserIsAdmin::class);
 
-    // API routes
-    Route::post('/api/inventory/add', [InventoryController::class, 'store'])->name('inventory.add');
-    Route::put('/api/inventory/update', [InventoryController::class, 'updateProduct'])->name('inventory.update.product');
-    Route::put('/api/inventory/{product}', [InventoryController::class, 'update'])->name('inventory.update');
+    // API routes — read-only for cashier, write ops admin-only per BRD
+    Route::post('/api/inventory/add', [InventoryController::class, 'store'])->name('inventory.add')->middleware(EnsureUserIsAdmin::class);
+    Route::put('/api/inventory/update', [InventoryController::class, 'updateProduct'])->name('inventory.update.product')->middleware(EnsureUserIsAdmin::class);
+    Route::put('/api/inventory/{product}', [InventoryController::class, 'update'])->name('inventory.update')->middleware(EnsureUserIsAdmin::class);
     Route::get('/api/inventory/alerts', [InventoryController::class, 'getAlerts'])->name('inventory.alerts');
     Route::get('/api/inventory/products', [InventoryController::class, 'getProducts'])->name('inventory.products');
-    Route::delete('/api/inventory/{product}', [InventoryController::class, 'destroy'])->name('inventory.destroy');
+    Route::delete('/api/inventory/{product}', [InventoryController::class, 'destroy'])->name('inventory.destroy')->middleware(EnsureUserIsAdmin::class);
     Route::post('/api/inventory/adjust', [InventoryController::class, 'adjustStock'])
         ->name('inventory.adjust')
         ->middleware(EnsureUserIsAdmin::class);
@@ -82,6 +93,31 @@ Route::middleware('auth')->group(function () {
         ->middleware(EnsureUserIsAdmin::class);
 
     // Dashboard API endpoints (admin overview)
+    // SS-35: demand-based restocking suggestions (Admin only per BRD)
+    Route::get('/api/dashboard/restock-suggestions', [DashboardController::class, 'restockSuggestions'])
+        ->name('dashboard.restockSuggestions')
+        ->middleware(EnsureUserIsAdmin::class);
+    // SS-24: paginated transaction history with staff name (Admin only)
+    Route::get('/api/dashboard/transactions', [DashboardController::class, 'transactionHistory'])
+        ->name('dashboard.transactions')
+        ->middleware(EnsureUserIsAdmin::class);
+    // SS-25 / SS-34: downloadable transaction summary CSV (Admin only)
+    Route::get('/api/dashboard/transactions/export', [DashboardController::class, 'exportTransactions'])
+        ->name('dashboard.transactions.export')
+        ->middleware(EnsureUserIsAdmin::class);
+    // SS-39: backup management API (Admin only)
+    Route::get('/api/backups', [BackupController::class, 'list'])
+        ->name('backups.list')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::post('/api/backups/run', [BackupController::class, 'run'])
+        ->name('backups.run')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::get('/api/backups/download/{file}', [BackupController::class, 'download'])
+        ->name('backups.download')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::delete('/api/backups/{file}', [BackupController::class, 'destroy'])
+        ->name('backups.destroy')
+        ->middleware(EnsureUserIsAdmin::class);
     Route::get('/api/dashboard/stats', [DashboardController::class, 'stats'])
         ->name('dashboard.stats');
     Route::get('/api/dashboard/revenue-chart', [DashboardController::class, 'revenueChart'])

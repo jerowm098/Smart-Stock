@@ -10,11 +10,13 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureUserIsCashier
 {
     /**
-     * Restrict POS checkout to cashier accounts.
+     * Restrict POS checkout to sales roles (cashier + admin).
+     * BRD: Staff restricted to sales interface only; Admin retains full access including sales.
      */
     public function handle(Request $request, Closure $next): Response|JsonResponse
     {
-        if (! $request->user()?->isCashier()) {
+        $user = $request->user();
+        if (! $user || (! $user->isCashier() && ! $user->isAdmin())) {
             return response()->json(['message' => 'Cashier access required.'], 403);
         }
 

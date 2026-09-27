@@ -24,7 +24,9 @@ Homestead.yaml
 Thumbs.db
 
 *.pdf
+myFiles/
+*.mp4
 plans/
 tmp_extract.py
 tmp_frames/
-*.mp4
+tests/

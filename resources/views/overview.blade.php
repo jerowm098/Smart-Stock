@@ -83,6 +83,56 @@
         </div>
     </div>
 
+    <!-- ====== SS-35: RESTOCK SUGGESTIONS (Admin only, demand-based) ====== -->
+    <div class="section-header" style="margin-top: 28px;">
+        <h2 class="section-title">Order Suggestions <span class="suggest-badge" id="suggestCount">—</span></h2>
+        <div class="suggest-controls">
+            <label for="suggestWindow" class="suggest-label">Demand window:</label>
+            <select id="suggestWindow" class="suggest-select" onchange="loadRestockSuggestions()">
+                <option value="7">Last 7 days</option>
+                <option value="14">Last 14 days</option>
+                <option value="30" selected>Last 30 days</option>
+                <option value="60">Last 60 days</option>
+                <option value="90">Last 90 days</option>
+            </select>
+            <a href="{{ route('stock-in') }}" class="section-link">Receive Stock →</a>
+        </div>
+    </div>
+    <p class="suggest-hint">Auto-computed mula sa aktwal na benta: avg daily × 14 days cover, minimum 2× reorder threshold. Critical muna, tapos mauubos agad, tapos pinakamalaking order.</p>
+    <div class="table-wrapper" id="suggestTable">
+        <table>
+            <thead>
+                <tr>
+                    <th>Urgency</th>
+                    <th>Product</th>
+                    <th>Stock / Threshold</th>
+                    <th>Sold (window)</th>
+                    <th>Avg / day</th>
+                    <th>Days left</th>
+                    <th>Suggested order</th>
+                    <th>Why</th>
+                </tr>
+            </thead>
+            <tbody id="suggestBody">
+                <tr>
+                    <td colspan="8" class="empty-state">
+                        <span class="spinner" aria-hidden="true"></span> Loading order suggestions...
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ====== SS-24: TRANSACTION HISTORY LINK + SS-25/SS-34 EXPORT ====== -->
+    <div class="section-header" style="margin-top: 28px;">
+        <h2 class="section-title">Transaction History</h2>
+        <div class="suggest-controls">
+            <button class="btn-export-sm" onclick="exportSummaryCsv()" title="Download transaction summary as CSV (Excel-compatible)">⬇ Export Summary CSV</button>
+            <a href="{{ route('transactions') }}" class="section-link">View All Transactions →</a>
+        </div>
+    </div>
+    <p class="suggest-hint">Buong listahan ng benta na may resibo number, petsa, cashier name, items, total, payment, at change. May search, filter by cashier at date, at pagination. Ang Export button ay nagda-download ng summary na Excel-compatible.</p>
+
     <!-- ====== RECENT STOCK-IN ACTIVITY ====== -->
     <div class="section-header" style="margin-top: 28px;">
         <h2 class="section-title">Recent Stock-In Activity</h2>
@@ -391,6 +441,55 @@
         tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
 
+        /* === SS-35 RESTOCK SUGGESTIONS === */
+        .suggest-badge {
+            font-size: 11px;
+            color: #fbbf24;
+            background: rgba(251,191,36,0.12);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-weight: 700;
+            vertical-align: middle;
+            margin-left: 6px;
+        }
+        .suggest-controls { display: flex; align-items: center; gap: 10px; }
+        .suggest-label { font-size: 12px; color: #64748b; }
+        .suggest-select {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #e2e8f0;
+            font-size: 12px;
+            border-radius: 8px;
+            padding: 6px 10px;
+            outline: none;
+        }
+        .suggest-hint { font-size: 12px; color: #64748b; margin: 0 0 12px 0; }
+        .urgency-pill {
+            display: inline-block;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+        .urgency-critical { background: rgba(248,113,113,0.15); color: #f87171; }
+        .urgency-low { background: rgba(251,191,36,0.15); color: #fbbf24; }
+        .urgency-watch { background: rgba(96,165,250,0.12); color: #60a5fa; }
+        .suggest-qty { font-weight: 700; color: #4ade80; font-size: 14px; }
+        .suggest-why { font-size: 12px; color: #94a3b8; max-width: 260px; }
+        .btn-export-sm {
+            background: rgba(74,222,128,0.12); color: #4ade80; border: 1px solid rgba(74,222,128,0.3);
+            border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+            font-family: 'Inter', sans-serif;
+        }
+        .btn-export-sm:hover { background: rgba(74,222,128,0.2); }
+        body.light-theme .suggest-select { background: #fff; border-color: rgba(15,23,42,0.12); color: #0f172a; }
+        body.light-theme .suggest-hint { color: #94a3b8; }
+        body.light-theme .suggest-why { color: #64748b; }
+        body.light-theme .suggest-qty { color: #16a34a; }
+
         /* === LIGHT THEME === */
         body.light-theme .page-title { color: #0f172a; }
         body.light-theme .page-subtitle { color: #64748b; }
@@ -613,6 +712,44 @@
             }
         }
 
+        // ── SS-35 Restock Suggestions ───────────────────────────
+        async function loadRestockSuggestions() {
+            const body = document.getElementById('suggestBody');
+            const countEl = document.getElementById('suggestCount');
+            const winEl = document.getElementById('suggestWindow');
+            const days = winEl ? winEl.value : 30;
+            try {
+                const res = await fetch('/api/dashboard/restock-suggestions?days=' + encodeURIComponent(days));
+                if (!res.ok) throw new Error('Failed (' + res.status + ')');
+                const d = await res.json();
+                const items = d.suggestions || [];
+                if (countEl) countEl.textContent = d.count + ' items · ' + d.window_days + 'd window · ' + d.cover_days + 'd cover';
+                if (items.length === 0) {
+                    body.innerHTML = '<tr><td colspan="8" class="empty-state">All stocks healthy — no restock needed right now.</td></tr>';
+                    return;
+                }
+                body.innerHTML = items.map(s => `
+                    <tr>
+                        <td><span class="urgency-pill urgency-${escapeHtml(s.urgency)}">${escapeHtml(s.urgency)}</span></td>
+                        <td><strong>${escapeHtml(s.name)}</strong><br><span style="font-size:11px;color:#64748b;font-family:monospace;">${escapeHtml(s.sku)}</span></td>
+                        <td>${s.current_stock} / ${s.reorder_threshold}</td>
+                        <td>${s.sold_in_window} pcs</td>
+                        <td>${s.avg_daily}/day</td>
+                        <td>${s.days_until_out === null ? '—' : s.days_until_out + ' days'}</td>
+                        <td class="suggest-qty">+${s.suggested_qty} pcs</td>
+                        <td class="suggest-why">${escapeHtml(s.reason)}</td>
+                    </tr>`).join('');
+            } catch (e) {
+                body.innerHTML = '<tr><td colspan="8" class="empty-state">Unable to load suggestions</td></tr>';
+                console.error('Suggestions load error:', e);
+            }
+        }
+
+        // ── SS-25/SS-34 Export Summary CSV ──────────────────────
+        function exportSummaryCsv() {
+            window.location.href = '/api/dashboard/transactions/export';
+        }
+
         // ── Helpers ─────────────────────────────────────────────
         function escapeHtml(text) {
             const d = document.createElement('div');
@@ -625,6 +762,7 @@
         loadRevenueChart();
         loadTopProducts();
         loadRecentStockIns();
+        loadRestockSuggestions();
     })();
     </script>
 @endpush
