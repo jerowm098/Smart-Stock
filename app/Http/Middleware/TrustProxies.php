@@ -2,60 +2,37 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
-use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Illuminate\Http\Middleware\TrustProxies as BaseTrustProxies;
 
-class TrustProxies
+class TrustProxies extends BaseTrustProxies
 {
     /**
      * Trusted proxies that Render uses for its Load Balancer.
      *
      * All modern cloud LBs send X-Forwarded-* headers:
-     *   X-Forwarded-For  = original client IP
+     *   X-Forwarded-For   = original client IP
      *   X-Forwarded-Proto = http or https
-     *   X-Forwarded-Host = original host
+     *   X-Forwarded-Host  = original host
      *
      * By default Laravel only trusts localhost proxies. On Render,
      * the incoming request from the LB to our container is over plain
      * HTTP on $PORT — but the original client-to-LB connection was HTTPS.
-     * We need to tell Laravel to trust those headers.
+     * Kailangan i-trust ang LB para makita ng Laravel ang https://,
+     * kung hindi secure-cookie + APP_URL mismatch ang magdudulot ng 500/loop.
+     *
+     * '*' = trust the calling IP (Render LB). Ito ang tamang paraan
+     * sa Laravel 12 — ang base class ang bahala sa REMOTE_ADDR mapping,
+     * hindi Symfony direkta (na hindi marunong sa '*' string).
      *
      * See: https://laravel.com/docs/12.x/deployment#reverse-proxies
      */
     protected $proxies = '*';
 
-    /**
-     * Handle an incoming request.
-     */
-    public function handle(Request $request, Closure $next): Response
-    {
-        // HEADER_X_FORWARDED_FOR_ALL covers all standard X-Forwarded-* headers
-        // including X-Forwarded-Proto which ngrok sends to signal HTTPS.
-        $request->setTrustedProxies(
-            $this->resolveProxies(),
-            Request::HEADER_X_FORWARDED_FOR
-                | Request::HEADER_X_FORWARDED_HOST
-                | Request::HEADER_X_FORWARDED_PORT
-                | Request::HEADER_X_FORWARDED_PROTO
-                | Request::HEADER_X_FORWARDED_PREFIX
-        );
-
-        return $next($request);
-    }
-
-    /**
-     * Resolve the trusted proxy addresses.
-     *
-     * '*' trusts all proxies — this is correct for Render because
-     * the LB is always the immediate predecessor of our app.
-     */
-    protected function resolveProxies(): array
-    {
-        if ($this->proxies === '*') {
-            return ['*'];
-        }
-
-        return array_map('trim', explode(',', (string) $this->proxies));
-    }
+    protected $headers =
+        \Illuminate\Http\Request::HEADER_X_FORWARDED_FOR |
+        \Illuminate\Http\Request::HEADER_X_FORWARDED_HOST |
+        \Illuminate\Http\Request::HEADER_X_FORWARDED_PORT |
+        \Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO |
+        \Illuminate\Http\Request::HEADER_X_FORWARDED_PREFIX |
+        \Illuminate\Http\Request::HEADER_X_FORWARDED_AWS_ELB;
 }

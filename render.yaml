@@ -10,9 +10,9 @@
 #  NOTE: Smart-Stock now uses Supabase PostgreSQL (no SQLite).
 #  Project region = Tokyo (ap-northeast-1), kaya pooler host ay
 #  aws-0-ap-northeast-1.pooler.supabase.com (hindi southeast).
-#  Kailangan mong i-set sa Render Dashboard > Environment:
-#    - APP_KEY (sync false, secret)
-#    - DB_HOST, DB_USERNAME, DB_PASSWORD (sync false, secret)
+#  Ang DB_HOST/DB_USERNAME ay naka-commit na bilang default para
+#  hindi blanko ang fresh deploy. Ang sekreto lang (APP_KEY,
+#  DB_PASSWORD) ang sync:false at manual sa dashboard.
 #  Huwag i-commit ang DB_PASSWORD sa repo.
 # ====================================================================
 
@@ -42,28 +42,34 @@ services:
       # --- Supabase PostgreSQL Tokyo (primary, walang SQLite) ---
       # Kunin sa Supabase Dashboard > Connect > Transaction Pooler > URI
       # PROD runtime = Transaction pooler 6543 (hindi Session, hindi Direct)
+      # Homepage/Login GET ay walang DB kaya 200 kahit blanko ang DB vars.
+      # POST login/register ay nag-500 pag blanko/mali ang DB vars.
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
-        sync: false
+        value: aws-0-ap-northeast-1.pooler.supabase.com
       - key: DB_PORT
         value: "6543"
       - key: DB_DATABASE
         value: postgres
       - key: DB_USERNAME
-        sync: false
+        value: postgres.vxmyfozpixzbobwnfziq
       - key: DB_PASSWORD
         sync: false
       - key: DB_SSLMODE
         value: require
 
-      # --- SESSION/CACHE sa file ---
+      # --- SESSION/CACHE/QUEUE sa file/sync (hindi database) ---
+      # MAHALAGA: pag database ang default at wala pang sessions/cache/jobs
+      # table sa Supabase, mag-500 ang GET /login. Kaya file/sync dito.
       - key: SESSION_DRIVER
         value: file
       - key: CACHE_STORE
         value: file
       - key: QUEUE_CONNECTION
-        value: "null"
+        value: sync
+      - key: APP_MAINTENANCE_STORE
+        value: file
       - key: SESSION_SECURE_COOKIE
         value: "true"
       - key: SESSION_HTTP_ONLY

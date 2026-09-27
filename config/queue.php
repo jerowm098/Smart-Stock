@@ -8,7 +8,10 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'default' => env('QUEUE_CONNECTION', 'database'),
+    // Render fix: default sync (hindi database) para hindi mag-500 ang
+    // GET /login kapag walang QUEUE_CONNECTION env o walang jobs table.
+    // Prod override nasa render.yaml: QUEUE_CONNECTION=sync.
+    'default' => env('QUEUE_CONNECTION', 'sync'),
 
     /*
     |--------------------------------------------------------------------------

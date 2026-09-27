@@ -56,18 +56,26 @@ RUN npm run build
 FROM php:8.3-fpm
 
 # ============ System dependencies ============
-# NOTE: ctype, fileinfo, session, pdo ay naka-built-in na sa
-# php:8.3-fpm image - kaya pdo_pgsql at bcmath ang i-install.
-# libpq-dev kailangan para ma-compile ang pdo_pgsql.
+# Laravel 12 kailangan: BCMath, Ctype, Fileinfo, JSON, Mbstring,
+# OpenSSL, PDO, Tokenizer, XML + pdo_pgsql para sa Supabase.
+# Sa php:8.3-fpm, ctype/fileinfo/json/openssl/pdo/tokenizer ay
+# built-in na, pero mbstring/xml/bcmath/pdo_pgsql kailangan
+# i-compile. Kapag kulang (lalo na mbstring/xml), nag-500 ang
+# lahat ng page kasama ang GET /login (Call to undefined
+# function mb_strlen() / class not found).
 RUN apt-get update && apt-get install -y --no-install-recommends \
         nginx \
         supervisor \
         libpq-dev \
         libssl-dev \
+        libonig-dev \
+        libxml2-dev \
+        libzip-dev \
         ca-certificates \
         curl \
+        unzip \
         gettext-base \
-        && docker-php-ext-install pdo_pgsql bcmath \
+        && docker-php-ext-install pdo_pgsql bcmath mbstring xml \
         && apt-get clean \
         && rm -rf /var/lib/apt/lists/*
 
@@ -122,12 +130,15 @@ RUN mkdir -p /var/log/nginx \
 RUN ln -sf /dev/stdout storage/logs/laravel.log
 
 # ============ Runtime ============
+# NOTE: QUEUE_CONNECTION=sync (hindi null/database) para hindi mag-500
+# ang GET /login kapag walang jobs table sa Supabase.
 EXPOSE 80
 ENV APP_ENV=production \
     APP_DEBUG=false \
     SESSION_DRIVER=file \
     CACHE_STORE=file \
-    QUEUE_CONNECTION=null \
+    QUEUE_CONNECTION=sync \
+    APP_MAINTENANCE_STORE=file \
     LOG_CHANNEL=stderr
 
 # $@ = ["/usr/bin/supervisord","-c","/etc/supervisor/conf.d/supervisord.conf"]

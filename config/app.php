@@ -120,7 +120,9 @@ return [
 
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
-        'store' => env('APP_MAINTENANCE_STORE', 'database'),
+        // Render fix: file din ang store para hindi mag-DB query ang
+        // GET /login kahit naka-maintenance check ang framework.
+        'store' => env('APP_MAINTENANCE_STORE', 'file'),
     ],
 
 ];
