@@ -55,18 +55,35 @@ services:
         value: require
 
       # --- SESSION/CACHE sa file ---
+      # NOTE: 'file' driver is safe here kasi Render spins up ONE container
+      # (nginx+php-fpm share it via supervisor), so lahat ng php-fpm workers
+      # ay may iisang session store. Kung magka-multiple instance ka, ilipat
+      # sa 'database' driver para hindi mawala ang session sa restart.
       - key: SESSION_DRIVER
         value: file
       - key: CACHE_STORE
         value: file
+
+      # 'null' ay VALID - Laravel registers it as the NullConnector
+      # (vendor/laravel/framework/src/Illuminate/Queue/QueueServiceProvider.php),
+      # meaning "huwag mag-enqueue, i-drop ang jobs". Ito ang pinaka-ligtas sa
+      # free plan dahil walang queue worker at hindi ka mag-hang ng jobs.
+      # ('sync' ay rin valid, pero 'null' ang default natin sa Dockerfile.)
       - key: QUEUE_CONNECTION
-        value: "sync"
+        value: "null"
+
+      # Cookies: secure lang sa HTTPS (Render's default), http-only para sa
+      # XSS, at 'lax' same-site para makapasok ang session sa POST /login
+      # pagkatapos ng redirect mula sa Cloudflare/Render edge.
       - key: SESSION_SECURE_COOKIE
         value: "true"
       - key: SESSION_HTTP_ONLY
         value: "true"
       - key: SESSION_SAME_SITE
         value: "lax"
+      # NOTE: huwag mag-set ng SESSION_DOMAIN. Kapag wala ito, gumagamit ang
+      # Laravel ng host ng request, kaya nananatiling wasto ang cookie kahit
+      # binago ang domain ng Render service.
 
       # --- APP_KEY ---
       # MAHALAGA: para manatiling valid ang mga session/encryption
@@ -79,4 +96,4 @@ services:
       # fully-qualified HTTPS URLs (forms, links, redirects).
       # Change the value below to your actual Render service name.
       - key: APP_URL
-        value: https://smart-stock.onrender.com
+        value: https://smart-stock-4lav.onrender.com

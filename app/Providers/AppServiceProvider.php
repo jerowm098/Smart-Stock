@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Database\PostgresConnection;
 use Illuminate\Database\Connection;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -21,7 +22,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Defense in depth against plain-HTTP URLs behind Render's TLS proxy.
+        // trustProxies() already makes $request->isSecure() true, so this is
+        // normally a no-op - but if the X-Forwarded-Proto chain ever breaks
+        // again, every generated URL (form actions, redirects, route('home'))
+        // stays on https instead of silently degrading to http://, which is
+        // what produced the Chrome "form is not secure" block + 419 on CSRF.
+        if ($this->app->environment('production')) {
+            URL::forceScheme('https');
+        }
     }
 
     /**
