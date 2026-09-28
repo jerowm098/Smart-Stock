@@ -60,7 +60,7 @@ services:
       - key: CACHE_STORE
         value: file
       - key: QUEUE_CONNECTION
-        value: "null"
+        value: "sync"
       - key: SESSION_SECURE_COOKIE
         value: "true"
       - key: SESSION_HTTP_ONLY
