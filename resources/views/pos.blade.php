@@ -119,10 +119,6 @@
                             <span>Subtotal</span>
                             <span id="summarySubtotal">₱0.00</span>
                         </div>
-                        <div class="summary-row">
-                            <span>Tax (12%)</span>
-                            <span id="summaryTax">₱0.00</span>
-                        </div>
                         <div class="summary-row summary-total-row">
                             <span>Total</span>
                             <span id="summaryTotal">₱0.00</span>
@@ -782,11 +778,8 @@
 
     function updateSummary() {
         const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const tax = subtotal * 0.12;
-        const total = subtotal + tax;
         document.getElementById('summarySubtotal').textContent = '₱' + subtotal.toFixed(2);
-        document.getElementById('summaryTax').textContent = '₱' + tax.toFixed(2);
-        document.getElementById('summaryTotal').textContent = '₱' + total.toFixed(2);
+        document.getElementById('summaryTotal').textContent = '₱' + subtotal.toFixed(2);
         const count = cart.reduce((sum, item) => sum + item.quantity, 0);
         document.getElementById('cartCount').textContent = count + ' item' + (count !== 1 ? 's' : '');
         updateChange();

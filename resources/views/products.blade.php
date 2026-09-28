@@ -5,19 +5,8 @@
 @section('content')
     <div class="page-header">
         <h1 class="page-title">Products</h1>
-        @if(Auth::user()?->isAdmin())
-            <p class="page-subtitle">Manage inventory items and add new products</p>
-        @else
-            <p class="page-subtitle">Browse catalogue — read-only for cashier. Use POS Checkout for sales.</p>
-        @endif
+        <p class="page-subtitle">Browse the hardware item catalogue and current stock levels</p>
     </div>
-    @if(Auth::user()?->isCashier())
-        <div class="section-card" style="border-left: 4px solid #f59e0b; margin-bottom: 16px;">
-            <div style="padding: 12px 16px; font-size: 13px; color: #fbbf24;">
-                Read-only mode: you can view products here, but only Admin can add, edit, or delete. Go to POS Checkout to process sales.
-            </div>
-        </div>
-    @endif
     <div class="section-card">
         <div class="section-card-header">
             <h2 class="section-card-title">Search & Filter</h2>
@@ -185,6 +174,44 @@
                     <button type="submit" class="btn btn-submit">Update Product</button>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <!-- VIEW PRODUCT MODAL (read-only, for cashiers) -->
+    <div class="modal-overlay" id="viewModal">
+        <div class="modal">
+            <h2>Product Details</h2>
+            <div class="form-group">
+                <label>Product Name</label>
+                <div class="form-static" id="vName">—</div>
+            </div>
+            <div class="form-group">
+                <label>SKU / Code</label>
+                <div class="form-static" id="vSku">—</div>
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <div class="form-static" id="vCategory">—</div>
+            </div>
+            <div class="form-group">
+                <label>Unit Price</label>
+                <div class="form-static" id="vPrice">—</div>
+            </div>
+            <div class="form-group">
+                <label>Current Stock</label>
+                <div class="form-static" id="vStock">—</div>
+            </div>
+            <div class="form-group">
+                <label>Reorder Threshold</label>
+                <div class="form-static" id="vThreshold">—</div>
+            </div>
+            <div class="form-group">
+                <label>Status</label>
+                <div class="form-static" id="vStatus">—</div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-cancel" onclick="closeViewModal()">Close</button>
+            </div>
         </div>
     </div>
 
@@ -633,6 +660,8 @@
         body.light-theme .modal h2 { color: #0f172a; }
         body.light-theme .modal .form-group label { color: #475569; }
         body.light-theme .modal .form-group input { background: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a; }
+        body.light-theme .modal .form-group select { background: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a; }
+        body.light-theme .modal .form-static { color: #0f172a; background: #f8fafc; border-color: rgba(15,23,42,0.14); }
         body.light-theme .modal-actions .btn-cancel { background: #e2e8f0; color: #334155; }
 
         /* STOCK ADJUSTMENT MODAL - LIGHT THEME */
@@ -818,7 +847,7 @@
                         <td class="stock-cell stock-${s.class}">${p.current_stock}</td>
                         <td>${p.reorder_threshold}</td>
                         <td><span class="status-text stock-${s.class}">${s.label}</span></td>
-                        <td>${canManageProducts ? '<button class="action-link" onclick="openEditModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Edit</button>' : ''}${canAdjustStock ? '<button class="action-link" onclick="openAdjustModal(' + p.id + ', ' + p.current_stock + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Adjust</button>' : ''}${canManageProducts ? '<button class="action-link danger" onclick="deleteProduct(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>Delete</button>' : ''}</td>
+                        <td>${canManageProducts ? '<button class="action-link" onclick="openEditModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Edit</button>' : '<button class="action-link" onclick="openViewModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>View</button>'}${canAdjustStock ? '<button class="action-link" onclick="openAdjustModal(' + p.id + ', ' + p.current_stock + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Adjust</button>' : ''}${canManageProducts ? '<button class="action-link danger" onclick="deleteProduct(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>Delete</button>' : ''}</td>
                     </tr>`;
                 }).join('');
             }
@@ -832,7 +861,7 @@
                 grid.innerHTML = products.map(p => {
                     const s = getStatus(p.current_stock, p.reorder_threshold);
                     const img = getProductImage(p);
-                    const editBtn = canManageProducts ? `<button class="action-link" onclick="openEditModal(${p.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Edit</button>` : '';
+                    const editBtn = canManageProducts ? `<button class="action-link" onclick="openEditModal(${p.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Edit</button>` : `<button class="action-link" onclick="openViewModal(${p.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>View</button>`;
                     const adjBtn = canAdjustStock ? `<button class="action-link" onclick="openAdjustModal(${p.id}, ${p.current_stock})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Adjust</button>` : '';
                     const delBtn = canManageProducts ? `<button class="action-link danger" onclick="deleteProduct(${p.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>Delete</button>` : '';
                     return `<div class="product-card" id="card-${p.id}">
@@ -988,6 +1017,32 @@
             if (stock <= threshold) return { label: 'Critical', class: 'critical' };
             if (stock <= threshold * 1.5) return { label: 'Low', class: 'low' };
             return { label: 'OK', class: 'ok' };
+        }
+
+        // --- Read-only product view (cashier) ---
+
+        function openViewModal(id) {
+            const product = allProducts.find(p => p.id === id);
+            if (!product) {
+                showToast('Product not found', 'error');
+                return;
+            }
+
+            const s = getStatus(product.current_stock, product.reorder_threshold);
+
+            document.getElementById('vName').textContent = product.name || '—';
+            document.getElementById('vSku').textContent = product.sku || '—';
+            document.getElementById('vCategory').textContent = product.category || '—';
+            document.getElementById('vPrice').textContent = '₱' + parseFloat(product.price || 0).toFixed(2);
+            document.getElementById('vStock').textContent = product.current_stock;
+            document.getElementById('vThreshold').textContent = product.reorder_threshold;
+            document.getElementById('vStatus').textContent = s.label;
+
+            document.getElementById('viewModal').classList.add('active');
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewModal').classList.remove('active');
         }
 
         // --- SS-82: Edit Product modal helpers ---

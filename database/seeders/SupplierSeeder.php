@@ -65,7 +65,11 @@ class SupplierSeeder extends Seeder
         ];
 
         foreach ($suppliers as $supplier) {
-            Supplier::create($supplier);
+            // Idempotent: re-running the seeder must not duplicate suppliers.
+            Supplier::updateOrCreate(
+                ['name' => $supplier['name']],
+                $supplier,
+            );
         }
     }
 }

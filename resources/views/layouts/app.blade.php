@@ -14,7 +14,8 @@
         /* SIDEBAR */
         .sidebar { width: 240px; min-height: calc(100vh - 64px); background: #253347; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; position: fixed; top: 64px; left: 0; bottom: 0; z-index: 90; }
         .sidebar-nav { flex: 1; padding: 12px; overflow-y: auto; }
-        .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; padding: 12px 12px 6px; font-weight: 600; }
+        .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; padding: 6px 12px; font-weight: 600; margin-top: 22px; }
+        .sidebar-nav > .nav-label:first-child { margin-top: 4px; }
         .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; margin-bottom: 6px; }
         .nav-item:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
         .nav-item.active { background: rgba(96,165,250,0.15); color: #60a5fa; }
@@ -43,15 +44,15 @@
         .header-center { display: flex; align-items: center; gap: 4px; margin-left: 12px; }
         .header-center-btn {
             display: inline-flex; align-items: center; padding: 0 16px; height: 36px; border-radius: 8px;
-            border: none; color: #1e293b; font-size: 14px; font-weight: 500;
-            text-decoration: none; transition: color 0.15s; background: none; cursor: pointer;
+            border: none; color: #94a3b8; font-size: 14px; font-weight: 500;
+            text-decoration: none; transition: color 0.15s, font-weight 0.15s; background: none; cursor: pointer;
             font-family: 'Inter', sans-serif;
         }
-        .header-center-btn:hover { color: #0f172a; }
-        .header-center-btn.active { color: #94a3b8; }
-        body.light-theme .header-center-btn { color: #1e293b; }
-        body.light-theme .header-center-btn:hover { color: #0f172a; }
-        body.light-theme .header-center-btn.active { color: #94a3b8; }
+        .header-center-btn:hover { color: #1e293b; }
+        .header-center-btn.active { color: #0f172a; font-weight: 700; }
+        body.light-theme .header-center-btn { color: #94a3b8; }
+        body.light-theme .header-center-btn:hover { color: #1e293b; }
+        body.light-theme .header-center-btn.active { color: #0f172a; font-weight: 700; }
         .header-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-decoration: none; }
         .header-brand:hover .brand-name { color: #cbd5e1; }
         body.light-theme .header-brand:hover .brand-name { color: #334155; }
@@ -369,22 +370,37 @@
             <span class="mobile-menu-title">Smart-Stock</span>
             <button type="button" class="mobile-menu-close" onclick="closeMobileMenu()" aria-label="Close navigation menu">×</button>
         </div>
+        @php
+            // Role-aware navigation.
+            // Cashier: exactly 3 tabs — Overview, Products, POS Checkout.
+            // Admin:   full set — Overview, Products, Suppliers,
+            //          Backups, Stock-In, POS Checkout, Transactions.
+            $isAdmin = auth()->user()?->isAdmin() ?? false;
+        @endphp
         <nav class="sidebar-nav">
-            <div class="nav-label">Home</div>
+            <div class="nav-label">{{ $isAdmin ? 'Home' : 'Main' }}</div>
             <a href="{{ route('dashboard') }}" class="nav-item" id="navOverview" data-page="overview">
                 <span class="nav-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                 </span>
                 <span>Overview</span>
             </a>
-            <div class="nav-label">Management</div>
+            @if(!$isAdmin)
             <a href="{{ route('products') }}" class="nav-item" id="navProducts" data-page="products">
                 <span class="nav-icon">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                 </span>
                 <span>Products</span>
             </a>
-            @if(auth()->user()?->isAdmin())
+            @endif
+            @if($isAdmin)
+                <div class="nav-label">Management</div>
+                <a href="{{ route('products') }}" class="nav-item" id="navProducts" data-page="products">
+                    <span class="nav-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    </span>
+                    <span>Products</span>
+                </a>
                 <a href="{{ route('suppliers') }}" class="nav-item" id="navSuppliers" data-page="suppliers">
                     <span class="nav-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -392,19 +408,7 @@
                     <span>Suppliers</span>
                 </a>
             @endif
-            @if(auth()->user()?->isAdmin())
-                <a href="{{ route('transactions') }}" class="nav-item" id="navTransactions" data-page="transactions">
-                    <span class="nav-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
-                    </span>
-                    <span>Transactions</span>
-                </a>
-                <a href="{{ route('backups') }}" class="nav-item" id="navBackups" data-page="backups">
-                    <span class="nav-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-                    </span>
-                    <span>Backups</span>
-                </a>
+            @if($isAdmin)
                 <a href="{{ route('stock-in') }}" class="nav-item" id="navStockIn" data-page="stock-in">
                     <span class="nav-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
@@ -412,13 +416,30 @@
                     <span>Stock-In</span>
                 </a>
             @endif
-            @if(auth()->user()?->isCashier() || auth()->user()?->isAdmin())
-                <div class="nav-label">Sale</div>
+            @if(auth()->user()?->isCashier() || $isAdmin)
+                <div class="nav-label">Sales</div>
                 <a href="{{ route('pos') }}" class="nav-item" id="navPos" data-page="pos">
                     <span class="nav-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
                     </span>
                     <span>POS Checkout</span>
+                </a>
+                @if($isAdmin)
+                <a href="{{ route('transactions') }}" class="nav-item" id="navTransactions" data-page="transactions">
+                    <span class="nav-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+                    </span>
+                    <span>Transactions</span>
+                </a>
+                @endif
+            @endif
+            @if($isAdmin)
+                <div class="nav-label">Settings</div>
+                <a href="{{ route('backups') }}" class="nav-item" id="navBackups" data-page="backups">
+                    <span class="nav-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    </span>
+                    <span>Backups</span>
                 </a>
             @endif
         </nav>

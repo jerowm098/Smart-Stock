@@ -15,10 +15,7 @@ return [
     |
     */
 
-    // Render fix: default file (hindi database) para hindi mag-500 ang
-    // GET /login kapag walang CACHE_STORE env o walang cache table.
-    // Prod override nasa render.yaml: CACHE_STORE=file.
-    'default' => env('CACHE_STORE', 'file'),
+    'default' => env('CACHE_STORE', 'database'),
 
     /*
     |--------------------------------------------------------------------------

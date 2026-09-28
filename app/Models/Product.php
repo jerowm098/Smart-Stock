@@ -10,7 +10,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Product model for the Smart-Stock inventory system.
  *
  * @property int $id Primary key
- * @property int|null $user_id Owner (creator) of the product
+ * @property int|null $user_id Account that first created the product (audit trail only).
+ *                                The catalogue itself is SHARED across every role — this
+ *                                column is deliberately NOT used to isolate data.
  * @property string $name Product name
  * @property string|null $description Product description
  * @property string $sku Unique stock keeping unit
@@ -70,18 +72,10 @@ class Product extends Model
     }
 
     /**
-     * Get the user who owns this product.
+     * Get the user who created this product (audit trail only).
      */
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
-    }
-
-    /**
-     * Scope a query to only include products owned by the given user.
-     */
-    public function scopeOwnedBy($query, int $userId)
-    {
-        return $query->where('user_id', $userId);
     }
 }

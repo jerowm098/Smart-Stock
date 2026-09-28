@@ -66,15 +66,15 @@
         .header-center { display: flex; align-items: center; gap: 4px; margin-left: 12px; }
         .header-center-btn {
             display: inline-flex; align-items: center; padding: 0 16px; height: 36px; border-radius: 8px;
-            border: none; color: #1e293b; font-size: 14px; font-weight: 500;
-            text-decoration: none; transition: color 0.15s; background: none; cursor: pointer;
+            border: none; color: #94a3b8; font-size: 14px; font-weight: 500;
+            text-decoration: none; transition: color 0.15s, font-weight 0.15s; background: none; cursor: pointer;
             font-family: 'Inter', sans-serif;
         }
-        .header-center-btn:hover { color: #0f172a; }
-        .header-center-btn.active { color: #94a3b8; }
-        body.light-theme .header-center-btn { color: #1e293b; }
-        body.light-theme .header-center-btn:hover { color: #0f172a; }
-        body.light-theme .header-center-btn.active { color: #94a3b8; }
+        .header-center-btn:hover { color: #1e293b; }
+        .header-center-btn.active { color: #0f172a; font-weight: 700; }
+        body.light-theme .header-center-btn { color: #94a3b8; }
+        body.light-theme .header-center-btn:hover { color: #1e293b; }
+        body.light-theme .header-center-btn.active { color: #0f172a; font-weight: 700; }
 
         /* Theme toggle - matches dashboard header-btn style */
         .header-btn { cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 14px; font-weight: 500; transition: background 0.15s; user-select: none; background: none; min-height: 40px; }
@@ -237,140 +237,217 @@
         body.light-theme .dropdown-item.logout:hover { background: rgba(239,68,68,0.07); }
         body.light-theme .dropdown-divider { background: rgba(15,23,42,0.08); }
 
-        /* ── HERO ────────────────────────────────────────────────── */
+        /* ── HERO — centered, no image, graph backdrop ───────────── */
         .hero {
             display: flex;
+            flex-direction: column;
             align-items: center;
-            justify-content: space-between;
-            gap: 170px;
-            padding: 80px 40px 64px;
-            max-width: 1100px;
+            justify-content: center;
+            text-align: center;
+            gap: 0;
+            padding: 120px 24px 100px;
+            max-width: 900px;
             margin: 0 auto;
             position: relative;
+            isolation: isolate;
+            overflow: visible;
         }
+        /* full-bleed canvas */
         .hero-bg {
             position: absolute;
-            top: 0;
+            top: -64px;
+            bottom: -20px;
             left: 50%;
             transform: translateX(-50%);
             width: 100vw;
-            height: 100%;
             z-index: 0;
             pointer-events: none;
             overflow: hidden;
+            background:
+                radial-gradient(900px 420px at 12% 8%, rgba(59,130,246,0.14), transparent 60%),
+                radial-gradient(800px 420px at 88% 18%, rgba(168,85,247,0.12), transparent 60%),
+                radial-gradient(700px 500px at 55% 100%, rgba(34,211,238,0.08), transparent 60%);
         }
-        .hero-bg-circle {
+        body.light-theme .hero-bg {
+            background:
+                radial-gradient(900px 420px at 12% 8%, rgba(37,99,235,0.10), transparent 60%),
+                radial-gradient(800px 420px at 88% 18%, rgba(168,85,247,0.10), transparent 60%),
+                radial-gradient(700px 500px at 55% 100%, rgba(6,182,212,0.08), transparent 60%);
+        }
+        /* aurora blobs — pure CSS3 blur + blend */
+        .hero-aurora { position: absolute; border-radius: 50%; filter: blur(70px); mix-blend-mode: screen; opacity: .85; animation: auroraDrift 12s ease-in-out infinite alternate; }
+        .hero-aurora.a1 { width: 520px; height: 520px; top: -160px; right: -80px;
+            background: radial-gradient(circle at 30% 30%, #3b82f6 0%, #6366f1 35%, transparent 70%); opacity: .38; }
+        .hero-aurora.a2 { width: 460px; height: 460px; bottom: -180px; left: -120px;
+            background: radial-gradient(circle at 60% 40%, #06b6d4 0%, #3b82f6 40%, transparent 70%); opacity: .28; animation-delay: -4s; }
+        .hero-aurora.a3 { width: 320px; height: 320px; top: 18%; left: 44%;
+            background: radial-gradient(circle at 50% 50%, #a855f7 0%, transparent 68%); opacity: .22; animation-delay: -8s; }
+        body.light-theme .hero-aurora { mix-blend-mode: multiply; opacity: .22; filter: blur(80px); }
+        @keyframes auroraDrift {
+            0% { transform: translate(0,0) scale(1) rotate(0deg); }
+            50% { transform: translate(24px,-28px) scale(1.08) rotate(8deg); }
+            100% { transform: translate(-18px,18px) scale(0.96) rotate(-6deg); }
+        }
+        /* perspective grid with mask fade */
+        .hero-grid {
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(148,163,184,0.14) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(148,163,184,0.14) 1px, transparent 1px);
+            background-size: 56px 56px;
+            mask-image: radial-gradient(720px 420px at 50% 38%, black 30%, transparent 72%);
+            -webkit-mask-image: radial-gradient(720px 420px at 50% 38%, black 30%, transparent 72%);
+            opacity: .7;
+        }
+        body.light-theme .hero-grid {
+            background-image:
+                linear-gradient(rgba(15,23,42,0.07) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(15,23,42,0.07) 1px, transparent 1px);
+        }
+        .hero-dots {
+            position: absolute; inset: 0;
+            background-image: radial-gradient(circle, rgba(96,165,250,0.35) 1.3px, transparent 1.3px);
+            background-size: 22px 22px;
+            mask-image: radial-gradient(520px 320px at 78% 45%, black 0%, transparent 70%);
+            -webkit-mask-image: radial-gradient(520px 320px at 78% 45%, black 0%, transparent 70%);
+            opacity: .55;
+        }
+        body.light-theme .hero-dots { background-image: radial-gradient(circle, rgba(37,99,235,0.22) 1.3px, transparent 1.3px); }
+        /* film grain — SVG noise data-uri */
+        .hero-noise {
+            position: absolute; inset: 0; opacity: .05; mix-blend-mode: overlay;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            background-size: 180px 180px;
+        }
+        /* rotating conic beam + hairline */
+        .hero-beam {
+            position: absolute; top: -120px; left: 50%; width: 720px; height: 720px;
+            transform: translateX(-50%); border-radius: 50%;
+            background: conic-gradient(from 0deg, transparent 0deg, rgba(59,130,246,0.14) 28deg, transparent 56deg, transparent 180deg, rgba(168,85,247,0.10) 208deg, transparent 236deg);
+            filter: blur(2px); animation: beamSpin 22s linear infinite; opacity: .9;
+        }
+        @keyframes beamSpin { to { transform: translateX(-50%) rotate(360deg); } }
+        .hero-hairline {
+            position: absolute; top: 42%; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent 4%, rgba(96,165,250,0.45) 28%, rgba(34,211,238,0.5) 50%, rgba(168,85,247,0.45) 72%, transparent 96%);
+            box-shadow: 0 0 24px rgba(59,130,246,0.35);
+        }
+        body.light-theme .hero-hairline { background: linear-gradient(90deg, transparent 4%, rgba(37,99,235,0.28) 30%, rgba(6,182,212,0.28) 50%, rgba(168,85,247,0.28) 70%, transparent 96%); box-shadow: none; }
+        /* giant ring */
+        .hero-ring {
+            position: absolute; width: 560px; height: 560px; right: -140px; top: -140px;
+            border-radius: 50%; border: 1px solid rgba(148,163,184,0.18);
+            box-shadow: inset 0 0 80px rgba(59,130,246,0.08);
+        }
+        .hero-ring::before { content:''; position: absolute; inset: 28px; border-radius: 50%; border: 1px dashed rgba(148,163,184,0.14); animation: beamSpin 40s linear infinite; }
+        .hero-ring::after { content:''; position: absolute; top: 18px; left: 50%; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 16px #22c55e; }
+        body.light-theme .hero-ring { border-color: rgba(15,23,42,0.10); box-shadow: inset 0 0 80px rgba(37,99,235,0.06); }
+        /* floating particles */
+        .hero-particle { position: absolute; border-radius: 50%; animation: particleFloat 7s ease-in-out infinite; }
+        .hero-particle.p1 { width: 8px; height: 8px; top: 22%; right: 32%; background: #22c55e; box-shadow: 0 0 14px #22c55e; }
+        .hero-particle.p2 { width: 6px; height: 6px; top: 64%; right: 8%; background: #60a5fa; box-shadow: 0 0 12px #60a5fa; animation-delay: -2s; }
+        .hero-particle.p3 { width: 5px; height: 5px; top: 18%; left: 42%; background: #a855f7; box-shadow: 0 0 12px #a855f7; animation-delay: -4s; }
+        .hero-particle.p4 { width: 4px; height: 4px; bottom: 18%; left: 36%; background: #22d3ee; box-shadow: 0 0 10px #22d3ee; animation-delay: -1s; }
+        @keyframes particleFloat { 0%,100% { transform: translateY(0) scale(1); opacity: .9; } 50% { transform: translateY(-16px) scale(1.2); opacity: 1; } }
+
+        .hero-left { flex: none; width: 100%; max-width: 780px; position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        /* subtle increasing line-graph backdrop — pure CSS3 + inline SVG */
+        .hero-graph {
             position: absolute;
-            border-radius: 50%;
-            border: 1.5px solid rgba(96,165,250,0.35);
-            background: rgba(96,165,250,0.08);
-            animation: heroFloat 6s ease-in-out infinite;
+            left: 50%;
+            bottom: -10px;
+            transform: translateX(-50%);
+            width: min(960px, 110vw);
+            height: 340px;
+            z-index: 1;
+            pointer-events: none;
+            opacity: .9;
+            mask-image: linear-gradient(to top, black 55%, transparent 98%);
+            -webkit-mask-image: linear-gradient(to top, black 55%, transparent 98%);
         }
-        .hero-bg-circle:nth-child(1) { width: 340px; height: 340px; top: -80px; right: -60px; animation-delay: 0s; border-color: rgba(96,165,250,0.4); background: rgba(96,165,250,0.1); }
-        .hero-bg-circle:nth-child(2) { width: 240px; height: 240px; bottom: -50px; left: -40px; animation-delay: 2s; border-color: rgba(59,130,246,0.3); background: rgba(59,130,246,0.08); }
-        .hero-bg-circle:nth-child(3) { width: 180px; height: 180px; top: 15%; right: 28%; animation-delay: 4s; border-color: rgba(147,197,253,0.25); background: rgba(147,197,253,0.06); }
-        body.light-theme .hero-bg-circle { border-color: rgba(37,99,235,0.2); background: rgba(37,99,235,0.06); }
-        @keyframes heroFloat {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-14px) scale(1.04); }
+        .hero-graph svg { width: 100%; height: 100%; display: block; overflow: visible; }
+        .hero-graph .g-grid { stroke: rgba(148,163,184,0.16); stroke-width: 1; stroke-dasharray: 3 6; }
+        body.light-theme .hero-graph .g-grid { stroke: rgba(15,23,42,0.10); }
+        .hero-graph .g-area { fill: url(#heroAreaFill); opacity: .5; }
+        .hero-graph .g-line {
+            fill: none; stroke: url(#heroLineGrad); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
+            stroke-dasharray: 1200; stroke-dashoffset: 1200;
+            animation: heroDraw 2.6s .3s ease forwards;
+            filter: drop-shadow(0 0 10px rgba(59,130,246,0.55));
         }
-        .hero-bg-dots {
-            position: absolute;
-            inset: 0;
-            background-image: radial-gradient(circle, rgba(96,165,250,0.3) 1.2px, transparent 1.2px);
-            background-size: 24px 24px;
+        @keyframes heroDraw { to { stroke-dashoffset: 0; } }
+        .hero-graph .g-dot { fill: #22c55e; stroke: #fff; stroke-width: 2; filter: drop-shadow(0 0 8px rgba(34,197,94,0.8)); animation: particleFloat 3s ease-in-out infinite; }
+        .hero-graph .g-label {
+            font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 800; fill: #4ade80;
+            background: transparent;
         }
-        body.light-theme .hero-bg-dots { background-image: radial-gradient(circle, rgba(37,99,235,0.15) 1.2px, transparent 1.2px); }
-        /* Horizontal line accent */
-        .hero-bg::after {
-            content: '';
-            position: absolute;
-            top: 40%;
-            left: 0;
-            right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent 5%, rgba(96,165,250,0.35) 30%, rgba(96,165,250,0.35) 70%, transparent 95%);
-        }
-        body.light-theme .hero-bg::after { background: linear-gradient(90deg, transparent 5%, rgba(37,99,235,0.2) 30%, rgba(37,99,235,0.2) 70%, transparent 95%); }
-        .hero-left { flex: 1; min-width: 0; position: relative; z-index: 1; }
-        .hero-tag {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            margin-bottom: 20px;
-            background: rgba(255,255,255,0.06);
-            color: #94a3b8;
-        }
-        body.light-theme .hero-tag { background: rgba(0,0,0,0.04); color: #64748b; }
         .hero-title {
-            font-size: 42px;
-            font-weight: 700;
-            line-height: 1.15;
-            color: #f8fafc;
-            margin-bottom: 16px;
+            font-size: clamp(40px, 5vw, 64px);
+            font-weight: 800; line-height: 1.04; letter-spacing: -0.035em;
+            text-wrap: balance; max-width: 18ch;
+            color: #f8fafc; margin: 0 auto 18px; text-align: center;
+        }
+        .hero-title .grad {
+            background: linear-gradient(92deg, #60a5fa 0%, #22d3ee 38%, #a78bfa 72%, #f472b6 100%);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            filter: drop-shadow(0 0 22px rgba(96,165,250,0.35));
+        }
+        .hero-title .stroke { position: relative; white-space: nowrap; }
+        .hero-title .stroke::after {
+            content:''; position: absolute; left: 0; right: 0; bottom: 2px; height: 10px; z-index: -1;
+            background: linear-gradient(90deg, rgba(59,130,246,0.35), rgba(34,211,238,0.28));
+            border-radius: 6px; transform: skewX(-12deg) rotate(-1deg);
         }
         body.light-theme .hero-title { color: #0f172a; }
+        body.light-theme .hero-title .grad { filter: none; }
         .hero-desc {
-            font-size: 16px;
-            color: #94a3b8;
-            line-height: 1.7;
-            margin-bottom: 32px;
-            max-width: 480px;
+            font-size: 17px; color: #94a3b8; line-height: 1.75;
+            margin: 0 auto 32px; max-width: 58ch; text-wrap: pretty; text-align: center;
         }
         body.light-theme .hero-desc { color: #64748b; }
-        .hero-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+        .hero-actions { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
         .btn-primary {
-            display: inline-flex; align-items: center; gap: 8px;
-            padding: 12px 24px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: #fff;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-            transition: opacity 0.15s, transform 0.1s;
+            position: relative; overflow: hidden;
+            display: inline-flex; align-items: center; gap: 9px;
+            padding: 14px 28px; border-radius: 12px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 55%, #1d4ed8 100%);
+            color: #fff; font-size: 14.5px; font-weight: 700; text-decoration: none;
+            box-shadow: 0 12px 32px rgba(37,99,235,0.42), inset 0 1px 0 rgba(255,255,255,0.25);
+            border: 1px solid rgba(255,255,255,0.14);
+            transition: transform .18s ease, box-shadow .18s ease;
         }
-        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary::after {
+            content:''; position: absolute; top: 0; left: -70%; width: 55%; height: 100%;
+            background: linear-gradient(105deg, transparent, rgba(255,255,255,0.45), transparent);
+            transform: skewX(-20deg); transition: left .6s ease;
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 44px rgba(37,99,235,0.55), inset 0 1px 0 rgba(255,255,255,0.25); }
+        .btn-primary:hover::after { left: 130%; }
         .btn-secondary {
             display: inline-flex; align-items: center; gap: 8px;
-            padding: 12px 24px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.12);
-            color: #cbd5e1;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-            background: transparent;
-            transition: background 0.15s, border-color 0.15s;
+            padding: 14px 26px; border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.14);
+            color: #e2e8f0; font-size: 14.5px; font-weight: 600; text-decoration: none;
+            background: rgba(255,255,255,0.04); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            transition: all .18s ease;
         }
-        .btn-secondary:hover { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.2); }
-        body.light-theme .btn-secondary { border-color: rgba(15,23,42,0.15); color: #475569; }
-        body.light-theme .btn-secondary:hover { background: rgba(15,23,42,0.04); border-color: rgba(15,23,42,0.25); }
-        .hero-right { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
-        .hero-illustration {
-            width: 420px;
-            height: 360px;
-            position: relative;
-            animation: heroFloatSvg 5s ease-in-out infinite;
-        }
-        @keyframes heroFloatSvg {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-14px); }
-        }
-        .hero-illustration svg { width: 100%; height: 100%; }
+        .btn-secondary:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.24); transform: translateY(-2px); }
+        body.light-theme .btn-secondary { border-color: rgba(15,23,42,0.14); color: #334155; background: rgba(255,255,255,0.9); }
+        body.light-theme .btn-secondary:hover { background: #fff; border-color: rgba(15,23,42,0.22); }
         .hero-counter-row {
-            display: flex;
-            gap: 32px;
-            margin-top: 36px;
+            display: flex; gap: 0; margin: 38px auto 0;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 16px; padding: 16px 8px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            max-width: 520px; width: 100%; justify-content: center;
         }
-        .hero-counter-item { display: flex; flex-direction: column; gap: 2px; }
-        .hero-counter-value { font-size: 28px; font-weight: 700; color: #f8fafc; }
+        body.light-theme .hero-counter-row { background: rgba(255,255,255,0.9); border-color: rgba(15,23,42,0.08); box-shadow: 0 12px 32px rgba(15,23,42,0.06); }
+        .hero-counter-item { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 0 22px; position: relative; }
+        .hero-counter-item + .hero-counter-item::before { content:''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 1px; background: linear-gradient(to bottom, transparent, rgba(148,163,184,0.28), transparent); }
+        .hero-counter-value { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; color: #f8fafc; font-variant-numeric: tabular-nums; }
         body.light-theme .hero-counter-value { color: #0f172a; }
-        .hero-counter-label { font-size: 12px; color: #64748b; font-weight: 500; }
+        .hero-counter-label { font-size: 11.5px; color: #64748b; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; }
+
+        /* hero image removed — centered layout only */
 
         /* ── ABOUT ────────────────────────────────────────────────── */
         .about-section {
@@ -708,13 +785,19 @@
             .user-dropdown { width: min(180px, calc(100vw - 24px)); }
         }
 
+        @media (max-width: 1024px) {
+            .hero { max-width: 100%; padding: 90px 28px 80px; }
+            .hero-left { max-width: 720px; }
+            .hero-graph { width: min(860px, 112vw); height: 300px; }
+        }
         @media (max-width: 768px) {
-            .hero { flex-direction: column; padding: 48px 20px; text-align: center; }
-            .hero-left { display: flex; flex-direction: column; align-items: center; }
-            .hero-desc { margin-left: auto; margin-right: auto; }
-            .hero-actions { justify-content: center; }
-            .hero-counter-row { justify-content: center; }
-            .hero-illustration { width: 280px; height: 220px; }
+            .hero { padding: 72px 20px 64px; }
+            .hero-left { max-width: 640px; }
+            .hero-title { max-width: 16ch; }
+            .hero-desc { max-width: 52ch; }
+            .hero-counter-row { width: 100%; }
+            .hero-graph { height: 260px; opacity: .75; }
+            .hero-ring { right: -220px; }
             .about-grid, .reviews-grid { grid-template-columns: 1fr; }
             .about-section, .reviews-section { padding: 48px 20px; }
         }
@@ -724,11 +807,13 @@
             .mobile-menu-button { width: 34px; height: 34px; }
             .header-btn { padding: 6px; }
             .user-avatar { width: 30px; height: 30px; }
-            .hero { padding: 32px 16px; }
-            .hero-title { font-size: 28px; }
+            .hero { padding: 56px 16px 48px; }
+            .hero-title { font-size: 32px; }
             .hero-desc { font-size: 14px; }
-            .hero-counter-row { gap: 20px; }
+            .hero-counter-row { flex-direction: row; padding: 14px 4px; }
+            .hero-counter-item { padding: 0 12px; }
             .hero-counter-value { font-size: 22px; }
+            .hero-graph { height: 220px; opacity: .65; }
             .section-title { font-size: 24px; }
             .reviews-rating-value { font-size: 36px; }
             .mobile-sidebar.mobile-open { width: calc(100vw - 40px); min-width: calc(100vw - 40px); }
@@ -743,6 +828,46 @@
             .mobile-menu-header { padding: 10px 8px; }
             .mobile-sidebar-nav { padding: 8px; }
         }
+
+        /* ── LOGIN REQUIRED MODAL ─────────────────────────────── */
+        .auth-modal-overlay {
+            position: fixed; inset: 0; z-index: 300;
+            background: rgba(2,6,23,0.7); backdrop-filter: blur(4px);
+            display: none; align-items: center; justify-content: center; padding: 20px;
+        }
+        body.light-theme .auth-modal-overlay { background: rgba(15,23,42,0.45); }
+        .auth-modal-overlay.active { display: flex; animation: authModalFade 0.2s ease; }
+        @keyframes authModalFade { from { opacity: 0; } to { opacity: 1; } }
+        .auth-modal {
+            background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
+            width: 100%; max-width: 420px; padding: 28px; text-align: center;
+            box-shadow: 0 24px 64px rgba(0,0,0,0.5); animation: authModalPop 0.25s cubic-bezier(0.34,1.56,0.64,1);
+        }
+        body.light-theme .auth-modal { background: #ffffff; border-color: rgba(15,23,42,0.1); box-shadow: 0 24px 64px rgba(15,23,42,0.2); }
+        @keyframes authModalPop { from { opacity: 0; transform: scale(0.92) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+        .auth-modal-icon {
+            width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 16px;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(59,130,246,0.12); color: #60a5fa;
+        }
+        body.light-theme .auth-modal-icon { background: rgba(37,99,235,0.1); color: #2563eb; }
+        .auth-modal-title { font-size: 18px; font-weight: 700; color: #f8fafc; margin-bottom: 8px; }
+        body.light-theme .auth-modal-title { color: #0f172a; }
+        .auth-modal-text { font-size: 14px; color: #94a3b8; line-height: 1.6; margin-bottom: 22px; }
+        body.light-theme .auth-modal-text { color: #64748b; }
+        .auth-modal-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+        .auth-modal-btn {
+            display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+            padding: 10px 20px; border-radius: 9px; font-size: 14px; font-weight: 600;
+            text-decoration: none; cursor: pointer; font-family: 'Inter', sans-serif;
+            border: 1px solid transparent; transition: filter 0.15s, background 0.15s;
+        }
+        .auth-modal-btn.primary { background: #3b82f6; color: #fff; }
+        .auth-modal-btn.primary:hover { filter: brightness(1.1); }
+        .auth-modal-btn.ghost { background: transparent; color: #94a3b8; border-color: rgba(255,255,255,0.15); }
+        .auth-modal-btn.ghost:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
+        body.light-theme .auth-modal-btn.ghost { color: #64748b; border-color: rgba(15,23,42,0.15); }
+        body.light-theme .auth-modal-btn.ghost:hover { background: rgba(15,23,42,0.05); color: #0f172a; }
     </style>
 </head>
 <body>
@@ -767,6 +892,8 @@
             <a href="{{ route('home') }}" class="header-center-btn active">Home</a>
             @auth
                 <a href="{{ route('dashboard') }}" class="header-center-btn">Dashboard</a>
+            @else
+                <a href="{{ route('dashboard') }}" class="header-center-btn" onclick="requireLogin(event, 'Dashboard')">Dashboard</a>
             @endauth
         </div>
 
@@ -845,6 +972,12 @@
                 <span>Home</span>
             </a>
             @guest
+                <a href="{{ route('dashboard') }}" class="mobile-nav-item" onclick="requireLogin(event, 'Dashboard')">
+                    <span class="mobile-nav-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    </span>
+                    <span>Dashboard</span>
+                </a>
                 <a href="{{ route('login') }}" class="mobile-nav-item">
                     <span class="mobile-nav-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
@@ -869,136 +1002,79 @@
     </aside>
     <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
 
-    <!-- HERO SECTION -->
+    <!-- HERO SECTION — centered, no image, graph backdrop -->
     <section class="hero">
-        <!-- 2D animated background -->
-        <div class="hero-bg">
-            <div class="hero-bg-circle"></div>
-            <div class="hero-bg-circle"></div>
-            <div class="hero-bg-circle"></div>
-            <div class="hero-bg-dots"></div>
+        <div class="hero-bg" aria-hidden="true">
+            <div class="hero-aurora a1"></div>
+            <div class="hero-aurora a2"></div>
+            <div class="hero-aurora a3"></div>
+            <div class="hero-grid"></div>
+            <div class="hero-dots"></div>
+            <div class="hero-beam"></div>
+            <div class="hero-hairline"></div>
+            <div class="hero-ring"></div>
+            <span class="hero-particle p1"></span>
+            <span class="hero-particle p2"></span>
+            <span class="hero-particle p3"></span>
+            <span class="hero-particle p4"></span>
+            <div class="hero-noise"></div>
+            <div class="hero-graph" aria-hidden="true">
+                <svg viewBox="0 0 960 340" preserveAspectRatio="none">
+                    <defs>
+                        <linearGradient id="heroLineGrad" x1="0" y1="0" x2="1" y2="0">
+                            <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.35"/>
+                            <stop offset="45%" stop-color="#38bdf8" stop-opacity="0.9"/>
+                            <stop offset="75%" stop-color="#22d3ee" stop-opacity="1"/>
+                            <stop offset="100%" stop-color="#4ade80" stop-opacity="1"/>
+                        </linearGradient>
+                        <linearGradient id="heroAreaFill" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.28"/>
+                            <stop offset="60%" stop-color="#38bdf8" stop-opacity="0.08"/>
+                            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+                        </linearGradient>
+                    </defs>
+                    <g>
+                        <line class="g-grid" x1="0" y1="70" x2="960" y2="70"/>
+                        <line class="g-grid" x1="0" y1="140" x2="960" y2="140"/>
+                        <line class="g-grid" x1="0" y1="210" x2="960" y2="210"/>
+                        <line class="g-grid" x1="0" y1="280" x2="960" y2="280"/>
+                    </g>
+                    <path class="g-area" d="M0,300 C80,290 140,260 220,245 C300,230 340,240 420,200 C500,160 540,170 620,130 C700,90 780,100 860,55 C890,38 920,30 960,22 L960,340 L0,340 Z"/>
+                    <path class="g-line" d="M0,300 C80,290 140,260 220,245 C300,230 340,240 420,200 C500,160 540,170 620,130 C700,90 780,100 860,55 C890,38 920,30 960,22"/>
+                    <circle class="g-dot" cx="860" cy="55" r="7"/>
+                    <circle class="g-dot" cx="620" cy="130" r="4" style="animation-delay:-1s;fill:#38bdf8"/>
+                    <circle class="g-dot" cx="420" cy="200" r="4" style="animation-delay:-2s;fill:#38bdf8"/>
+                </svg>
+            </div>
         </div>
 
         <div class="hero-left">
-            <span class="hero-tag">Smart Inventory System</span>
-            <h1 class="hero-title">Manage Your Inventory<br>with Smart Dashboard.</h1>
+            <h1 class="hero-title">Manage Your Hardware Products with <span class="grad stroke">Smart Stock</span> Inventory</h1>
             <p class="hero-desc">
                 Smart-Stock helps hardware stores track products, monitor stock levels in real time,
                 and get instant alerts — all from one easy-to-use dashboard.
             </p>
             <div class="hero-actions">
                 @guest
-                    <a href="{{ route('login') }}" class="btn-primary">Get Started</a>
+                    <a href="{{ route('login') }}" class="btn-primary">Get Started <span aria-hidden="true">→</span></a>
                     <a href="{{ route('register') }}" class="btn-secondary">Create Account</a>
                 @else
-                    <a href="{{ route('dashboard') }}" class="btn-primary">Open Dashboard</a>
+                    <a href="{{ route('dashboard') }}" class="btn-primary">Open Dashboard <span aria-hidden="true">→</span></a>
                 @endguest
             </div>
             <div class="hero-counter-row">
                 <div class="hero-counter-item">
-                    <span class="hero-counter-value" data-count="500">0</span>
+                    <span class="hero-counter-value" data-count="{{ $heroStats['products'] ?? 0 }}">0</span>
                     <span class="hero-counter-label">Products Tracked</span>
                 </div>
                 <div class="hero-counter-item">
-                    <span class="hero-counter-value" data-count="50">0</span>
-                    <span class="hero-counter-label">Active Stores</span>
+                    <span class="hero-counter-value" data-count="{{ $heroStats['suppliers'] ?? 0 }}">0</span>
+                    <span class="hero-counter-label">Suppliers</span>
                 </div>
                 <div class="hero-counter-item">
-                    <span class="hero-counter-value" data-count="99">0</span>
-                    <span class="hero-counter-label">% Uptime</span>
+                    <span class="hero-counter-value" data-count="{{ $heroStats['sales'] ?? 0 }}">0</span>
+                    <span class="hero-counter-label">Sales Recorded</span>
                 </div>
-            </div>
-        </div>
-        <div class="hero-right">
-            <div class="hero-illustration">
-                <svg viewBox="0 0 440 360" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <!-- Monitor / Screen - isometric -->
-                    <g transform="translate(80, 30)">
-                        <!-- Screen body (3D depth) -->
-                        <path d="M20 20 L280 20 L300 40 L40 40 Z" fill="#1e293b" opacity="0.5"/>
-                        <path d="M280 20 L280 210 L300 230 L300 40 Z" fill="#1a2332" opacity="0.5"/>
-                        <!-- Screen frame -->
-                        <rect x="16" y="16" width="268" height="198" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1.5"/>
-                        <!-- Screen display area -->
-                        <rect x="24" y="24" width="252" height="170" rx="4" fill="#0c1425"/>
-                        <!-- Chart grid lines -->
-                        <line x1="24" y1="64" x2="276" y2="64" stroke="#1e3a5f" stroke-width="0.5" opacity="0.4"/>
-                        <line x1="24" y1="104" x2="276" y2="104" stroke="#1e3a5f" stroke-width="0.5" opacity="0.4"/>
-                        <line x1="24" y1="144" x2="276" y2="144" stroke="#1e3a5f" stroke-width="0.5" opacity="0.4"/>
-                        <line x1="24" y1="184" x2="276" y2="184" stroke="#1e3a5f" stroke-width="0.5" opacity="0.4"/>
-                        <!-- Candlestick bars -->
-                        <rect x="40" y="120" width="6" height="40" rx="1" fill="#22c55e" opacity="0.8"/>
-                        <rect x="56" y="100" width="6" height="55" rx="1" fill="#22c55e" opacity="0.8"/>
-                        <rect x="72" y="130" width="6" height="30" rx="1" fill="#ef4444" opacity="0.8"/>
-                        <rect x="88" y="110" width="6" height="50" rx="1" fill="#22c55e" opacity="0.8"/>
-                        <rect x="104" y="90" width="6" height="60" rx="1" fill="#22c55e" opacity="0.8"/>
-                        <rect x="120" y="105" width="6" height="40" rx="1" fill="#ef4444" opacity="0.8"/>
-                        <rect x="136" y="80" width="6" height="55" rx="1" fill="#22c55e" opacity="0.8"/>
-                        <rect x="152" y="95" width="6" height="45" rx="1" fill="#ef4444" opacity="0.8"/>
-                        <rect x="168" y="70" width="6" height="65" rx="1" fill="#22c55e" opacity="0.8"/>
-                        <rect x="184" y="60" width="6" height="50" rx="1" fill="#22c55e" opacity="0.8"/>
-                        <rect x="200" y="75" width="6" height="35" rx="1" fill="#ef4444" opacity="0.8"/>
-                        <rect x="216" y="55" width="6" height="60" rx="1" fill="#22c55e" opacity="0.8"/>
-                        <rect x="232" y="45" width="6" height="55" rx="1" fill="#22c55e" opacity="0.8"/>
-                        <rect x="248" y="50" width="6" height="40" rx="1" fill="#ef4444" opacity="0.8"/>
-                        <!-- Trend line -->
-                        <polyline class="chart-line" points="43,135 59,118 75,140 91,120 107,98 123,115 139,85 155,100 171,72 187,62 203,80 219,58 235,48 251,55"
-                            stroke="#60a5fa" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"
-                            stroke-dasharray="200" opacity="0.9"/>
-                        <!-- Glow on trend line -->
-                        <polyline points="43,135 59,118 75,140 91,120 107,98 123,115 139,85 155,100 171,72 187,62 203,80 219,58 235,48 251,55"
-                            stroke="#60a5fa" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round" opacity="0.15"/>
-                        <!-- Small notification dot -->
-                        <circle cx="260" cy="32" r="4" fill="#22c55e"/>
-                    </g>
-                    <!-- Monitor stand -->
-                    <g transform="translate(80, 30)">
-                        <path d="M130 214 L130 240 L190 240 L190 214" fill="#1a2332" opacity="0.6"/>
-                        <rect x="110" y="238" width="100" height="6" rx="3" fill="#1e293b" opacity="0.7"/>
-                    </g>
-                    <!-- BUY badge - green -->
-                    <g transform="translate(160, 300)">
-                        <rect x="0" y="0" width="56" height="26" rx="13" fill="#22c55e" opacity="0.9"/>
-                        <text x="28" y="17" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="Inter, sans-serif">BUY</text>
-                    </g>
-                    <!-- SELL badge - red -->
-                    <g transform="translate(226, 300)">
-                        <rect x="0" y="0" width="56" height="26" rx="13" fill="#ef4444" opacity="0.9"/>
-                        <text x="28" y="17" text-anchor="middle" fill="#fff" font-size="10" font-weight="700" font-family="Inter, sans-serif">SELL</text>
-                    </g>
-                    <!-- Small floating document / spreadsheet card -->
-                    <g transform="translate(20, 190)">
-                        <rect x="0" y="0" width="120" height="80" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" opacity="0.8"/>
-                        <!-- Mini grid lines -->
-                        <line x1="10" y1="20" x2="110" y2="20" stroke="#334155" stroke-width="0.5"/>
-                        <line x1="10" y1="36" x2="110" y2="36" stroke="#334155" stroke-width="0.5"/>
-                        <line x1="10" y1="52" x2="110" y2="52" stroke="#334155" stroke-width="0.5"/>
-                        <line x1="10" y1="68" x2="110" y2="68" stroke="#334155" stroke-width="0.5"/>
-                        <line x1="45" y1="10" x2="45" y2="75" stroke="#334155" stroke-width="0.5"/>
-                        <line x1="80" y1="10" x2="80" y2="75" stroke="#334155" stroke-width="0.5"/>
-                        <!-- Mini data cells -->
-                        <rect x="12" y="24" width="30" height="8" rx="2" fill="#22c55e" opacity="0.5"/>
-                        <rect x="48" y="24" width="28" height="8" rx="2" fill="#334155" opacity="0.5"/>
-                        <rect x="82" y="24" width="24" height="8" rx="2" fill="#60a5fa" opacity="0.4"/>
-                        <rect x="12" y="40" width="30" height="8" rx="2" fill="#ef4444" opacity="0.4"/>
-                        <rect x="48" y="40" width="28" height="8" rx="2" fill="#334155" opacity="0.5"/>
-                        <rect x="82" y="40" width="24" height="8" rx="2" fill="#60a5fa" opacity="0.4"/>
-                        <rect x="12" y="56" width="30" height="8" rx="2" fill="#22c55e" opacity="0.5"/>
-                        <rect x="48" y="56" width="28" height="8" rx="2" fill="#334155" opacity="0.5"/>
-                        <!-- Mini chart on card -->
-                        <polyline points="16,66 30,60 44,64" stroke="#60a5fa" stroke-width="1" fill="none" stroke-linecap="round"/>
-                    </g>
-                    <!-- Floating sparkle dots -->
-                    <circle cx="380" cy="60" r="3" fill="#60a5fa" opacity="0.4">
-                        <animate attributeName="opacity" values="0.4;0.8;0.4" dur="2s" repeatCount="indefinite"/>
-                    </circle>
-                    <circle cx="400" cy="180" r="2" fill="#a855f7" opacity="0.3">
-                        <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2.5s" repeatCount="indefinite"/>
-                    </circle>
-                    <circle cx="50" cy="50" r="2.5" fill="#22c55e" opacity="0.3">
-                        <animate attributeName="opacity" values="0.3;0.6;0.3" dur="3s" repeatCount="indefinite"/>
-                    </circle>
-                </svg>
             </div>
         </div>
     </section>
@@ -1094,7 +1170,50 @@
         &copy; {{ date('Y') }} Smart-Stock. All rights reserved.
     </footer>
 
+    <!-- LOGIN REQUIRED MODAL -->
+    <div class="auth-modal-overlay" id="authModalOverlay" role="dialog" aria-modal="true" aria-labelledby="authModalTitle" onclick="if (event.target === this) closeAuthModal();">
+        <div class="auth-modal">
+            <div class="auth-modal-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            </div>
+            <h3 class="auth-modal-title" id="authModalTitle">Login Required</h3>
+            <p class="auth-modal-text">You must be logged in to access the <span id="authModalTarget">Dashboard</span>. Please log in to continue.</p>
+            <div class="auth-modal-actions">
+                <a href="{{ route('login') }}" class="auth-modal-btn primary">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                    Go to Login
+                </a>
+                <button type="button" class="auth-modal-btn ghost" onclick="closeAuthModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        /* ── Login-required modal (guests only) ──
+           NOTE: deliberately does NOT toggle body overflow.
+           Hiding the scrollbar changes the viewport width and shifts the
+           whole layout, which looks like the page "jumps". The page keeps
+           its scrollbar and scroll position behind the modal. */
+        function openAuthModal(target) {
+            const overlay = document.getElementById('authModalOverlay');
+            if (!overlay) return;
+            const label = document.getElementById('authModalTarget');
+            if (label) label.textContent = target || 'Dashboard';
+            overlay.classList.add('active');
+        }
+        function closeAuthModal() {
+            const overlay = document.getElementById('authModalOverlay');
+            if (!overlay) return;
+            overlay.classList.remove('active');
+        }
+        function requireLogin(event, target) {
+            if (event) event.preventDefault();
+            openAuthModal(target);
+        }
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeAuthModal();
+        });
+
         // Theme init
         (function () {
             let saved = 'dark';
@@ -1311,6 +1430,9 @@
                 if (el.dataset.animated) return;
                 el.dataset.animated = '1';
                 var target = parseFloat(el.dataset.count);
+                if (isNaN(target)) { el.textContent = '0'; return; }
+                // No animation needed when there is nothing to count up to.
+                if (target === 0) { el.textContent = '0'; return; }
                 var isDecimal = target % 1 !== 0;
                 var duration = 1500;
                 var startTime = performance.now();
@@ -1319,7 +1441,7 @@
                     var progress = Math.min(elapsed / duration, 1);
                     var eased = 1 - Math.pow(1 - progress, 3);
                     var current = eased * target;
-                    el.textContent = isDecimal ? current.toFixed(1) : Math.floor(current);
+                    el.textContent = isDecimal ? current.toFixed(1) : Math.floor(current).toLocaleString('en-PH');
                     if (progress < 1) requestAnimationFrame(update);
                 }
                 requestAnimationFrame(update);

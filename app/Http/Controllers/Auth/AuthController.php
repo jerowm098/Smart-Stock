@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Database\Seeders\ProductSeeder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -82,10 +81,11 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        // SS-49: Seed the new account with the sample hardware inventory
-        // so the catalogue (SS-17) and search/filter features (SS-18)
-        // have real data to display and test against from day one.
-        app(ProductSeeder::class)->seedForUser($user->id);
+        // NOTE: the inventory catalogue is SHARED store-wide, so a new account
+        // must NOT be given its own copy of the sample products. The previous
+        // per-user seeding violated the global UNIQUE(sku) constraint and made
+        // registration fail with a 500. New accounts simply start with access
+        // to the existing shared catalogue.
 
         return redirect()->route('login')->with('success', 'Account created! You can now sign in.');
     }
@@ -173,10 +173,9 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        // SS-49: Seed the new account with the sample hardware inventory
-        // so the catalogue (SS-17) and search/filter features (SS-18)
-        // have real data to display and test against from day one.
-        app(ProductSeeder::class)->seedForUser($user->id);
+        // NOTE: the inventory catalogue is SHARED store-wide, so a new account
+        // must NOT receive its own copy of the sample products. Seeding per
+        // user violates the global UNIQUE(sku) constraint.
 
         return response()->json([
             'message' => 'Account created successfully.',

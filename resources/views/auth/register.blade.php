@@ -254,10 +254,13 @@
             </div>
             <div class="form-group">
                 <label for="role">Role</label>
+                {{-- The placeholder must only be pre-selected when there is no
+                     previous input, otherwise it fights with the real option
+                     and the wrong role ends up submitted. --}}
                 <select id="role" name="role" required>
-                    <option value="" disabled selected>Select a role</option>
-                    <option value="admin" {{ old('role') == 'admin' ? 'selected' : '' }}>Admin</option>
-                    <option value="cashier" {{ old('role') == 'cashier' ? 'selected' : '' }}>Cashier</option>
+                    <option value="" disabled {{ old('role') ? '' : 'selected' }}>Select a role</option>
+                    <option value="admin" {{ old('role') === 'admin' ? 'selected' : '' }}>Admin</option>
+                    <option value="cashier" {{ old('role') === 'cashier' ? 'selected' : '' }}>Cashier</option>
                 </select>
             </div>
             <div class="form-group">

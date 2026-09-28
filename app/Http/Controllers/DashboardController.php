@@ -537,7 +537,9 @@ class DashboardController extends Controller
                 'sales.created_at'
             )
             ->orderByDesc('sales.created_at')
-            ->limit(10)
+            // Kept at 5 to match recentStockIns() so the two side-by-side
+            // dashboard panels render the same number of rows.
+            ->limit(5)
             ->get()
             ->map(function ($item) {
                 return [

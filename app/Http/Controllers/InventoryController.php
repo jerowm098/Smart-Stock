@@ -16,13 +16,16 @@ class InventoryController extends Controller
 {
     /**
      * Show the overview page.
-     * Admin sees the full analytics dashboard; cashier sees the simpler inventory overview.
+     *
+     * Both roles read from the SAME shared inventory database; they only get
+     * a different presentation. Admin gets the full analytics dashboard while
+     * the cashier gets the simplified, distraction-free overview.
      */
     public function index()
     {
         $user = Auth::user();
 
-        if ($user && $user->isAdmin()) {
+        if ($user?->isAdmin()) {
             return view('overview');
         }
 
@@ -75,8 +78,7 @@ class InventoryController extends Controller
         $stockAfter = 0;
 
         DB::transaction(function () use ($user, $validated, &$transactionProduct, &$unitMismatch, &$piecesPerReceivingUnit, &$pieceDelta, &$stockBefore, &$stockAfter) {
-            $query = Product::where('id', $validated['product_id'])
-                ->where('user_id', $user->id);
+            $query = Product::where('id', $validated['product_id']);
 
             // SQLite does not support lockForUpdate; the transaction plus
             // incremental update still serializes stock mutations safely.
@@ -173,18 +175,15 @@ class InventoryController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'sku' => [
-                'required',
-                'string',
-                'max:50',
-                Rule::unique('products', 'sku')->where(fn ($q) => $q->where('user_id', $user->id)),
-            ],
+            'sku' => ['required', 'string', 'max:50', Rule::unique('products', 'sku')],
             'category' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'current_stock' => 'required|integer|min:0',
             'reorder_threshold' => 'required|integer|min:0',
         ]);
 
+        // user_id is kept purely as a "created by" audit trail; the catalogue
+        // itself is shared store-wide across every account.
         $validated['user_id'] = $user->id;
         $product = Product::create($validated);
 
@@ -196,21 +195,13 @@ class InventoryController extends Controller
      */
     public function update(Request $request, Product $product): JsonResponse
     {
-        $user = $this->currentUser();
-        if (! $user || $product->user_id !== $user->id) {
-            return response()->json(['message' => 'Product not found or access denied.'], 404);
+        if (! $this->currentUser()) {
+            return response()->json(['message' => 'Authentication required.'], 401);
         }
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'sku' => [
-                'sometimes',
-                'string',
-                'max:50',
-                Rule::unique('products', 'sku')
-                    ->where(fn ($q) => $q->where('user_id', $user->id))
-                    ->ignore($product->id),
-            ],
+            'sku' => ['sometimes', 'string', 'max:50', Rule::unique('products', 'sku')->ignore($product->id)],
             'category' => 'sometimes|nullable|string',
             'price' => 'sometimes|numeric|min:0',
             'current_stock' => 'sometimes|integer|min:0',
@@ -238,26 +229,17 @@ class InventoryController extends Controller
         $validated = $request->validate([
             'id' => ['required', 'integer'],
             'name' => 'required|string|max:255',
-            'sku' => [
-                'required',
-                'string',
-                'max:50',
-                Rule::unique('products', 'sku')
-                    ->where(fn ($q) => $q->where('user_id', $user->id))
-                    ->ignore($request->input('id')),
-            ],
+            'sku' => ['required', 'string', 'max:50', Rule::unique('products', 'sku')->ignore($request->input('id'))],
             'category' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'current_stock' => 'required|integer|min:0',
             'reorder_threshold' => 'required|integer|min:0',
         ]);
 
-        $product = Product::where('id', $validated['id'])
-            ->where('user_id', $user->id)
-            ->first();
+        $product = Product::find($validated['id']);
 
         if (! $product) {
-            return response()->json(['message' => 'Product not found or access denied.'], 404);
+            return response()->json(['message' => 'Product not found.'], 404);
         }
 
         // SS-85: Execute SQL UPDATE query for the selected product ID.
@@ -285,8 +267,7 @@ class InventoryController extends Controller
             return response()->json([], 401);
         }
 
-        $lowStockProducts = Product::ownedBy($user->id)
-            ->whereColumn('current_stock', '<=', 'reorder_threshold')
+        $lowStockProducts = Product::whereColumn('current_stock', '<=', 'reorder_threshold')
             ->addSelect([
                 'last_received_at' => function ($query) {
                     $query->select('stock_ins.created_at')
@@ -317,7 +298,7 @@ public function getProducts(): JsonResponse
         return response()->json([], 401);
     }
 
-    $products = Product::ownedBy($user->id)
+    $products = Product::query()
         ->addSelect([
             'last_supplier_name' => function ($query) {
                 $query->select('suppliers.name')
@@ -345,9 +326,8 @@ public function getProducts(): JsonResponse
      */
     public function destroy(Product $product): JsonResponse
     {
-        $user = $this->currentUser();
-        if (! $user || $product->user_id !== $user->id) {
-            return response()->json(['message' => 'Product not found or access denied.'], 404);
+        if (! $this->currentUser()) {
+            return response()->json(['message' => 'Authentication required.'], 401);
         }
 
         $product->delete();
@@ -376,12 +356,10 @@ public function getProducts(): JsonResponse
             'delta' => ['required', 'integer', 'not_in:0'],
         ]);
 
-        $product = Product::where('id', $validated['product_id'])
-            ->where('user_id', $user->id)
-            ->first();
+        $product = Product::find($validated['product_id']);
 
         if (! $product) {
-            return response()->json(['message' => 'Product not found or access denied.'], 404);
+            return response()->json(['message' => 'Product not found.'], 404);
         }
 
         $delta = (int) $validated['delta'];

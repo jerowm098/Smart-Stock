@@ -130,7 +130,7 @@ git push origin main
 | `APP_DEBUG` | `false` | No stack trace |
 | `SESSION_DRIVER` | `file` | Walang Redis |
 | `CACHE_STORE` | `file` | Walang Redis |
-| `QUEUE_CONNECTION` | `sync` | Hindi `null`/`database` — pag `null` o `database` na walang jobs table, nag-500 ang GET /login |
+| `QUEUE_CONNECTION` | `null` | Walang worker |
 | `DB_CONNECTION` | `pgsql` | Supabase |
 | `DB_HOST` | pooler host mula sa Connect modal | Supabase host |
 | `DB_PORT` | `6543` sa prod (Transaction pooler) | Direct vs pooler |

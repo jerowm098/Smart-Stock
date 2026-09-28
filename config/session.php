@@ -18,10 +18,7 @@ return [
     |
     */
 
-    // Render fix: default file (hindi database) para hindi mag-500 ang
-    // GET /login kapag walang SESSION_DRIVER env o walang sessions table.
-    // Prod override nasa render.yaml: SESSION_DRIVER=file.
-    'driver' => env('SESSION_DRIVER', 'file'),
+    'driver' => env('SESSION_DRIVER', 'database'),
 
     /*
     |--------------------------------------------------------------------------
@@ -172,7 +169,7 @@ return [
     |
     */
 
-    'secure' => filter_var(env('SESSION_SECURE_COOKIE', false), FILTER_VALIDATE_BOOLEAN),
+    'secure' => env('SESSION_SECURE_COOKIE'),
 
     /*
     |--------------------------------------------------------------------------
@@ -185,7 +182,7 @@ return [
     |
     */
 
-    'http_only' => filter_var(env('SESSION_HTTP_ONLY', true), FILTER_VALIDATE_BOOLEAN),
+    'http_only' => env('SESSION_HTTP_ONLY', true),
 
     /*
     |--------------------------------------------------------------------------

@@ -14,11 +14,6 @@ use Illuminate\Validation\ValidationException;
 class PosCheckoutController extends Controller
 {
     /**
-     * Tax rate applied to POS sales.
-     */
-    private const TAX_RATE = 0.12;
-
-    /**
      * Resolve the authenticated user used for ownership checks.
      */
     protected function currentUser(): ?\App\Models\User
@@ -68,13 +63,6 @@ class PosCheckoutController extends Controller
             foreach ($cartItems as $cartItem) {
                 $product = Product::findOrFail($cartItem['product_id']);
 
-                if ($product->user_id !== $user->id) {
-                    return response()->json([
-                        'message' => 'Unauthorized: Product does not belong to you.',
-                        'product_id' => $product->id,
-                    ], 403);
-                }
-
                 if ($product->current_stock < $cartItem['quantity']) {
                     return response()->json([
                         'message' => 'Insufficient stock.',
@@ -97,8 +85,8 @@ class PosCheckoutController extends Controller
                 ];
             }
 
-            $taxAmount = round($subtotal * self::TAX_RATE, 2);
-            $totalAmount = round($subtotal + $taxAmount, 2);
+            // No tax applied: the store sells at listed price (VAT-inclusive).
+            $totalAmount = $subtotal;
 
             if ($paymentAmount < $totalAmount) {
                 return response()->json([
@@ -139,7 +127,6 @@ class PosCheckoutController extends Controller
                 'message' => 'Checkout completed successfully.',
                 'sale_id' => $sale->id,
                 'subtotal_amount' => $subtotal,
-                'tax_amount' => $taxAmount,
                 'total_amount' => $totalAmount,
                 'payment_amount' => $paymentAmount,
                 'change_amount' => $changeAmount,

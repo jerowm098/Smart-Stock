@@ -2,9 +2,9 @@
 
 namespace App\Providers;
 
+use App\Database\PostgresConnection;
+use Illuminate\Database\Connection;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\URL;
-use Illuminate\Http\Request;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -13,7 +13,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->useNativePostgresBooleans();
     }
 
     /**
@@ -21,14 +21,28 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Force HTTPS when the request was forwarded over HTTPS (e.g. ngrok, Render, any reverse proxy).
-        // This prevents the browser "form is not secure" warning by ensuring all generated
-        // URLs use https:// scheme even when artisan serve itself runs on plain HTTP.
-        if (request()->server('HTTP_X_FORWARDED_PROTO') === 'https'
-            || request()->server('HTTPS') === 'on'
-            || app()->environment('production')
-        ) {
-            URL::forceScheme('https');
-        }
+        //
+    }
+
+    /**
+     * Keep PostgreSQL BOOLEAN columns working with Eloquent.
+     *
+     * This schema stores two real boolean columns (`suppliers.is_active` and
+     * `alerts.is_resolved`). Laravel rewrites boolean bindings to integers,
+     * which PostgreSQL rejects, so a dedicated connection class converts them
+     * to native literals instead. Fixing it here keeps every model, seeder
+     * and query free of DB::raw() workarounds.
+     */
+    protected function useNativePostgresBooleans(): void
+    {
+        Connection::resolverFor(
+            'pgsql',
+            fn ($connection, $database, $prefix, $config) => new PostgresConnection(
+                $connection,
+                $database,
+                $prefix,
+                $config,
+            ),
+        );
     }
 }

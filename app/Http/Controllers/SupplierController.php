@@ -27,7 +27,7 @@ class SupplierController extends Controller
             return response()->json([], 401);
         }
 
-        $suppliers = Supplier::where('is_active', true)->latest()->get();
+        $suppliers = Supplier::active()->latest('created_at')->get();
 
         return response()->json($suppliers);
     }

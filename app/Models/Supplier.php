@@ -53,4 +53,15 @@ class Supplier extends Model
             'is_active' => 'boolean',
         ];
     }
+
+    /**
+     * Scope a query to active suppliers.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 }

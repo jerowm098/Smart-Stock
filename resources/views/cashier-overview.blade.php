@@ -52,7 +52,7 @@
 
     <!-- ====== CHART + TOP SELLING ROW ====== -->
     <div class="chart-top-row">
-        <!-- Revenue Chart (with 2 lines: Revenue + Tax) -->
+        <!-- Revenue Chart (single line: Revenue only) -->
         <div class="chart-panel">
             <div class="section-header">
                 <h2 class="section-title">Revenue Overview</h2>
@@ -366,7 +366,7 @@
             }
         }
 
-        // ── Revenue Chart (2 lines: Revenue + Tax) ──────────────
+        // ── Revenue Chart (single line: Revenue only) ───────────
         async function loadRevenueChart() {
             const loading = document.getElementById('chartLoading');
             try {
@@ -374,16 +374,14 @@
                 if (!res.ok) throw new Error('Failed to load chart');
                 const d = await res.json();
                 if (loading) loading.style.display = 'none';
-                // Compute tax line (12% of revenue)
-                const taxValues = d.values.map(v => Math.round(v * 0.12 * 100) / 100);
-                renderChart(d.labels, d.values, taxValues);
+                renderChart(d.labels, d.values);
             } catch (e) {
                 if (loading) loading.innerHTML = '<span style="color:#f87171;font-size:13px;">Unable to load chart</span>';
                 console.error('Chart load error:', e);
             }
         }
 
-        function renderChart(labels, revenueValues, taxValues) {
+        function renderChart(labels, revenueValues) {
             const ctx = document.getElementById('revenueChart').getContext('2d');
             const textColor = isLight() ? '#64748b' : '#94a3b8';
             const gridColor  = isLight() ? 'rgba(15,23,42,0.06)' : 'rgba(255,255,255,0.06)';
@@ -407,20 +405,6 @@
                             pointHoverRadius: 6,
                             fill: true,
                             tension: 0.35,
-                        },
-                        {
-                            label: 'Tax (₱)',
-                            data: taxValues,
-                            borderColor: '#4ade80',
-                            backgroundColor: 'rgba(74,222,128,0.06)',
-                            borderWidth: 2,
-                            pointRadius: 2,
-                            pointBackgroundColor: '#4ade80',
-                            pointBorderColor: '#4ade80',
-                            pointHoverRadius: 5,
-                            fill: true,
-                            tension: 0.35,
-                            borderDash: [5, 3],
                         }
                     ]
                 },
