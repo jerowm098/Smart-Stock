@@ -79,4 +79,4 @@ services:
       # fully-qualified HTTPS URLs (forms, links, redirects).
       # Change the value below to your actual Render service name.
       - key: APP_URL
-        value: https://smart-stock.onrender.com
+        value: https://smart-stock-4lav.onrender.com
