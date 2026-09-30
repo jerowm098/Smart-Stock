@@ -2,76 +2,102 @@
 
 namespace Tests\Feature;
 
-use App\Models\Product;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * SS-50: Validate that the product delete flow works end-to-end
- * through the CSRF-protected route, mirroring browser behavior.
+ * The product deactivation flow, end-to-end through the CSRF-protected route.
  *
- * Covers:
- *  - Delete with a valid CSRF token succeeds (the original bug was a
- *    missing X-CSRF-TOKEN header causing a 419 response).
- *  - Delete without a CSRF token is rejected with 419.
- *  - Deletion is scoped per account: removing a product in account A
- *    does not affect account B's products, and vice-versa.
+ * REVISED (was: DeleteProductCsrfTest).
+ * The product is no longer hard-deleted. BRD (Inventory Management) says
+ * "Editing existing product details or deactivating discontinued items", and
+ * deleting the row would orphan the sale_items / stock_ins /
+ * stock_adjustments audit trail. The route is still DELETE (so the Blade
+ * callers and CSRF header stay unchanged) but the server now toggles
+ * `is_active`.
+ *
+ * The old version also asserted that one account's deletion could not affect
+ * another account's products. That is obsolete: the catalogue is SHARED
+ * store-wide, so there is no per-account product scope to protect.
  */
 class DeleteProductCsrfTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithStore;
 
     #[Test]
-    public function delete_with_valid_csrf_token_succeeds(): void
+    public function deactivating_with_a_valid_csrf_token_succeeds(): void
     {
-        $user = User::factory()->create();
-        $product = Product::factory()->create(['user_id' => $user->id]);
+        $admin = $this->makeAdmin();
+        $product = $this->makeProduct();
 
-        $response = $this->actingAs($user)->deleteJson("/api/inventory/{$product->id}");
+        $this->actingAs($admin)
+            ->deleteJson("/api/inventory/{$product->id}")
+            ->assertOk();
 
-        $response->assertStatus(200);
-        $this->assertDatabaseMissing('products', ['id' => $product->id]);
+        // Deactivated, NOT deleted — the row must survive for the audit trail.
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'is_active' => false]);
     }
 
     #[Test]
-    public function delete_without_csrf_token_is_rejected(): void
+    public function staff_session_is_rejected(): void
     {
-        $userA = User::factory()->create();
-        $userB = User::factory()->create();
-        $product = Product::factory()->create(['user_id' => $userA->id]);
+        $cashier = $this->makeCashier();
+        $product = $this->makeProduct();
 
-        // Simulate a cross-site DELETE without a CSRF token
-        $response = $this->actingAs($userB)->deleteJson("/api/inventory/{$product->id}");
+        $this->actingAs($cashier)
+            ->deleteJson("/api/inventory/{$product->id}")
+            ->assertForbidden();
 
-        // Even with the token in the test helper, the destroy() ownership
-        // check returns 404 for a foreign product — confirming isolation.
-        $response->assertStatus(404);
-        $this->assertDatabaseHas('products', ['id' => $product->id, 'user_id' => $userA->id]);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'is_active' => true]);
     }
 
     #[Test]
-    public function deletion_in_one_account_does_not_affect_another_account(): void
+    public function guest_session_is_rejected(): void
     {
-        $userA = User::factory()->create();
-        $userB = User::factory()->create();
+        $product = $this->makeProduct();
 
-        $productA = Product::factory()->create(['user_id' => $userA->id]);
-        $productB = Product::factory()->create(['user_id' => $userB->id]);
+        $this->deleteJson("/api/inventory/{$product->id}")->assertUnauthorized();
 
-        // User A deletes their own product
-        $this->actingAs($userA)
-            ->deleteJson("/api/inventory/{$productA->id}")
-            ->assertStatus(200);
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'is_active' => true]);
+    }
 
-        // User A's product is gone, but User B's product is untouched
-        $this->assertDatabaseMissing('products', ['id' => $productA->id]);
-        $this->assertDatabaseHas('products', ['id' => $productB->id, 'user_id' => $userB->id]);
+    /**
+     * Deactivating one item must not affect the rest of the shared catalogue.
+     *
+     * NOTE: the Admin master list intentionally still returns deactivated rows
+     * (flagged `is_active: false`) so the Admin can reactivate them; callers
+     * that want only active items pass ?include_inactive=0.
+     */
+    #[Test]
+    public function deactivating_one_item_leaves_the_others_active(): void
+    {
+        $admin = $this->makeAdmin();
 
-        // User B still only sees their own product
-        $responseB = $this->actingAs($userB)->getJson('/api/inventory/products');
-        $responseB->assertStatus(200)->assertJsonCount(1);
-        $this->assertSame($productB->id, $responseB->json(0)['id']);
+        $a = $this->makeProduct(['sku' => 'KEEP-A']);
+        $b = $this->makeProduct(['sku' => 'KEEP-B']);
+
+        $this->actingAs($admin)->deleteJson("/api/inventory/{$a->id}")->assertOk();
+
+        $this->assertDatabaseHas('products', ['id' => $a->id, 'is_active' => false]);
+        $this->assertDatabaseHas('products', ['id' => $b->id, 'is_active' => true]);
+
+        // Filtered to active items, the deactivated one drops out.
+        $rows = $this->actingAs($admin)
+            ->getJson('/api/inventory/products?include_inactive=0')
+            ->json();
+
+        $skus = collect($rows)->pluck('sku')->all();
+
+        $this->assertNotContains('KEEP-A', $skus);
+        $this->assertContains('KEEP-B', $skus);
+
+        // Unfiltered, both are listed but the flag distinguishes them.
+        $all = collect($this->actingAs($admin)->getJson('/api/inventory/products')->json())
+            ->keyBy('sku');
+
+        $this->assertFalse((bool) $all['KEEP-A']['is_active']);
+        $this->assertTrue((bool) $all['KEEP-B']['is_active']);
     }
 }

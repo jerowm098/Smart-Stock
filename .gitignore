@@ -25,6 +25,7 @@ Thumbs.db
 
 *.pdf
 myFiles/
+.venv
 *.mp4
 plans/
 tmp_extract.py

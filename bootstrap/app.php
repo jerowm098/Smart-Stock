@@ -27,7 +27,23 @@ return Application::configure(basePath: dirname(__DIR__))
             | \Illuminate\Http\Request::HEADER_X_FORWARDED_PREFIX
         );
 
-        $middleware->redirectUsersTo('home');
+        // An authenticated user hitting a guest-only route (e.g. /login) is sent
+        // to the surface their role allows, matching the post-login rule in
+        // AuthController::redirectForRole():
+        //   Admin -> dashboard, Staff (cashier) -> POS.
+        $middleware->redirectUsersTo(function ($request) {
+            $user = $request->user();
+
+            if ($user?->isAdmin()) {
+                return route('dashboard');
+            }
+
+            if ($user?->isCashier()) {
+                return route('pos');
+            }
+
+            return route('home');
+        });
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

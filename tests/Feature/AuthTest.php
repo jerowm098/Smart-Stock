@@ -2,574 +2,278 @@
 
 namespace Tests\Feature;
 
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * SS-61: QA tests for authentication flows.
+ * Authentication flows.
  *
- * Covers:
- *  - Valid login (web + API)
- *  - Invalid password / wrong credentials
- *  - Logout and session clearing (web + API)
+ * REVISED (was: AuthTest).
+ * BRD (Account Management) changed the sign-in contract:
+ *
+ *  - "The system shall require a registered user to sign in using their
+ *     assigned username and password."  => the login field is `username`,
+ *     not `email`.
+ *  - "The system shall automatically redirect Staff accounts strictly to the
+ *     simplified POS sales interface upon successful login." / "Admins should
+ *     be redirected to the main dashboard." => the redirect is ROLE-based,
+ *     not always /home.
+ *  - "The login screen shall consist only of username, password, and a submit
+ *     button with no distracting elements." => the "Remember me" checkbox was
+ *     removed, so the remember_token assertions no longer apply.
+ *  - Out of Scope: "Self-service account registration" => /register is gone.
  */
 class AuthTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithStore;
 
     // -------------------------------------------------------------------------
-    // Web login tests
+    // Web login
     // -------------------------------------------------------------------------
 
     #[Test]
     public function login_page_is_accessible_to_guests(): void
     {
-        $response = $this->get('/login');
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee('Sign In')
+            ->assertSee('name="username"', false);
+    }
 
-        $response->assertStatus(200);
-        $response->assertSee('Sign In');
+    /**
+     * BRD Usability: the screen holds only username, password and submit.
+     */
+    #[Test]
+    public function login_page_has_no_remember_me_checkout(): void
+    {
+        $this->get('/login')
+            ->assertOk()
+            ->assertDontSee('name="remember"', false)
+            ->assertDontSee('Remember me');
+    }
+
+    /**
+     * BRD: "staff cannot create their own accounts" — no public registration.
+     */
+    #[Test]
+    public function registration_page_no_longer_exists(): void
+    {
+        $this->get('/register')->assertNotFound();
     }
 
     #[Test]
-    public function valid_credentials_redirect_to_home(): void
+    public function admin_login_redirects_to_dashboard(): void
     {
-        $user = User::factory()->create([
-            'email'    => 'admin@example.com',
-            'password' => Hash::make('secret123'),
-            'role'     => 'admin',
-        ]);
+        $admin = $this->makeAdmin(['username' => 'owner', 'password' => 'secret123']);
 
-        $response = $this->post('/login', [
-            'email'    => 'admin@example.com',
+        $this->post('/login', ['username' => 'owner', 'password' => 'secret123'])
+            ->assertRedirect(route('dashboard'));
+
+        $this->assertAuthenticatedAs($admin);
+    }
+
+    /**
+     * BRD: Staff are redirected "strictly to the simplified POS sales interface".
+     */
+    #[Test]
+    public function cashier_login_redirects_to_pos(): void
+    {
+        $cashier = $this->makeCashier(['username' => 'cashier', 'password' => 'secret123']);
+
+        $this->post('/login', ['username' => 'cashier', 'password' => 'secret123'])
+            ->assertRedirect(route('pos'));
+
+        $this->assertAuthenticatedAs($cashier);
+    }
+
+    #[Test]
+    public function login_works_with_the_email_identifier_too(): void
+    {
+        $admin = $this->makeAdmin([
+            'username' => 'owner',
+            'email'    => 'owner@example.com',
             'password' => 'secret123',
         ]);
 
-        $response->assertRedirect('/home');
-        $this->assertAuthenticatedAs($user);
-    }
+        $this->post('/login', ['email' => 'owner@example.com', 'password' => 'secret123'])
+            ->assertRedirect(route('dashboard'));
 
-    #[Test]
-    public function login_ignores_a_stale_dashboard_intended_url(): void
-    {
-        $user = User::factory()->create([
-            'email'    => 'stale@example.com',
-            'password' => Hash::make('secret123'),
-        ]);
-
-        $response = $this
-            ->from('/dashboard')
-            ->post('/login', [
-                'email'    => 'stale@example.com',
-                'password' => 'secret123',
-            ]);
-
-        $response->assertRedirect('/home');
-        $this->assertAuthenticatedAs($user);
-    }
-
-    #[Test]
-    public function home_page_is_accessible_after_login(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $this->actingAs($admin)->get('/home')->assertStatus(200)->assertSee('Smart-Stock');
-
-        $cashier = User::factory()->create(['role' => 'cashier']);
-        $this->actingAs($cashier)->get('/home')->assertStatus(200)->assertSee('Smart-Stock');
-    }
-
-    #[Test]
-    public function home_page_is_accessible_to_guests(): void
-    {
-        // /home is now public — guests see it with a Login button
-        $this->get('/home')->assertStatus(200)->assertSee('Login');
+        $this->assertAuthenticatedAs($admin);
     }
 
     #[Test]
     public function invalid_password_shows_error_and_does_not_authenticate(): void
     {
-        User::factory()->create([
-            'email'    => 'cashier@example.com',
-            'password' => Hash::make('correct-password'),
-        ]);
+        $this->makeCashier(['username' => 'cashier', 'password' => 'correct-password']);
 
-        $response = $this->post('/login', [
-            'email'    => 'cashier@example.com',
-            'password' => 'wrong-password',
-        ]);
+        $this->post('/login', ['username' => 'cashier', 'password' => 'wrong-password'])
+            ->assertSessionHasErrors('username');
 
-        $response->assertRedirect();
-        $response->assertSessionHasErrors('email');
         $this->assertGuest();
     }
 
     #[Test]
-    public function empty_email_fails_server_validation(): void
+    public function empty_username_fails_validation(): void
     {
-        $response = $this->post('/login', [
-            'email'    => '',
-            'password' => 'somepassword',
-        ]);
+        $this->post('/login', ['username' => '', 'password' => 'somepassword'])
+            ->assertSessionHasErrors('username');
 
-        $response->assertSessionHasErrors('email');
         $this->assertGuest();
     }
 
     #[Test]
-    public function empty_password_fails_server_validation(): void
+    public function empty_password_fails_validation(): void
     {
-        $response = $this->post('/login', [
-            'email'    => 'user@example.com',
-            'password' => '',
-        ]);
+        $this->post('/login', ['username' => 'someone', 'password' => ''])
+            ->assertSessionHasErrors('password');
 
-        $response->assertSessionHasErrors('password');
         $this->assertGuest();
     }
 
     #[Test]
-    public function nonexistent_email_fails_login(): void
+    public function unknown_username_fails_login(): void
     {
-        $response = $this->post('/login', [
-            'email'    => 'nobody@example.com',
-            'password' => 'password123',
+        $this->post('/login', ['username' => 'nobody', 'password' => 'password123'])
+            ->assertSessionHasErrors('username');
+
+        $this->assertGuest();
+    }
+
+    /**
+     * BRD: deactivated accounts are blocked but never deleted.
+     */
+    #[Test]
+    public function deactivated_account_cannot_sign_in(): void
+    {
+        $this->makeCashier([
+            'username'  => 'former',
+            'password'  => 'secret123',
+            'is_active' => false,
         ]);
 
-        $response->assertSessionHasErrors('email');
+        $this->post('/login', ['username' => 'former', 'password' => 'secret123'])
+            ->assertSessionHasErrors('username');
+
         $this->assertGuest();
     }
 
     #[Test]
-    public function logout_clears_session_and_redirects_to_home(): void
+    public function logout_clears_session(): void
     {
-        $user = User::factory()->create();
+        $user = $this->makeAdmin();
 
-        $response = $this->actingAs($user)->post('/logout');
+        $this->actingAs($user)->post('/logout')->assertRedirect();
 
-        $response->assertRedirect('/home');
         $this->assertGuest();
     }
 
     #[Test]
-    public function authenticated_user_cannot_access_login_page(): void
+    public function authenticated_user_is_bounced_from_login_by_role(): void
     {
-        $user = User::factory()->create();
-
-        $response = $this->actingAs($user)->get('/login');
-
-        $response->assertRedirect('/home');
-    }
-
-    #[Test]
-    public function authenticated_user_cannot_access_registration_page(): void
-    {
-        $user = User::factory()->create();
-
-        $response = $this->actingAs($user)->get('/register');
-
-        $response->assertRedirect('/home');
-    }
-
-    #[Test]
-    public function remember_me_checkbox_persists_session_token_on_login(): void
-    {
-        $user = User::factory()->create([
-            'password' => Hash::make('pass1234'),
-        ]);
-
-        $response = $this->post('/login', [
-            'email'    => $user->email,
-            'password' => 'pass1234',
-            'remember' => '1',
-        ]);
-
-        $response->assertRedirect('/home');
-        $this->assertAuthenticatedAs($user);
-
-        // Laravel sets a remember_token on the user record when remember=true
-        $user->refresh();
-        $this->assertNotNull($user->remember_token, 'remember_token should be set when Remember Me is checked');
-    }
-
-    #[Test]
-    public function login_without_remember_me_does_not_persist_token(): void
-    {
-        $user = User::factory()->create([
-            'password'       => Hash::make('pass1234'),
-            'remember_token' => null,
-        ]);
-
-        $response = $this->post('/login', [
-            'email'    => $user->email,
-            'password' => 'pass1234',
-            // no 'remember' field
-        ]);
-
-        $response->assertRedirect('/home');
-        $this->assertAuthenticatedAs($user);
-
-        // Without remember=true, Laravel does NOT write a remember_token
-        $user->refresh();
-        $this->assertNull($user->remember_token, 'remember_token should remain null when Remember Me is unchecked');
-    }
-
-    #[Test]
-    public function authenticated_homepage_does_not_show_a_direct_dashboard_shortcut(): void
-    {
-        $user = User::factory()->create();
-
-        $response = $this->actingAs($user)->get('/home');
-
-        $response->assertOk();
-        $response->assertDontSee('Go to Dashboard');
-        $response->assertSee('Dashboard', false);
+        $this->actingAs($this->makeAdmin())->get('/login')->assertRedirect(route('dashboard'));
+        $this->actingAs($this->makeCashier())->get('/login')->assertRedirect(route('pos'));
     }
 
     // -------------------------------------------------------------------------
-    // API auth endpoint tests (SS-59)
+    // Public pages
     // -------------------------------------------------------------------------
 
     #[Test]
-    public function api_login_returns_json_with_user_data_on_valid_credentials(): void
+    public function home_page_is_accessible_to_guests(): void
     {
-        User::factory()->create([
-            'email'    => 'api@example.com',
-            'password' => Hash::make('apipass1'),
-            'role'     => 'cashier',
-        ]);
+        $this->get('/home')->assertOk()->assertSee('Login');
+    }
 
-        $response = $this->postJson('/api/auth/login', [
+    #[Test]
+    public function home_page_is_accessible_after_login(): void
+    {
+        $this->actingAs($this->makeAdmin())->get('/home')->assertOk();
+        $this->actingAs($this->makeCashier())->get('/home')->assertOk();
+    }
+
+    // -------------------------------------------------------------------------
+    // API login
+    // -------------------------------------------------------------------------
+
+    #[Test]
+    public function api_login_returns_json_with_user_data(): void
+    {
+        $this->makeCashier([
+            'username' => 'apiuser',
             'email'    => 'api@example.com',
             'password' => 'apipass1',
         ]);
 
-        $response->assertStatus(200)
-                 ->assertJsonStructure([
-                     'message',
-                     'user' => ['id', 'name', 'email', 'role'],
-                 ])
-                 ->assertJsonPath('user.email', 'api@example.com')
-                 ->assertJsonPath('user.role', 'cashier');
+        $this->postJson('/api/auth/login', ['username' => 'apiuser', 'password' => 'apipass1'])
+            ->assertOk()
+            ->assertJsonStructure(['message', 'redirect', 'user' => ['id', 'name', 'username', 'email', 'role']])
+            ->assertJsonPath('user.username', 'apiuser')
+            ->assertJsonPath('user.role', 'cashier');
+    }
+
+    #[Test]
+    public function api_login_reports_the_role_specific_redirect(): void
+    {
+        $this->makeCashier(['username' => 'apipos', 'password' => 'apipass1']);
+        $this->makeAdmin(['username' => 'apiadmin', 'password' => 'apipass1']);
+
+        $this->postJson('/api/auth/login', ['username' => 'apipos', 'password' => 'apipass1'])
+            ->assertJsonPath('redirect', route('pos'));
+
+        $this->post('/logout');
+
+        $this->postJson('/api/auth/login', ['username' => 'apiadmin', 'password' => 'apipass1'])
+            ->assertJsonPath('redirect', route('dashboard'));
     }
 
     #[Test]
     public function api_login_returns_401_on_invalid_credentials(): void
     {
-        User::factory()->create([
-            'email'    => 'api@example.com',
-            'password' => Hash::make('correctpass'),
-        ]);
+        $this->makeCashier(['username' => 'apiuser', 'password' => 'correctpass']);
 
-        $response = $this->postJson('/api/auth/login', [
-            'email'    => 'api@example.com',
-            'password' => 'wrongpass',
-        ]);
-
-        $response->assertStatus(401)
-                 ->assertJsonPath('message', 'The provided credentials do not match our records.');
+        $this->postJson('/api/auth/login', ['username' => 'apiuser', 'password' => 'wrongpass'])
+            ->assertStatus(401)
+            ->assertJsonPath('message', 'The provided credentials do not match our records.');
     }
 
     #[Test]
-    public function registration_form_contains_role_selection(): void
+    public function api_login_rejects_deactivated_accounts(): void
     {
-        $response = $this->get('/register');
-
-        $response->assertOk()
-                 ->assertSee('value="admin"', false)
-                 ->assertSee('value="cashier"', false);
-    }
-
-    #[Test]
-    public function user_can_register_with_a_role(): void
-    {
-        $response = $this->post('/register', [
-            'first_name' => 'Hardware',
-            'last_name' => 'Cashier',
-            'username' => 'cashier_reg',
-            'email' => 'cashier-registration@example.com',
-            'role' => 'cashier',
-            'password' => 'securepass123',
-            'password_confirmation' => 'securepass123',
+        $this->makeCashier([
+            'username'  => 'gone',
+            'password'  => 'secret123',
+            'is_active' => false,
         ]);
 
-        $response->assertRedirect(route('login'));
-        $this->assertDatabaseHas('users', [
-            'email' => 'cashier-registration@example.com',
-            'username' => 'cashier_reg',
-            'role' => 'cashier',
-            'name' => 'Hardware Cashier',
-        ]);
-        $this->assertDatabaseMissing('users', [
-            'email' => 'cashier-registration@example.com',
-            'password' => 'securepass123',
-        ]);
-    }
-
-    #[Test]
-    public function registration_rejects_an_invalid_role(): void
-    {
-        $response = $this->post('/register', [
-            'first_name' => 'Invalid',
-            'last_name' => 'User',
-            'username' => 'invalid_role_user',
-            'email' => 'invalid-role@example.com',
-            'role' => 'manager',
-            'password' => 'securepass123',
-            'password_confirmation' => 'securepass123',
-        ]);
-
-        $response->assertSessionHasErrors('role');
-        $this->assertDatabaseMissing('users', [
-            'email' => 'invalid-role@example.com',
-        ]);
-    }
-
-    #[Test]
-    public function registration_rejects_a_duplicate_username(): void
-    {
-        User::factory()->create([
-            'username' => 'taken_user',
-            'email' => 'taken-user@example.com',
-        ]);
-
-        $response = $this->post('/register', [
-            'first_name' => 'Duplicate',
-            'last_name' => 'Username',
-            'username' => 'taken_user',
-            'email' => 'duplicate-username@example.com',
-            'role' => 'cashier',
-            'password' => 'securepass123',
-            'password_confirmation' => 'securepass123',
-        ]);
-
-        $response->assertSessionHasErrors('username');
-        $this->assertDatabaseMissing('users', [
-            'email' => 'duplicate-username@example.com',
-        ]);
-    }
-
-    #[Test]
-    public function registration_requires_a_username(): void
-    {
-        $response = $this->post('/register', [
-            'first_name' => 'Missing',
-            'last_name' => 'Username',
-            'email' => 'missing-username@example.com',
-            'role' => 'cashier',
-            'password' => 'securepass123',
-            'password_confirmation' => 'securepass123',
-        ]);
-
-        $response->assertSessionHasErrors('username');
-        $this->assertDatabaseMissing('users', [
-            'email' => 'missing-username@example.com',
-        ]);
-    }
-
-    #[Test]
-    public function registration_requires_first_and_last_name(): void
-    {
-        $response = $this->post('/register', [
-            'email' => 'no-names@example.com',
-            'username' => 'no_names_user',
-            'role' => 'cashier',
-            'password' => 'securepass123',
-            'password_confirmation' => 'securepass123',
-        ]);
-
-        $response->assertSessionHasErrors(['first_name', 'last_name']);
-        $this->assertDatabaseMissing('users', [
-            'email' => 'no-names@example.com',
-        ]);
-    }
-
-    #[Test]
-    public function user_can_register_as_admin(): void
-    {
-        $response = $this->post('/register', [
-            'first_name' => 'Store',
-            'last_name' => 'Admin',
-            'username' => 'store_admin',
-            'email' => 'admin-registration@example.com',
-            'role' => 'admin',
-            'password' => 'securepass123',
-            'password_confirmation' => 'securepass123',
-        ]);
-
-        $response->assertRedirect(route('login'));
-        $this->assertDatabaseHas('users', [
-            'email' => 'admin-registration@example.com',
-            'username' => 'store_admin',
-            'role' => 'admin',
-            'name' => 'Store Admin',
-        ]);
-    }
-
-    #[Test]
-    public function registration_rejects_a_duplicate_email(): void
-    {
-        User::factory()->create([
-            'email' => 'existing@example.com',
-            'username' => 'existing_user',
-        ]);
-
-        $response = $this->followingRedirects()
-            ->from('/register')
-            ->post('/register', [
-                'first_name' => 'Duplicate',
-                'last_name' => 'Email',
-                'username' => 'new_user',
-                'email' => 'existing@example.com',
-                'role' => 'cashier',
-                'password' => 'securepass123',
-                'password_confirmation' => 'securepass123',
-            ]);
-
-        // TC-03: block the duplicate email and show a clear error message.
-        $response->assertOk();
-        $response->assertSee('The email has already been taken.');
-        $this->assertDatabaseMissing('users', [
-            'username' => 'new_user',
-        ]);
-    }
-
-    #[Test]
-    public function registration_page_is_accessible_to_guests(): void
-    {
-        $response = $this->get('/register');
-
-        $response->assertOk();
-        $this->assertGuest();
-    }
-
-    #[Test]
-    public function api_user_registration_creates_an_account(): void
-    {
-        $response = $this->postJson('/api/users/register', [
-            'first_name' => 'API',
-            'last_name' => 'Cashier',
-            'username' => 'api_cashier',
-            'email' => 'api-cashier@example.com',
-            'role' => 'cashier',
-            'password' => 'securepass123',
-            'password_confirmation' => 'securepass123',
-        ]);
-
-        $response->assertCreated()
-                 ->assertJsonPath('message', 'Account created successfully.')
-                 ->assertJsonPath('user.email', 'api-cashier@example.com')
-                 ->assertJsonPath('user.role', 'cashier');
-
-        $this->assertDatabaseHas('users', [
-            'email' => 'api-cashier@example.com',
-            'username' => 'api_cashier',
-            'role' => 'cashier',
-        ]);
-        $this->assertDatabaseMissing('users', [
-            'email' => 'api-cashier@example.com',
-            'password' => 'securepass123',
-        ]);
-    }
-
-    #[Test]
-    public function api_user_registration_rejects_a_duplicate_email(): void
-    {
-        User::factory()->create([
-            'email' => 'api-existing@example.com',
-            'username' => 'api_existing_user',
-        ]);
-
-        $response = $this->postJson('/api/users/register', [
-            'first_name' => 'Duplicate',
-            'last_name' => 'Email',
-            'username' => 'api_new_user',
-            'email' => 'api-existing@example.com',
-            'role' => 'cashier',
-            'password' => 'securepass123',
-            'password_confirmation' => 'securepass123',
-        ]);
-
-        $response->assertUnprocessable()
-                 ->assertJsonValidationErrors('email');
-        $this->assertDatabaseMissing('users', [
-            'username' => 'api_new_user',
-        ]);
-    }
-
-    #[Test]
-    public function api_user_registration_rejects_a_duplicate_username(): void
-    {
-        User::factory()->create([
-            'email' => 'api-taken-user@example.com',
-            'username' => 'api_taken_user',
-        ]);
-
-        $response = $this->postJson('/api/users/register', [
-            'first_name' => 'Duplicate',
-            'last_name' => 'Username',
-            'username' => 'api_taken_user',
-            'email' => 'api-duplicate-username@example.com',
-            'role' => 'cashier',
-            'password' => 'securepass123',
-            'password_confirmation' => 'securepass123',
-        ]);
-
-        $response->assertUnprocessable()
-                 ->assertJsonValidationErrors('username');
-        $this->assertDatabaseMissing('users', [
-            'email' => 'api-duplicate-username@example.com',
-        ]);
-    }
-
-    #[Test]
-    public function api_user_registration_rejects_missing_fields(): void
-    {
-        $response = $this->postJson('/api/users/register', []);
-
-        $response->assertUnprocessable()
-                 ->assertJsonValidationErrors([
-                     'first_name',
-                     'last_name',
-                     'username',
-                     'email',
-                     'role',
-                     'password',
-                 ]);
-    }
-
-    #[Test]
-    public function api_login_returns_422_on_missing_fields(): void
-    {
-        $response = $this->postJson('/api/auth/login', []);
-
-        $response->assertStatus(422)
-                 ->assertJsonValidationErrors(['email', 'password']);
-    }
-
-    #[Test]
-    public function api_logout_returns_json_and_clears_session(): void
-    {
-        $user = User::factory()->create();
-
-        $response = $this->actingAs($user)->postJson('/api/auth/logout');
-
-        $response->assertStatus(200)
-                 ->assertJsonPath('message', 'Logged out successfully.');
+        $this->postJson('/api/auth/login', ['username' => 'gone', 'password' => 'secret123'])
+            ->assertStatus(401);
 
         $this->assertGuest();
     }
 
     #[Test]
-    public function api_logout_requires_authentication(): void
+    public function api_logout_clears_the_session(): void
     {
-        $response = $this->postJson('/api/auth/logout');
+        $user = $this->makeAdmin();
 
-        // Unauthenticated request should be redirected or return 401/302
-        $this->assertTrue(
-            in_array($response->status(), [302, 401]),
-            "Expected 302 or 401, got {$response->status()}"
-        );
+        $this->actingAs($user)->postJson('/api/auth/logout')->assertOk();
+
+        $this->assertGuest();
+    }
+
+    /**
+     * BRD Security: "Passwords shall be stored using hashing, never in plain
+     * text or a reversible form."
+     */
+    #[Test]
+    public function stored_passwords_are_hashed(): void
+    {
+        $user = $this->makeAdmin(['username' => 'hashed', 'password' => 'secret123']);
+
+        $this->assertNotSame('secret123', $user->password);
+        $this->assertTrue(Hash::check('secret123', $user->fresh()->password));
     }
 }

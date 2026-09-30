@@ -262,24 +262,27 @@
         <form method="POST" action="{{ route('login.post') }}" autocomplete="on" id="loginForm" novalidate>
             @csrf
             <div class="form-group">
-                <label for="email">Email Address</label>
-                <input type="email" id="email" name="email" value="{{ old('email') }}" placeholder="you@example.com" autofocus autocomplete="email">
-                <span class="field-error" id="emailError"></span>
+                <label for="username">Username</label>
+                {{-- BRD (Account Management): sign in uses the assigned username. --}}
+                <input type="text" id="username" name="username" value="{{ old('username') }}" placeholder="Enter your username" autofocus autocomplete="username">
+                <span class="field-error" id="usernameError"></span>
             </div>
             <div class="form-group">
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password">
                 <span class="field-error" id="passwordError"></span>
             </div>
-            <div class="remember-row">
-                <input type="checkbox" id="remember" name="remember" value="1">
-                <label for="remember">Remember me</label>
-            </div>
+            {{-- BRD (Account Management) Usability: "The login screen shall consist
+                 only of username, password, and a submit button with no distracting
+                 elements." The "Remember me" checkbox was removed to match. --}}
             <button type="submit" class="btn btn-primary">Sign In</button>
         </form>
 
+        {{-- BRD (Account Management): no self-service registration and no emailed
+             password recovery — an Admin provisions accounts and resets passwords
+             from the User Management screen. --}}
         <div class="footer-text">
-            Don't have an account? <a href="{{ route('register') }}">Create one</a>
+            Need access? Ask the store administrator.
         </div>
     </div>
 
@@ -309,33 +312,17 @@
             }
         }
 
-        // SS-42 + SS-60: Client-side form validation + remember last logged-in credentials
+        // SS-42: Client-side form validation.
+        // BRD (Account Management) keeps the login screen to username, password and
+        // a submit button, so there is no "remember me" state to persist here.
         (function () {
             const form          = document.getElementById('loginForm');
             if (!form) return;
 
-            const emailInput    = document.getElementById('email');
+            const usernameInput = document.getElementById('username');
             const passwordInput = document.getElementById('password');
-            const rememberBox   = document.getElementById('remember');
-            const emailError    = document.getElementById('emailError');
+            const usernameError = document.getElementById('usernameError');
             const passwordError = document.getElementById('passwordError');
-
-            // SS-60: On page load, restore saved credentials if "Remember me" was previously checked.
-            // NOTE: Passwords stored in localStorage are readable by JS — this is a UX convenience
-            // feature (same pattern as browser "remember password"), not a security mechanism.
-            // The actual session security is handled server-side by Laravel.
-            try {
-                const savedEmail    = localStorage.getItem('smartStockLastEmail');
-                const savedPassword = localStorage.getItem('smartStockLastPassword');
-                const wasRemembered = localStorage.getItem('smartStockRemember') === '1';
-
-                if (wasRemembered && savedEmail) {
-                    // Only pre-fill when no server-side old() value is present
-                    if (!emailInput.value.trim()) emailInput.value = savedEmail;
-                    if (savedPassword)            passwordInput.value = savedPassword;
-                    rememberBox.checked = true;
-                }
-            } catch (err) {}
 
             function setError(input, errorEl, msg) {
                 errorEl.textContent = msg;
@@ -346,8 +333,8 @@
                 setError(input, errorEl, '');
             }
 
-            emailInput.addEventListener('input', function () {
-                if (this.value.trim()) clearError(this, emailError);
+            usernameInput.addEventListener('input', function () {
+                if (this.value.trim()) clearError(this, usernameError);
             });
 
             passwordInput.addEventListener('input', function () {
@@ -357,17 +344,14 @@
             form.addEventListener('submit', function (e) {
                 let valid = true;
 
-                const emailVal = emailInput.value.trim();
-                const passVal  = passwordInput.value.trim();
+                const usernameVal = usernameInput.value.trim();
+                const passVal     = passwordInput.value.trim();
 
-                if (!emailVal) {
-                    setError(emailInput, emailError, 'Email address is required.');
-                    valid = false;
-                } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
-                    setError(emailInput, emailError, 'Please enter a valid email address.');
+                if (!usernameVal) {
+                    setError(usernameInput, usernameError, 'Username is required.');
                     valid = false;
                 } else {
-                    clearError(emailInput, emailError);
+                    clearError(usernameInput, usernameError);
                 }
 
                 if (!passVal) {
@@ -379,21 +363,7 @@
 
                 if (!valid) {
                     e.preventDefault();
-                    return;
                 }
-
-                // SS-60: Save or clear credentials depending on checkbox state.
-                try {
-                    if (rememberBox && rememberBox.checked) {
-                        localStorage.setItem('smartStockLastEmail',    emailVal);
-                        localStorage.setItem('smartStockLastPassword', passwordInput.value);
-                        localStorage.setItem('smartStockRemember',     '1');
-                    } else {
-                        localStorage.removeItem('smartStockLastEmail');
-                        localStorage.removeItem('smartStockLastPassword');
-                        localStorage.removeItem('smartStockRemember');
-                    }
-                } catch (err) {}
             });
         })();
     </script>

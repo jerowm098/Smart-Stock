@@ -14,12 +14,12 @@ class AuthController extends Controller
 {
     /**
      * Show the login page.
-     * Redirects already-authenticated users to the homepage.
+     * Redirects already-authenticated users by role.
      */
     public function showLogin(): View|RedirectResponse
     {
         if (Auth::check()) {
-            return redirect()->route('home');
+            return $this->redirectForRole(Auth::user());
         }
 
         return view('auth.login');
@@ -27,68 +27,81 @@ class AuthController extends Controller
 
     /**
      * Handle login attempt.
-     * On success, validates active session and redirects to the homepage.
+     *
+     * BRD (Account Management): "The system shall require a registered user to
+     * sign in using their assigned username and password."
+     *
+     * On success the user is routed by role:
+     *   - Staff  -> the simplified POS sales interface
+     *   - Admin  -> the main dashboard (inventory and order suggestions)
      */
     public function login(Request $request): RedirectResponse
     {
+        // BRD: sign-in uses the assigned username. The `email` key is accepted
+        // as a fallback so the store owner can type either identifier into the
+        // same field; the error bag is always keyed to `username` because that
+        // is the only field the login form renders.
+        $request->merge([
+            'username' => $request->input('username') ?: $request->input('email'),
+        ]);
+
         $validated = $request->validate([
-            'email' => 'required|email',
+            'username' => 'required|string',
             'password' => 'required|string|min:6',
         ]);
 
-        if (Auth::attempt($validated, $request->boolean('remember'))) {
-            $request->session()->regenerate();
+        $user = $this->findAuthenticatable($validated['username']);
 
-            return redirect()->route('home');
+        // BRD: deactivated accounts are blocked, not deleted.
+        if (! $user || ! $user->isActive() || ! Hash::check($validated['password'], $user->password)) {
+            return back()
+                ->withErrors(['username' => 'The provided credentials do not match our records.'])
+                ->onlyInput('username');
         }
 
-        return back()->withErrors([
-            'email' => 'The provided credentials do not match our records.',
-        ])->onlyInput('email');
+        Auth::login($user, $request->boolean('remember'));
+        $request->session()->regenerate();
+
+        return $this->redirectForRole($user);
     }
 
     /**
-     * Show the register page.
+     * Route a freshly authenticated user to the surface their role allows.
+     *
+     * BRD: "The system shall automatically redirect Staff accounts strictly to the
+     * simplified POS sales interface upon successful login." Admins go to the
+     * dashboard instead.
      */
-    public function showRegister(): View
+    private function redirectForRole(User $user): RedirectResponse
     {
-        if (Auth::check()) {
-            return redirect()->route('home');
+        if ($user->isAdmin()) {
+            return redirect()->route('dashboard');
         }
 
-        return view('auth.register');
+        return redirect()->route('pos');
     }
 
     /**
-     * Handle registration.
+     * Resolve the account for a login identifier.
+     *
+     * Accounts carry both a username and an email; the store owner may type
+     * either, so both are accepted here while the BRD's username remains the
+     * primary identifier.
      */
-    public function register(Request $request): RedirectResponse
+    private function findAuthenticatable(string $identifier): ?User
     {
-        $validated = $request->validate([
-            'first_name' => 'required|string|max:100',
-            'last_name' => 'required|string|max:100',
-            'username' => 'required|string|min:3|max:255|alpha_dash|unique:users,username',
-            'email' => 'required|email|unique:users,email',
-            'role' => 'required|in:admin,cashier',
-            'password' => 'required|string|confirmed|min:6',
-        ]);
-
-        $user = User::create([
-            'name' => trim($validated['first_name'].' '.$validated['last_name']),
-            'username' => $validated['username'],
-            'email' => $validated['email'],
-            'role' => $validated['role'],
-            'password' => Hash::make($validated['password']),
-        ]);
-
-        // NOTE: the inventory catalogue is SHARED store-wide, so a new account
-        // must NOT be given its own copy of the sample products. The previous
-        // per-user seeding violated the global UNIQUE(sku) constraint and made
-        // registration fail with a 500. New accounts simply start with access
-        // to the existing shared catalogue.
-
-        return redirect()->route('login')->with('success', 'Account created! You can now sign in.');
+        return User::query()
+            ->where('username', $identifier)
+            ->orWhere('email', $identifier)
+            ->first();
     }
+
+    /**
+     * BRD (Account Management) removes self-service registration, so the
+     * public showRegister()/register() methods were deleted along with the
+     * /register routes. Accounts are created by an Admin via
+     * App\Http\Controllers\UserController (POST /api/users).
+     */
 
     /**
      * Handle logout.
@@ -105,31 +118,45 @@ class AuthController extends Controller
 
     /**
      * SS-59: Handle API login — returns JSON.
+     *
+     * Mirrors the web login: username-first identifier (email accepted as a
+     * convenience), deactivated accounts rejected, and the response reports the
+     * role so the client can route to the POS or the dashboard.
      */
     public function apiLogin(Request $request): \Illuminate\Http\JsonResponse
     {
+        // Mirror the web login: username is primary, email accepted as fallback.
+        $request->merge([
+            'username' => $request->input('username') ?: $request->input('email'),
+        ]);
+
         $validated = $request->validate([
-            'email'    => 'required|email',
+            'username' => 'required|string',
             'password' => 'required|string|min:6',
         ]);
 
-        if (Auth::attempt($validated, $request->boolean('remember'))) {
-            $request->session()->regenerate();
+        $user = $this->findAuthenticatable($validated['username']);
 
+        if (! $user || ! $user->isActive() || ! Hash::check($validated['password'], $user->password)) {
             return response()->json([
-                'message' => 'Login successful.',
-                'user'    => [
-                    'id'    => Auth::id(),
-                    'name'  => Auth::user()->name,
-                    'email' => Auth::user()->email,
-                    'role'  => Auth::user()->role,
-                ],
-            ]);
+                'message' => 'The provided credentials do not match our records.',
+            ], 401);
         }
 
+        Auth::login($user, $request->boolean('remember'));
+        $request->session()->regenerate();
+
         return response()->json([
-            'message' => 'The provided credentials do not match our records.',
-        ], 401);
+            'message' => 'Login successful.',
+            'redirect' => $user->isAdmin() ? route('dashboard') : route('pos'),
+            'user'    => [
+                'id'       => $user->id,
+                'name'     => $user->name,
+                'username' => $user->username,
+                'email'    => $user->email,
+                'role'     => $user->role,
+            ],
+        ]);
     }
 
     /**
@@ -145,47 +172,5 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Logged out successfully.',
         ]);
-    }
-
-    /**
-     * SS-46: Handle API registration — validates fields and rejects
-     * duplicate email/username before creating the account.
-     *
-     * Returns JSON on success (201) and JSON validation errors (422)
-     * on duplicate email/username or invalid input.
-     */
-    public function apiRegister(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $validated = $request->validate([
-            'first_name' => 'required|string|max:100',
-            'last_name'  => 'required|string|max:100',
-            'username'  => 'required|string|min:3|max:255|alpha_dash|unique:users,username',
-            'email'     => 'required|email|max:255|unique:users,email',
-            'role'      => 'required|in:admin,cashier',
-            'password'  => 'required|string|confirmed|min:6',
-        ]);
-
-        $user = User::create([
-            'name'     => trim($validated['first_name'] . ' ' . $validated['last_name']),
-            'username' => $validated['username'],
-            'email'    => $validated['email'],
-            'role'     => $validated['role'],
-            'password' => Hash::make($validated['password']),
-        ]);
-
-        // NOTE: the inventory catalogue is SHARED store-wide, so a new account
-        // must NOT receive its own copy of the sample products. Seeding per
-        // user violates the global UNIQUE(sku) constraint.
-
-        return response()->json([
-            'message' => 'Account created successfully.',
-            'user'    => [
-                'id'       => $user->id,
-                'name'     => $user->name,
-                'username' => $user->username,
-                'email'    => $user->email,
-                'role'     => $user->role,
-            ],
-        ], 201);
     }
 }

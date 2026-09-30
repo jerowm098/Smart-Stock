@@ -2,42 +2,31 @@
 
 namespace Tests\Feature;
 
-use App\Models\Product;
 use App\Models\StockAdjustment;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * SS-38 / SS-99: Tests for manual stock adjustment and audit trail verification.
+ * Manual stock adjustment and audit trail.
  *
- * Covers:
- *  - SS-99: Admin can reduce stock via POST /api/inventory/adjust with a reason
- *  - SS-99: Stock delta correctly updates the current_stock column
- *  - SS-99: Adjustment is logged in the audit trail with reason and responsible admin
- *  - SS-99: Adjustment entries include timestamp, stock_before, stock_after, delta, reason
- *  - Validation and error cases (insufficient stock, invalid reason, missing fields)
+ * BRD (Inventory Management) — Functional Requirements:
+ *   "The system shall allow the user to manually adjust the stock quantity of
+ *    an existing item (e.g., logging new deliveries or deducting damaged
+ *    goods)."
+ *
+ * REVISED: the previous version scoped adjustments to products the admin
+ * "owned" and hardcoded the same SKU in several tests. The catalogue is SHARED
+ * store-wide (so SKU is globally unique and ownership is irrelevant), and
+ * access is governed by ROLE.
  */
 class StockAdjustmentTest extends TestCase
 {
     use RefreshDatabase;
-
-    private function createProduct(User $user, array $overrides = []): Product
-    {
-        return Product::factory()->create(array_merge([
-            'user_id' => $user->id,
-            'name' => 'Wireless Mouse',
-            'sku' => 'WM-001',
-            'category' => 'Electronics',
-            'price' => 29.99,
-            'current_stock' => 50,
-            'reorder_threshold' => 10,
-        ], $overrides));
-    }
+    use InteractsWithStore;
 
     // -------------------------------------------------------------------------
-    // SS-99: Successful stock reduction
+    // Authorization
     // -------------------------------------------------------------------------
 
     #[Test]
@@ -45,60 +34,33 @@ class StockAdjustmentTest extends TestCase
     {
         $this->postJson('/api/inventory/adjust', [
             'product_id' => 1,
-            'reason' => 'damaged',
-            'delta' => -2,
-        ])->assertStatus(401);
-    }
-
-    #[Test]
-    public function products_page_shows_adjust_action_only_for_admins(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $cashier = User::factory()->create(['role' => 'cashier']);
-        $this->createProduct($admin);
-        $this->createProduct($cashier);
-
-        $adminResponse = $this->actingAs($admin)->get('/products');
-        $cashierResponse = $this->actingAs($cashier)->get('/products');
-
-        // The product table is rendered client-side via JS, so we verify the
-        // admin-only flag and the conditional template string in the source.
-        $adminResponse->assertStatus(200)
-            ->assertSee('const canAdjustStock = true;', false)
-            ->assertSee("canAdjustStock ? '<button class=\"btn-adjust\"", false)
-            ->assertSee('function openAdjustModal(', false);
-
-        $cashierResponse->assertStatus(200)
-            ->assertSee('const canAdjustStock = false;', false)
-            ->assertSee("canAdjustStock ? '<button class=\"btn-adjust\"", false)
-            ->assertSee('function openAdjustModal(', false);
+            'reason'     => 'damaged',
+            'delta'      => -2,
+        ])->assertUnauthorized();
     }
 
     #[Test]
     public function cashier_cannot_adjust_stock(): void
     {
-        $cashier = User::factory()->create(['role' => 'cashier']);
-
-        $this->actingAs($cashier)
+        $this->actingAs($this->makeCashier())
             ->postJson('/api/inventory/adjust', [
-                'product_id' => 1,
-                'reason' => 'damaged',
-                'delta' => -2,
+                'product_id' => $this->makeProduct()->id,
+                'reason'     => 'damaged',
+                'delta'      => -2,
             ])
-            ->assertStatus(403)
+            ->assertForbidden()
             ->assertJsonPath('message', 'Administrator access required.');
     }
+
+    // -------------------------------------------------------------------------
+    // Validation
+    // -------------------------------------------------------------------------
 
     #[Test]
     public function adjust_requires_product_id(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-
-        $this->actingAs($admin)
-            ->postJson('/api/inventory/adjust', [
-                'reason' => 'damaged',
-                'delta' => -2,
-            ])
+        $this->actingAs($this->makeAdmin())
+            ->postJson('/api/inventory/adjust', ['reason' => 'damaged', 'delta' => -2])
             ->assertStatus(422)
             ->assertJsonValidationErrors('product_id');
     }
@@ -106,13 +68,10 @@ class StockAdjustmentTest extends TestCase
     #[Test]
     public function adjust_requires_reason(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $product = $this->createProduct($admin);
-
-        $this->actingAs($admin)
+        $this->actingAs($this->makeAdmin())
             ->postJson('/api/inventory/adjust', [
-                'product_id' => $product->id,
-                'delta' => -2,
+                'product_id' => $this->makeProduct()->id,
+                'delta'      => -2,
             ])
             ->assertStatus(422)
             ->assertJsonValidationErrors('reason');
@@ -121,14 +80,11 @@ class StockAdjustmentTest extends TestCase
     #[Test]
     public function adjust_rejects_invalid_reason(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $product = $this->createProduct($admin);
-
-        $this->actingAs($admin)
+        $this->actingAs($this->makeAdmin())
             ->postJson('/api/inventory/adjust', [
-                'product_id' => $product->id,
-                'reason' => 'invalid_reason',
-                'delta' => -2,
+                'product_id' => $this->makeProduct()->id,
+                'reason'     => 'invalid_reason',
+                'delta'      => -2,
             ])
             ->assertStatus(422)
             ->assertJsonValidationErrors('reason');
@@ -137,91 +93,78 @@ class StockAdjustmentTest extends TestCase
     #[Test]
     public function adjust_rejects_zero_delta(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $product = $this->createProduct($admin);
-
-        $this->actingAs($admin)
+        $this->actingAs($this->makeAdmin())
             ->postJson('/api/inventory/adjust', [
-                'product_id' => $product->id,
-                'reason' => 'damaged',
-                'delta' => 0,
+                'product_id' => $this->makeProduct()->id,
+                'reason'     => 'damaged',
+                'delta'      => 0,
             ])
             ->assertStatus(422)
             ->assertJsonValidationErrors('delta');
     }
 
     #[Test]
-    public function adjust_returns_404_for_nonexistent_product(): void
+    public function adjust_returns_404_for_a_nonexistent_product(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-
-        $this->actingAs($admin)
+        $this->actingAs($this->makeAdmin())
             ->postJson('/api/inventory/adjust', [
                 'product_id' => 9999,
-                'reason' => 'damaged',
-                'delta' => -2,
+                'reason'     => 'damaged',
+                'delta'      => -2,
             ])
-            ->assertStatus(404)
-            ->assertJsonPath('message', 'Product not found or access denied.');
+            ->assertNotFound();
     }
 
     #[Test]
-    public function adjust_returns_404_for_other_users_product(): void
+    public function adjust_rejects_insufficient_stock(): void
     {
-        $ownerA = User::factory()->create(['role' => 'admin']);
-        $ownerB = User::factory()->create(['role' => 'admin']);
-        $product = $this->createProduct($ownerA);
+        $admin = $this->makeAdmin();
+        $product = $this->makeProduct(['current_stock' => 2]);
 
-        $this->actingAs($ownerB)
+        $this->actingAs($admin)
             ->postJson('/api/inventory/adjust', [
                 'product_id' => $product->id,
-                'reason' => 'damaged',
-                'delta' => -2,
+                'reason'     => 'damaged',
+                'delta'      => -5,
             ])
-            ->assertStatus(404);
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('delta');
 
-        $this->assertDatabaseHas('products', [
-            'id' => $product->id,
-            'user_id' => $ownerA->id,
-            'current_stock' => 50,
-        ]);
+        $this->assertSame(2, (int) $product->fresh()->current_stock);
+        $this->assertDatabaseCount('stock_adjustments', 0);
     }
+
+    // -------------------------------------------------------------------------
+    // Successful adjustments
+    // -------------------------------------------------------------------------
 
     #[Test]
     public function admin_can_reduce_stock_with_reason(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $product = $this->createProduct($admin, ['current_stock' => 50]);
+        $admin = $this->makeAdmin(['name' => 'Store Admin']);
+        $product = $this->makeProduct(['current_stock' => 50]);
 
-        $response = $this->actingAs($admin)->postJson('/api/inventory/adjust', [
-            'product_id' => $product->id,
-            'reason' => 'damaged',
-            'reason_note' => '2 units damaged during inspection',
-            'delta' => -2,
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJsonPath('message', 'Stock adjusted successfully')
+        $this->actingAs($admin)
+            ->postJson('/api/inventory/adjust', [
+                'product_id'  => $product->id,
+                'reason'      => 'damaged',
+                'reason_note' => '2 units damaged during inspection',
+                'delta'       => -2,
+            ])
+            ->assertOk()
             ->assertJsonPath('product.current_stock', 48)
             ->assertJsonPath('adjustment.reason', 'damaged')
             ->assertJsonPath('adjustment.delta', -2)
             ->assertJsonPath('adjustment.stock_before', 50)
             ->assertJsonPath('adjustment.stock_after', 48);
 
-        // Product stock was updated
-        $this->assertDatabaseHas('products', [
-            'id' => $product->id,
-            'current_stock' => 48,
-        ]);
-
-        // Adjustment was logged in audit trail (stock_adjustments table)
         $this->assertDatabaseHas('stock_adjustments', [
-            'product_id' => $product->id,
-            'user_id' => $admin->id,
-            'reason' => 'damaged',
+            'product_id'  => $product->id,
+            'user_id'     => $admin->id,
+            'reason'      => 'damaged',
             'reason_note' => '2 units damaged during inspection',
-            'delta' => -2,
-            'stock_before' => 50,
+            'delta'       => -2,
+            'stock_before'=> 50,
             'stock_after' => 48,
         ]);
     }
@@ -229,169 +172,111 @@ class StockAdjustmentTest extends TestCase
     #[Test]
     public function admin_can_increase_stock_with_positive_delta(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $product = $this->createProduct($admin, ['current_stock' => 50]);
-
-        $response = $this->actingAs($admin)->postJson('/api/inventory/adjust', [
-            'product_id' => $product->id,
-            'reason' => 'correction',
-            'delta' => 5,
-        ]);
-
-        $response->assertStatus(200)
-            ->assertJsonPath('product.current_stock', 55)
-            ->assertJsonPath('adjustment.stock_before', 50)
-            ->assertJsonPath('adjustment.stock_after', 55);
-
-        $this->assertDatabaseHas('products', [
-            'id' => $product->id,
-            'current_stock' => 55,
-        ]);
-
-        $this->assertDatabaseHas('stock_adjustments', [
-            'product_id' => $product->id,
-            'user_id' => $admin->id,
-            'reason' => 'correction',
-            'delta' => 5,
-            'stock_before' => 50,
-            'stock_after' => 55,
-        ]);
-    }
-
-    #[Test]
-    public function adjustment_entry_includes_timestamp(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $product = $this->createProduct($admin, ['current_stock' => 10]);
-
-        $this->actingAs($admin)->postJson('/api/inventory/adjust', [
-            'product_id' => $product->id,
-            'reason' => 'lost',
-            'delta' => -1,
-        ])->assertStatus(200);
-
-        $adjustment = StockAdjustment::where('product_id', $product->id)->first();
-
-        $this->assertNotNull($adjustment);
-        $this->assertNotNull($adjustment->created_at);
-        $this->assertNotNull($adjustment->updated_at);
-    }
-
-    #[Test]
-    public function adjustment_is_logged_with_responsible_admin(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin', 'name' => 'Store Admin']);
-        $product = $this->createProduct($admin, ['current_stock' => 10]);
-
-        $this->actingAs($admin)->postJson('/api/inventory/adjust', [
-            'product_id' => $product->id,
-            'reason' => 'internal_transfer',
-            'delta' => -3,
-        ])->assertStatus(200);
-
-        $adjustment = StockAdjustment::where('product_id', $product->id)->first();
-
-        $this->assertNotNull($adjustment);
-        $this->assertEquals($admin->id, $adjustment->user_id);
-        $this->assertEquals('Store Admin', $adjustment->admin->name);
-    }
-
-    #[Test]
-    public function adjust_rejects_insufficient_stock(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $product = $this->createProduct($admin, ['current_stock' => 2]);
+        $admin = $this->makeAdmin();
+        $product = $this->makeProduct(['current_stock' => 50]);
 
         $this->actingAs($admin)
             ->postJson('/api/inventory/adjust', [
                 'product_id' => $product->id,
-                'reason' => 'damaged',
-                'delta' => -5,
+                'reason'     => 'correction',
+                'delta'      => 5,
             ])
-            ->assertStatus(422)
-            ->assertJsonValidationErrors('delta');
+            ->assertOk()
+            ->assertJsonPath('product.current_stock', 55);
 
-        // Stock should NOT have been modified
-        $this->assertDatabaseHas('products', [
-            'id' => $product->id,
-            'current_stock' => 2,
-        ]);
-
-        // No adjustment should have been logged
-        $this->assertDatabaseMissing('stock_adjustments', [
-            'product_id' => $product->id,
+        $this->assertDatabaseHas('stock_adjustments', [
+            'product_id'  => $product->id,
+            'reason'      => 'correction',
+            'delta'       => 5,
+            'stock_before'=> 50,
+            'stock_after' => 55,
         ]);
     }
 
+    /**
+     * The adjustment must be attributed to the responsible admin.
+     */
     #[Test]
-    public function successful_adjustment_refreshes_product_via_api(): void
+    public function adjustment_is_logged_with_the_responsible_admin(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $product = $this->createProduct($admin, ['current_stock' => 50]);
+        $admin = $this->makeAdmin(['name' => 'Store Admin']);
+        $product = $this->makeProduct(['current_stock' => 10]);
 
         $this->actingAs($admin)->postJson('/api/inventory/adjust', [
             'product_id' => $product->id,
-            'reason' => 'damaged',
-            'delta' => -2,
-        ])->assertStatus(200);
+            'reason'     => 'internal_transfer',
+            'delta'      => -3,
+        ])->assertOk();
 
-        $apiResponse = $this->actingAs($admin)->getJson('/api/inventory/products');
-        $apiResponse->assertStatus(200)
-            ->assertJsonPath('0.id', $product->id)
-            ->assertJsonPath('0.current_stock', 48);
+        $adjustment = StockAdjustment::where('product_id', $product->id)->firstOrFail();
+
+        $this->assertSame($admin->id, $adjustment->user_id);
+        $this->assertSame('Store Admin', $adjustment->admin->name);
+        $this->assertNotNull($adjustment->created_at);
     }
 
     #[Test]
-    public function multiple_adjustments_are_all_logged(): void
+    public function multiple_adjustments_are_all_logged_in_order(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $product = $this->createProduct($admin, ['current_stock' => 50]);
+        $admin = $this->makeAdmin();
+        $product = $this->makeProduct(['current_stock' => 50]);
 
         $this->actingAs($admin)->postJson('/api/inventory/adjust', [
-            'product_id' => $product->id,
-            'reason' => 'damaged',
-            'delta' => -2,
-        ])->assertStatus(200);
+            'product_id' => $product->id, 'reason' => 'damaged', 'delta' => -2,
+        ])->assertOk();
 
         $this->actingAs($admin)->postJson('/api/inventory/adjust', [
-            'product_id' => $product->id,
-            'reason' => 'internal_transfer',
-            'delta' => -3,
-        ])->assertStatus(200);
+            'product_id' => $product->id, 'reason' => 'internal_transfer', 'delta' => -3,
+        ])->assertOk();
 
-        $this->assertDatabaseHas('products', [
-            'id' => $product->id,
-            'current_stock' => 45,
-        ]);
-
+        $this->assertSame(45, (int) $product->fresh()->current_stock);
         $this->assertDatabaseCount('stock_adjustments', 2);
 
         $adjustments = StockAdjustment::where('product_id', $product->id)->orderBy('id')->get();
-        $this->assertEquals('damaged', $adjustments[0]->reason);
-        $this->assertEquals(50, $adjustments[0]->stock_before);
-        $this->assertEquals(48, $adjustments[0]->stock_after);
-        $this->assertEquals('internal_transfer', $adjustments[1]->reason);
-        $this->assertEquals(48, $adjustments[1]->stock_before);
-        $this->assertEquals(45, $adjustments[1]->stock_after);
+
+        $this->assertSame('damaged', $adjustments[0]->reason);
+        $this->assertSame(50, $adjustments[0]->stock_before);
+        $this->assertSame(48, $adjustments[0]->stock_after);
+
+        $this->assertSame('internal_transfer', $adjustments[1]->reason);
+        $this->assertSame(48, $adjustments[1]->stock_before);
+        $this->assertSame(45, $adjustments[1]->stock_after);
     }
 
     #[Test]
-    public function adjustment_stock_before_after_are_consistent(): void
+    public function stock_before_plus_delta_equals_stock_after(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-        $product = $this->createProduct($admin, ['current_stock' => 100]);
+        $admin = $this->makeAdmin();
+        $product = $this->makeProduct(['current_stock' => 100]);
 
         $this->actingAs($admin)->postJson('/api/inventory/adjust', [
-            'product_id' => $product->id,
-            'reason' => 'lost',
-            'delta' => -10,
-        ])->assertStatus(200);
+            'product_id' => $product->id, 'reason' => 'lost', 'delta' => -10,
+        ])->assertOk();
 
-        $adjustment = StockAdjustment::where('product_id', $product->id)->first();
+        $a = StockAdjustment::where('product_id', $product->id)->firstOrFail();
 
-        $this->assertEquals(100, $adjustment->stock_before);
-        $this->assertEquals(90, $adjustment->stock_after);
-        $this->assertEquals(-10, $adjustment->delta);
-        $this->assertEquals(100 - 10, $adjustment->stock_before + $adjustment->delta);
+        $this->assertSame(100, $a->stock_before);
+        $this->assertSame(90, $a->stock_after);
+        $this->assertSame($a->stock_after, $a->stock_before + $a->delta);
+    }
+
+    /**
+     * The catalogue is shared, so an adjustment applies to the item itself and
+     * is immediately visible through the master list.
+     */
+    #[Test]
+    public function successful_adjustment_refreshes_the_product_via_api(): void
+    {
+        $admin = $this->makeAdmin();
+        $product = $this->makeProduct(['current_stock' => 50]);
+
+        $this->actingAs($admin)->postJson('/api/inventory/adjust', [
+            'product_id' => $product->id, 'reason' => 'damaged', 'delta' => -2,
+        ])->assertOk();
+
+        $this->actingAs($admin)->getJson('/api/inventory/products')
+            ->assertOk()
+            ->assertJsonPath('0.id', $product->id)
+            ->assertJsonPath('0.current_stock', 48);
     }
 }

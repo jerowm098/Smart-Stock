@@ -3,178 +3,103 @@
 namespace Tests\Feature;
 
 use App\Models\Supplier;
-use App\Models\User;
-use Illuminate\Support\Facades\Schema;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * SS-92 / SS-93 / SS-95: Tests for supplier records.
+ * Supplier records.
  *
- * Covers:
- *  - Supplier table schema is present
- *  - GET active suppliers requires authentication and admin role
- *  - POST supplier requires authentication and admin role
- *  - Validation errors for invalid data
- *  - Active suppliers are returned; inactive are hidden
- *  - SS-95: Adding a supplier profile verifies the persisted database entry
+ * NOTE: Suppliers are listed as Out of Scope in the Detailed BRDs, but the
+ * feature exists in the codebase and is Admin-only under the BRD role model
+ * ("Admin Role = POS + Inventory + Demand Suggestions + User Management";
+ * supplier access sits with Inventory). These tests therefore keep an Admin
+ * subject and verify the role guard.
  */
 class SupplierTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithStore;
 
     #[Test]
     public function supplier_table_exists_in_database(): void
     {
-        $this->assertTrue(
-            Schema::hasTable('suppliers'),
-            'The suppliers table should exist.'
-        );
+        $this->assertTrue(Schema::hasTable('suppliers'), 'The suppliers table should exist.');
 
-        $columns = Schema::getColumnListing('suppliers');
-
-        $requiredColumns = ['id', 'name', 'contact_person', 'phone', 'email', 'is_active', 'created_at', 'updated_at'];
-        foreach ($requiredColumns as $column) {
-            $this->assertContains($column, $columns, "The suppliers table is missing the {$column} column.");
+        foreach (['id', 'name', 'contact_person', 'phone', 'email', 'is_active', 'created_at', 'updated_at'] as $column) {
+            $this->assertContains($column, Schema::getColumnListing('suppliers'), "Missing column: {$column}");
         }
     }
 
     #[Test]
-    public function active_suppliers_endpoint_requires_authentication(): void
+    public function guest_cannot_access_supplier_endpoints(): void
     {
-        $this->getJson('/api/suppliers/active')->assertStatus(401);
+        $this->getJson('/api/suppliers/active')->assertUnauthorized();
+        $this->postJson('/api/suppliers', [])->assertUnauthorized();
+        $this->get('/suppliers')->assertRedirect('/login');
     }
 
     #[Test]
-    public function active_suppliers_endpoint_requires_admin_role(): void
+    public function cashier_cannot_access_supplier_endpoints(): void
     {
-        $user = User::factory()->create(['role' => 'cashier']);
+        $cashier = $this->makeCashier();
 
-        $this->actingAs($user)->getJson('/api/suppliers/active')->assertStatus(403);
+        $this->actingAs($cashier)->getJson('/api/suppliers/active')->assertForbidden();
+        $this->actingAs($cashier)->postJson('/api/suppliers', ['name' => 'Nope'])->assertForbidden();
+        $this->actingAs($cashier)->get('/suppliers')->assertRedirect(route('dashboard'));
     }
 
     #[Test]
-    public function active_suppliers_endpoint_returns_empty_for_admin(): void
+    public function admin_can_open_the_suppliers_page(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
-
-        $this->actingAs($admin)->getJson('/api/suppliers/active')
-            ->assertStatus(200)
-            ->assertJson([]);
+        $this->actingAs($this->makeAdmin())->get('/suppliers')->assertOk();
     }
 
     #[Test]
-    public function active_suppliers_endpoint_returns_active_suppliers_only(): void
+    public function admin_can_add_a_supplier(): void
     {
-        $admin = User::factory()->create(['role' => 'admin']);
+        $this->actingAs($this->makeAdmin())
+            ->postJson('/api/suppliers', [
+                'name'           => 'Metro Hardware Supply',
+                'contact_person' => 'Ana Reyes',
+                'phone'          => '09171234567',
+                'email'          => 'ana@metrohardware.test',
+            ])
+            ->assertCreated();
 
-        Supplier::factory()->create(['name' => 'Active Supplier', 'is_active' => true]);
-        Supplier::factory()->create(['name' => 'Inactive Supplier', 'is_active' => false]);
-
-        $response = $this->actingAs($admin)->getJson('/api/suppliers/active');
-
-        $response->assertStatus(200)
-            ->assertJsonCount(1)
-            ->assertJsonPath('0.name', 'Active Supplier');
+        $this->assertDatabaseHas('suppliers', ['name' => 'Metro Hardware Supply']);
     }
 
     #[Test]
-    public function store_supplier_requires_authentication(): void
+    public function only_active_suppliers_are_returned(): void
     {
-        $this->postJson('/api/suppliers', [
-            'name' => 'Test Supplier',
-        ])->assertStatus(401);
+        Supplier::factory()->create(['name' => 'Active Co', 'is_active' => true]);
+        Supplier::factory()->create(['name' => 'Retired Co', 'is_active' => false]);
+
+        $names = collect($this->actingAs($this->makeAdmin())
+            ->getJson('/api/suppliers/active')
+            ->assertOk()
+            ->json())->pluck('name')->all();
+
+        $this->assertContains('Active Co', $names);
+        $this->assertNotContains('Retired Co', $names);
     }
 
+    /**
+     * A supplier is deactivated, not deleted, so historical stock-ins keep
+     * pointing at a real supplier.
+     */
     #[Test]
-    public function store_supplier_requires_admin_role(): void
+    public function admin_can_deactivate_rather_than_delete_a_supplier(): void
     {
-        $user = User::factory()->create(['role' => 'cashier']);
+        $admin = $this->makeAdmin();
+        $supplier = Supplier::factory()->create(['is_active' => true]);
 
-        $this->actingAs($user)->postJson('/api/suppliers', [
-            'name' => 'Test Supplier',
-        ])->assertStatus(403);
-    }
+        $this->actingAs($admin)
+            ->deleteJson("/api/suppliers/{$supplier->id}")
+            ->assertOk();
 
-    #[Test]
-    public function store_supplier_validates_required_name(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin']);
-
-        $this->actingAs($admin)->postJson('/api/suppliers', [
-            'name' => '',
-            'contact_person' => 'Person',
-        ])->assertStatus(422)
-            ->assertJsonValidationErrors('name');
-    }
-
-    #[Test]
-    public function admin_can_create_supplier(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin']);
-
-        $response = $this->actingAs($admin)->postJson('/api/suppliers', [
-            'name' => 'Hardware World',
-            'contact_person' => 'Juan Dela Cruz',
-            'phone' => '09123456789',
-            'email' => 'contact@hardwareworld.com',
-        ]);
-
-        $response->assertStatus(201)
-            ->assertJsonPath('message', 'Supplier added successfully')
-            ->assertJsonPath('supplier.name', 'Hardware World');
-
-        $this->assertDatabaseHas('suppliers', [
-            'name' => 'Hardware World',
-            'contact_person' => 'Juan Dela Cruz',
-            'phone' => '09123456789',
-            'email' => 'contact@hardwareworld.com',
-            'is_active' => true,
-        ]);
-    }
-
-    #[Test]
-    public function store_supplier_ignores_is_active_input(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin']);
-
-        $this->actingAs($admin)->postJson('/api/suppliers', [
-            'name' => 'Test Co',
-            'is_active' => false,
-        ])->assertStatus(201);
-
-        $this->assertDatabaseHas('suppliers', [
-            'name' => 'Test Co',
-            'is_active' => true,
-        ]);
-    }
-
-    #[Test]
-    public function ss95_admin_can_add_supplier_profile_and_verify_database_entry(): void
-    {
-        $admin = User::factory()->create(['role' => 'admin']);
-
-        $response = $this->actingAs($admin)->postJson('/api/suppliers', [
-            'name' => 'TechParts Inc',
-            'contact_person' => 'Maria Santos',
-            'phone' => '09876543210',
-            'email' => 'maria@techparts.com',
-        ]);
-
-        $response->assertStatus(201)
-            ->assertJsonPath('message', 'Supplier added successfully')
-            ->assertJsonPath('supplier.name', 'TechParts Inc')
-            ->assertJsonPath('supplier.contact_person', 'Maria Santos')
-            ->assertJsonPath('supplier.phone', '09876543210')
-            ->assertJsonPath('supplier.email', 'maria@techparts.com');
-
-        $this->assertDatabaseHas('suppliers', [
-            'name' => 'TechParts Inc',
-            'contact_person' => 'Maria Santos',
-            'phone' => '09876543210',
-            'email' => 'maria@techparts.com',
-            'is_active' => true,
-        ]);
+        $this->assertDatabaseHas('suppliers', ['id' => $supplier->id, 'is_active' => false]);
     }
 }

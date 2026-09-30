@@ -52,6 +52,7 @@ class Product extends Model
         'price',
         'current_stock',
         'reorder_threshold',
+        'is_active',
         'receiving_unit',
         'pieces_per_receiving_unit',
     ];
@@ -67,8 +68,18 @@ class Product extends Model
             'price' => 'decimal:2',
             'current_stock' => 'integer',
             'reorder_threshold' => 'integer',
+            'is_active' => 'boolean',
             'pieces_per_receiving_unit' => 'integer',
         ];
+    }
+
+    /**
+     * BRD (Inventory Management): only active (non-discontinued) products should
+     * appear in the catalogue, the master list, and the POS catalog.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 
     /**

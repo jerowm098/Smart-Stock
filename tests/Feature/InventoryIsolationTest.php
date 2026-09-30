@@ -2,142 +2,173 @@
 
 namespace Tests\Feature;
 
-use App\Models\Product;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * QA tests for per-account inventory isolation.
+ * Inventory visibility and the shared store catalogue.
  *
- * Covers:
- *  - Each user only sees their own products
- *  - New accounts start with an empty inventory
- *  - Users cannot delete products they do not own
- *  - Alerts are scoped to the authenticated user
+ * BRD (Account Management) — Business rules:
+ *   "Staff Role = POS Access Only."
+ *   "Admin Role = POS + Inventory + Demand Suggestions + User Management."
+ * BRD (Inventory Management) — Security:
+ *   "The system shall restrict all access to this module; it must be
+ *    completely inaccessible to accounts with the Staff role."
+ *   "Direct URL navigation to the inventory dashboard by an unauthenticated or
+ *    Staff-level user shall result in an immediate redirect to the login or POS
+ *    screen."
+ *
+ * REVISED (was: InventoryIsolationTest).
+ * The previous version asserted *per-account* product isolation. That design
+ * was abandoned: the product catalogue is SHARED store-wide, and
+ * `products.user_id` is an audit-trail column only — never a data-isolation
+ * boundary (see App\Models\Product and the note in AuthController). Access is
+ * now governed strictly by ROLE. The "other user's product" cases therefore
+ * assert that a Staff account is refused, and that all admins share one
+ * catalogue.
  */
 class InventoryIsolationTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithStore;
 
     #[Test]
-    public function user_only_sees_their_own_products(): void
+    public function admin_sees_the_whole_shared_catalogue(): void
     {
-        $ownerA = User::factory()->create();
-        $ownerB = User::factory()->create();
+        $admin = $this->makeAdmin();
 
-        Product::factory()->count(3)->create(['user_id' => $ownerA->id]);
-        Product::factory()->count(2)->create(['user_id' => $ownerB->id]);
+        $this->makeProduct(['sku' => 'SHARED-1', 'name' => 'Item One']);
+        $this->makeProduct(['sku' => 'SHARED-2', 'name' => 'Item Two']);
 
-        $responseA = $this->actingAs($ownerA)->getJson('/api/inventory/products');
-        $responseB = $this->actingAs($ownerB)->getJson('/api/inventory/products');
-
-        $responseA->assertStatus(200)->assertJsonCount(3);
-        $responseB->assertStatus(200)->assertJsonCount(2);
+        $this->actingAs($admin)
+            ->getJson('/api/inventory/products')
+            ->assertOk()
+            ->assertJsonCount(2);
     }
 
     #[Test]
-    public function newly_created_account_starts_with_empty_inventory(): void
+    public function catalogue_is_shared_between_admins_not_scoped_per_account(): void
     {
-        $existingUser = User::factory()->create();
-        Product::factory()->count(5)->create(['user_id' => $existingUser->id]);
+        $adminA = $this->makeAdmin();
+        $adminB = $this->makeAdmin();
 
-        $newUser = User::factory()->create();
+        // Created while signed in as A, but visible to B: one store, one catalogue.
+        $this->actingAs($adminA)->postJson('/api/inventory/add', [
+            'name'              => 'Store Wide Item',
+            'sku'               => 'STORE-WIDE-1',
+            'price'             => 25,
+            'current_stock'     => 10,
+            'reorder_threshold' => 2,
+        ])->assertCreated();
 
-        $response = $this->actingAs($newUser)->getJson('/api/inventory/products');
+        $rows = $this->actingAs($adminB)
+            ->getJson('/api/inventory/products')
+            ->assertOk()
+            ->json();
 
-        $response->assertStatus(200)->assertJsonCount(0);
+        $this->assertCount(1, $rows);
+        $this->assertSame('STORE-WIDE-1', $rows[0]['sku']);
+    }
+
+    /**
+     * The old test asserted a Staff user could not delete "another user's"
+     * product (404). Under the shared-catalogue model ownership is irrelevant —
+     * the refusal is purely about ROLE, so the answer is 403.
+     */
+    #[Test]
+    public function staff_cannot_deactivate_a_product_regardless_of_ownership(): void
+    {
+        $cashier = $this->makeCashier();
+        $product = $this->makeProduct(['user_id' => $this->makeAdmin()->id]);
+
+        $this->actingAs($cashier)
+            ->deleteJson("/api/inventory/{$product->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'is_active' => true]);
+    }
+
+    /**
+     * BRD: "Editing existing product details or deactivating discontinued items."
+     * Deactivation preserves the row so the audit trail survives.
+     */
+    #[Test]
+    public function admin_can_deactivate_a_product_and_bring_it_back(): void
+    {
+        $admin = $this->makeAdmin();
+        $product = $this->makeProduct();
+
+        $this->actingAs($admin)->deleteJson("/api/inventory/{$product->id}")->assertOk();
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'is_active' => false]);
+
+        $this->actingAs($admin)->deleteJson("/api/inventory/{$product->id}?reactivate=1")->assertOk();
+        $this->assertDatabaseHas('products', ['id' => $product->id, 'is_active' => true]);
     }
 
     #[Test]
-    public function user_cannot_delete_a_product_they_do_not_own(): void
+    public function alerts_are_admin_only(): void
     {
-        $ownerA = User::factory()->create();
-        $ownerB = User::factory()->create();
+        $admin = $this->makeAdmin();
+        $cashier = $this->makeCashier();
 
-        $product = Product::factory()->create(['user_id' => $ownerA->id]);
+        $this->makeProduct(['sku' => 'LOW-1', 'current_stock' => 1, 'reorder_threshold' => 5]);
+        $this->makeProduct(['sku' => 'OK-1', 'current_stock' => 80, 'reorder_threshold' => 5]);
 
-        $response = $this->actingAs($ownerB)->deleteJson("/api/inventory/{$product->id}");
+        $skus = collect($this->actingAs($admin)->getJson('/api/inventory/alerts')->assertOk()->json())
+            ->pluck('sku')->all();
 
-        $response->assertStatus(404);
-        $this->assertDatabaseHas('products', ['id' => $product->id, 'user_id' => $ownerA->id]);
+        $this->assertContains('LOW-1', $skus);
+        $this->assertNotContains('OK-1', $skus);
+
+        $this->actingAs($cashier)->getJson('/api/inventory/alerts')->assertForbidden();
     }
 
     #[Test]
-    public function owner_can_delete_their_own_product(): void
+    public function stored_product_records_the_creating_admin(): void
     {
-        $owner = User::factory()->create();
-        $product = Product::factory()->create(['user_id' => $owner->id]);
+        $admin = $this->makeAdmin();
 
-        $response = $this->actingAs($owner)->deleteJson("/api/inventory/{$product->id}");
-
-        $response->assertStatus(200);
-        $this->assertDatabaseMissing('products', ['id' => $product->id]);
-    }
-
-    #[Test]
-    public function alerts_are_scoped_to_the_authenticated_user(): void
-    {
-        $ownerA = User::factory()->create();
-        $ownerB = User::factory()->create();
-
-        // Low stock product owned by A
-        Product::factory()->create([
-            'user_id' => $ownerA->id,
-            'current_stock' => 1,
-            'reorder_threshold' => 5,
-        ]);
-
-        // Low stock product owned by B
-        Product::factory()->create([
-            'user_id' => $ownerB->id,
-            'current_stock' => 2,
-            'reorder_threshold' => 5,
-        ]);
-
-        $responseA = $this->actingAs($ownerA)->getJson('/api/inventory/alerts');
-        $responseB = $this->actingAs($ownerB)->getJson('/api/inventory/alerts');
-
-        $responseA->assertStatus(200)->assertJsonCount(1);
-        $responseB->assertStatus(200)->assertJsonCount(1);
-
-        $this->assertSame($ownerA->id, $responseA->json(0)['user_id']);
-        $this->assertSame($ownerB->id, $responseB->json(0)['user_id']);
-    }
-
-    #[Test]
-    public function stored_product_is_owned_by_the_authenticated_user(): void
-    {
-        $user = User::factory()->create();
-
-        $response = $this->actingAs($user)->postJson('/api/inventory/add', [
-            'name' => 'Test Widget',
-            'sku' => 'TW-001',
-            'category' => 'Widgets',
-            'price' => 99.50,
-            'current_stock' => 10,
+        $this->actingAs($admin)->postJson('/api/inventory/add', [
+            'name'              => 'Test Widget',
+            'sku'               => 'TW-UPD-001',
+            'category'          => 'Widgets',
+            'price'             => 99.50,
+            'current_stock'     => 10,
             'reorder_threshold' => 3,
-        ]);
+        ])->assertCreated();
 
-        $response->assertStatus(201);
-        $this->assertDatabaseHas('products', [
-            'sku' => 'TW-001',
-            'user_id' => $user->id,
-        ]);
+        $this->assertDatabaseHas('products', ['sku' => 'TW-UPD-001', 'user_id' => $admin->id]);
+    }
+
+    #[Test]
+    public function staff_cannot_add_products(): void
+    {
+        $cashier = $this->makeCashier();
+
+        $this->actingAs($cashier)->postJson('/api/inventory/add', [
+            'name'              => 'Nope',
+            'sku'               => 'NP-001',
+            'price'             => 1,
+            'current_stock'     => 1,
+            'reorder_threshold' => 1,
+        ])->assertForbidden();
+
+        $this->assertDatabaseMissing('products', ['sku' => 'NP-001']);
     }
 
     #[Test]
     public function guest_cannot_access_inventory_api(): void
     {
-        $this->getJson('/api/inventory/products')->assertStatus(401);
-        $this->getJson('/api/inventory/alerts')->assertStatus(401);
+        $this->getJson('/api/inventory/products')->assertUnauthorized();
+        $this->getJson('/api/inventory/alerts')->assertUnauthorized();
+
         $this->postJson('/api/inventory/add', [
-            'name' => 'Nope',
-            'sku' => 'NP-001',
-            'price' => 1,
-            'current_stock' => 1,
+            'name'              => 'Nope',
+            'sku'               => 'NP-GUEST',
+            'price'             => 1,
+            'current_stock'     => 1,
             'reorder_threshold' => 1,
-        ])->assertStatus(401);
+        ])->assertUnauthorized();
     }
 }

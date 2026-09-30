@@ -8,6 +8,7 @@ use Tests\TestCase;
 class ExampleTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithStore;
 
     /**
      * A basic test example.
@@ -19,14 +20,28 @@ class ExampleTest extends TestCase
         $response->assertRedirect('/home');
     }
 
-    public function test_authenticated_user_can_access_dashboard_and_products(): void
+    /**
+     * REVISED: the default User factory produces a `cashier`. Under the BRD role
+     * model ("Staff Role = POS Access Only") a cashier is redirected away from
+     * /products, so this test now signs in as an Admin — the role that owns
+     * Inventory.
+     */
+    public function test_authenticated_admin_can_access_dashboard_and_products(): void
     {
-        $user = \App\Models\User::factory()->create();
+        $admin = $this->makeAdmin();
 
-        $responseDashboard = $this->actingAs($user)->get('/dashboard');
-        $responseDashboard->assertStatus(200);
+        $this->actingAs($admin)->get('/dashboard')->assertOk();
+        $this->actingAs($admin)->get('/products')->assertOk();
+    }
 
-        $responseProducts = $this->actingAs($user)->get('/products');
-        $responseProducts->assertStatus(200);
+    /**
+     * The BRD counterpart: a Staff account reaches the POS, not Inventory.
+     */
+    public function test_cashier_reaches_pos_but_is_redirected_from_products(): void
+    {
+        $cashier = $this->makeCashier();
+
+        $this->actingAs($cashier)->get('/pos')->assertOk();
+        $this->actingAs($cashier)->get('/products')->assertRedirect();
     }
 }

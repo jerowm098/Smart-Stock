@@ -151,16 +151,12 @@ class DashboardController extends Controller
      * BRD Must: "The system shall generate automated restocking
      * suggestions for Admins based on sales demand."
      *
-     * Formula (simple, explainable for hardware store):
-     *   avg_daily   = total_qty_sold_in_window / window_days
-     *   target      = max(reorder_threshold * 2, ceil(avg_daily * cover_days))
-     *   suggested   = max(0, target - current_stock)
-     *   days_left   = avg_daily > 0 ? current_stock / avg_daily : null
+     * BRD Reliability/Performance: forecasting now runs in the nightly
+     * `forecast:orders` job (see App\Services\ForecastingService) which writes
+     * pre-computed rows to `order_suggestions`. This endpoint simply reads
+     * those rows, so loading the dashboard does not slow the application down.
      *
-     * A product appears in the list when:
-     *   - it is already at/below reorder_threshold, OR
-     *   - its suggested order qty > 0 (fast mover), OR
-     *   - it will run out within cover_days at current pace.
+     * The response shape is preserved for the existing dashboard JavaScript.
      */
     public function restockSuggestions(Request $request): JsonResponse
     {
@@ -169,102 +165,56 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        // Demand window: ?days=7|14|30 (default 30). Answers BRD open question SS-35.
-        $windowDays = (int) $request->query('days', 30);
-        $windowDays = in_array($windowDays, [7, 14, 30, 60, 90], true) ? $windowDays : 30;
+        $status = (string) $request->query('status', \App\Models\OrderSuggestion::STATUS_ACTIVE);
 
-        // How many days of future demand we want to cover with one order.
-        $coverDays = 14;
-        $from = now()->subDays($windowDays - 1)->startOfDay();
+        $query = \App\Models\OrderSuggestion::with(
+            'product:id,name,sku,category,price,current_stock,reorder_threshold'
+        )
+            ->orderByRaw("CASE urgency WHEN 'critical' THEN 0 WHEN 'low' THEN 1 ELSE 2 END")
+            ->orderByDesc('suggested_qty');
 
-        // Total qty sold per product inside the demand window.
-        $soldMap = DB::table('sale_items')
-            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
-            ->where('sales.created_at', '>=', $from)
-            ->select('sale_items.product_id', DB::raw('SUM(sale_items.quantity) as total_qty'))
-            ->groupBy('sale_items.product_id')
-            ->pluck('total_qty', 'product_id');
-
-        $products = Product::orderBy('name')->get();
-        $suggestions = [];
-
-        foreach ($products as $p) {
-            $sold = (int) ($soldMap[$p->id] ?? 0);
-            $avgDaily = $windowDays > 0 ? $sold / $windowDays : 0;
-            $current = (int) $p->current_stock;
-            $threshold = (int) $p->reorder_threshold;
-
-            // Target stock covers future demand, but never below 2x threshold.
-            $demandTarget = (int) ceil($avgDaily * $coverDays);
-            $target = max($threshold * 2, $demandTarget);
-
-            // Don't suggest absurd orders for dead items: cap at threshold*2 top-up.
-            if ($sold === 0) {
-                $target = $threshold * 2;
-            }
-
-            $suggested = max(0, $target - $current);
-            $daysLeft = $avgDaily > 0 ? round($current / $avgDaily, 1) : null;
-
-            $isLow = $current <= $threshold;
-            $willRunOut = $daysLeft !== null && $daysLeft <= $coverDays;
-
-            if (! $isLow && $suggested <= 0 && ! $willRunOut) {
-                continue;
-            }
-
-            $urgency = 'watch';
-            $reason = 'Steady seller — top up to cover next ' . $coverDays . ' days.';
-            if ($isLow && $current <= 0) {
-                $urgency = 'critical';
-                $reason = 'Out of stock. Sold ' . $sold . ' pcs in last ' . $windowDays . ' days.';
-            } elseif ($isLow) {
-                $urgency = 'critical';
-                $reason = 'At/below reorder threshold. Sold ' . $sold . ' pcs in last ' . $windowDays . ' days.';
-            } elseif ($willRunOut) {
-                $urgency = 'low';
-                $reason = 'Will run out in ~' . $daysLeft . ' days at current pace.';
-            } elseif ($sold === 0) {
-                $urgency = 'watch';
-                $reason = 'No sales in last ' . $windowDays . ' days — refill to threshold only.';
-            }
-
-            $suggestions[] = [
-                'product_id'        => $p->id,
-                'sku'               => $p->sku,
-                'name'              => $p->name,
-                'category'          => $p->category,
-                'current_stock'     => $current,
-                'reorder_threshold' => $threshold,
-                'sold_in_window'    => $sold,
-                'window_days'       => $windowDays,
-                'avg_daily'         => round($avgDaily, 2),
-                'days_until_out'    => $daysLeft,
-                'suggested_qty'     => $suggested,
-                'urgency'           => $urgency,
-                'reason'            => $reason,
-            ];
+        if ($status !== 'all') {
+            $query->where('status', $status);
         }
 
-        // Critical first, then lowest days-until-out, then biggest suggested qty.
-        usort($suggestions, function ($a, $b) {
-            $rank = ['critical' => 0, 'low' => 1, 'watch' => 2];
-            $ra = $rank[$a['urgency']] ?? 3;
-            $rb = $rank[$b['urgency']] ?? 3;
-            if ($ra !== $rb) {
-                return $ra <=> $rb;
-            }
-            $da = $a['days_until_out'] ?? 9999;
-            $db = $b['days_until_out'] ?? 9999;
-            if ($da !== $db) {
-                return $da <=> $db;
-            }
-            return $b['suggested_qty'] <=> $a['suggested_qty'];
-        });
+        // Units sold per product inside the BRD's fixed 30-day window, so the
+        // overview table can keep showing the "sold in window" column.
+        $windowDays = \App\Services\ForecastingService::WINDOW_DAYS;
+        $soldMap = DB::table('sale_items')
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->where('sales.created_at', '>=', now()->subDays($windowDays - 1)->startOfDay())
+            ->groupBy('sale_items.product_id')
+            ->select('sale_items.product_id', DB::raw('SUM(sale_items.quantity) as total_qty'))
+            ->pluck('total_qty', 'product_id');
+
+        $suggestions = $query->get()->map(function ($s) use ($soldMap) {
+            $avgDaily = (float) $s->avg_daily;
+
+            return [
+                'id'               => $s->id,
+                'product_id'       => $s->product_id,
+                'sku'              => $s->product?->sku ?? '—',
+                'name'             => $s->product?->name ?? '—',
+                'category'         => $s->product?->category ?? '—',
+                'current_stock'    => $s->current_stock,
+                'reorder_threshold'=> $s->product?->reorder_threshold ?? 0,
+                'sold_in_window'   => (int) ($soldMap[$s->product_id] ?? 0),
+                'window_days'      => $s->window_days,
+                'avg_daily'        => round($avgDaily, 2),
+                'reorder_point'    => (float) $s->reorder_point,
+                'days_until_out'   => $avgDaily > 0 ? round($s->current_stock / $avgDaily, 1) : null,
+                'suggested_qty'    => (int) ceil((float) $s->suggested_qty),
+                'urgency'          => $s->urgency,
+                'status'           => $s->status,
+                'reason'           => $s->reason,
+                'generated_at'     => optional($s->generated_at)->format('M d, Y g:i A'),
+            ];
+        })->values()->all();
 
         return response()->json([
-            'window_days' => $windowDays,
-            'cover_days'  => $coverDays,
+            'window_days' => \App\Services\ForecastingService::WINDOW_DAYS,
+            'cover_days'  => \App\Services\ForecastingService::COVER_DAYS,
+            'safety_days' => \App\Services\ForecastingService::SAFETY_DAYS,
             'count'       => count($suggestions),
             'suggestions' => $suggestions,
         ]);
@@ -325,18 +275,22 @@ class DashboardController extends Controller
 
         if ($search !== '') {
             // Match by receipt no (sale id) or product name/sku inside the sale.
-            $query->where(function ($q) use ($search) {
+            //
+            // NOTE: this previously issued both an ILIKE and a LIKE clause as a
+            // "driver fallback". ILIKE is PostgreSQL-only and is a hard syntax
+            // error on SQLite, so the duplicate clause is removed. LIKE is
+            // case-insensitive for ASCII in PostgreSQL and behaves identically,
+            // giving one portable statement instead of two.
+            $like = '%' . $search . '%';
+
+            $query->where(function ($q) use ($search, $like) {
                 if (ctype_digit($search)) {
                     $q->orWhere('id', (int) $search);
                 }
-                $q->orWhereHas('items.product', function ($pq) use ($search) {
-                    $pq->where('name', 'ILIKE', '%' . $search . '%')
-                        ->orWhere('sku', 'ILIKE', '%' . $search . '%');
-                });
-                // Fallback for MySQL (LIKE) if ILIKE unsupported — harmless duplicate.
-                $q->orWhereHas('items.product', function ($pq) use ($search) {
-                    $pq->where('name', 'LIKE', '%' . $search . '%')
-                        ->orWhere('sku', 'LIKE', '%' . $search . '%');
+
+                $q->orWhereHas('items.product', function ($pq) use ($like) {
+                    $pq->where('name', 'LIKE', $like)
+                        ->orWhere('sku', 'LIKE', $like);
                 });
             });
         }
@@ -430,13 +384,20 @@ class DashboardController extends Controller
         }
 
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
+            $like = '%' . $search . '%';
+
+            $query->where(function ($q) use ($search, $like) {
                 if (ctype_digit($search)) {
                     $q->orWhere('id', (int) $search);
                 }
-                $q->orWhereHas('items.product', function ($pq) use ($search) {
-                    $pq->where('name', 'LIKE', '%' . $search . '%')
-                        ->orWhere('sku', 'LIKE', '%' . $search . '%');
+
+                $q->orWhereHas('items.product', function ($pq) use ($like) {
+                    // Case-insensitive match that works on both PostgreSQL and
+                    // SQLite. LIKE is already case-insensitive for ASCII in
+                    // PostgreSQL, so this behaves the same as the previous ILIKE
+                    // while remaining portable.
+                    $pq->where('name', 'LIKE', $like)
+                        ->orWhere('sku', 'LIKE', $like);
                 });
             });
         }

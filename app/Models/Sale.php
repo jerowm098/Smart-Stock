@@ -32,6 +32,11 @@ class Sale extends Model
         'total_amount',
         'payment_amount',
         'change_amount',
+        // BRD (Demand Forecasting): the 30-day velocity window is derived from
+        // historical sales, so the transaction timestamp must be settable when
+        // backfilling or testing historical data.
+        'created_at',
+        'updated_at',
     ];
 
     /**

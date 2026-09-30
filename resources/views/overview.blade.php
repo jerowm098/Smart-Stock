@@ -111,14 +111,14 @@
         <div class="section-header">
             <h2 class="section-title">Order Suggestions</h2>
             <div class="panel-controls">
-                <label for="suggestWindow" class="control-label">Demand window:</label>
-                <select id="suggestWindow" class="control-select" onchange="loadRestockSuggestions()">
-                    <option value="7">Last 7 days</option>
-                    <option value="14">Last 14 days</option>
-                    <option value="30" selected>Last 30 days</option>
-                    <option value="60">Last 60 days</option>
-                    <option value="90">Last 90 days</option>
-                </select>
+                {{-- BRD (Demand Forecasting) fixes the demand window at 30 days:
+                     "Daily Velocity = Total Units Sold / 30 days". The selector was
+                     removed so the on-screen figures always match the BRD formulas.
+                     Recomputed nightly by the `forecast:orders` job. --}}
+                <span class="control-label">Demand window: last 30 days (nightly job)</span>
+                <a href="{{ route('order-suggestions') }}" class="panel-action" title="Open full Order Suggestions dashboard" aria-label="Open full Order Suggestions dashboard">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 15l4-5 3 3 5-7"></path></svg>
+                </a>
                 <a href="{{ route('stock-in') }}" class="panel-action" title="Receive new stock" aria-label="Receive new stock">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
                 </a>
@@ -1124,12 +1124,11 @@
         }
 
         // ── SS-35 Restock Suggestions ───────────────────────────
-        // Reload (window change) re-enters compact spinner state so it
-        // shrinks then expands again, same as first load.
+        // Reads the pre-computed rows written by the nightly `forecast:orders`
+        // job (BRD: forecasting runs as a scheduled task so the page does not
+        // slow down). No demand-window selector: the BRD fixes it at 30 days.
         async function loadRestockSuggestions() {
             const body = document.getElementById('suggestBody');
-            const winEl = document.getElementById('suggestWindow');
-            const days = winEl ? winEl.value : 30;
             const wrap = document.getElementById('suggestTable');
             const panel = document.getElementById('suggestPanel');
             if (wrap && !wrap.classList.contains('is-loading')) {
@@ -1143,7 +1142,7 @@
                 }
             }
             try {
-                const res = await fetch('/api/dashboard/restock-suggestions?days=' + encodeURIComponent(days));
+                const res = await fetch('/api/dashboard/restock-suggestions');
                 if (!res.ok) throw new Error('Failed (' + res.status + ')');
                 const d = await res.json();
                 const items = d.suggestions || [];

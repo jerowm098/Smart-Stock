@@ -916,6 +916,9 @@
                     Login
                 </a>
             @else
+                {{-- BRD (Inventory) Security: low-stock alerts are Admin-only data,
+                     so the bell is hidden from Staff (who would receive a 403). --}}
+                @if(Auth::user()->isAdmin())
                 <!-- Alerts button -->
                 <div class="header-alert-wrapper">
                     <button type="button" class="header-btn header-btn-icon" onclick="toggleHeaderAlerts()" title="Notifications">
@@ -930,6 +933,7 @@
                         <div id="headerAlertList"></div>
                     </div>
                 </div>
+                @endif
 
                 <!-- User button -->
                 <div class="header-user" id="headerUserBtn" onclick="toggleUserDropdown(event)">
@@ -983,12 +987,6 @@
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
                     </span>
                     <span>Login</span>
-                </a>
-                <a href="{{ route('register') }}" class="mobile-nav-item">
-                    <span class="mobile-nav-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><line x1="19" y1="8" x2="19" y2="14"></line><line x1="22" y1="11" x2="16" y2="11"></line></svg>
-                    </span>
-                    <span>Register</span>
                 </a>
             @else
                 <a href="{{ route('products') }}" class="mobile-nav-item" data-page="products">
@@ -1056,8 +1054,9 @@
             </p>
             <div class="hero-actions">
                 @guest
+                    {{-- BRD (Account Management): accounts are created by an Admin,
+                         so there is no public registration entry point. --}}
                     <a href="{{ route('login') }}" class="btn-primary">Get Started <span aria-hidden="true">→</span></a>
-                    <a href="{{ route('register') }}" class="btn-secondary">Create Account</a>
                 @else
                     <a href="{{ route('dashboard') }}" class="btn-primary">Open Dashboard <span aria-hidden="true">→</span></a>
                 @endguest
@@ -1253,7 +1252,7 @@
             const sidebar = document.getElementById('mobileNavigation');
             const overlay = document.getElementById('mobileMenuOverlay');
             const button = document.getElementById('mobileMenuButton');
-            const isOpen = sidebar.classList.toggle('mobile-open');
+            const isOpen = sidebar.classList.toggle('mobile-open', isOpen);
 
             overlay.classList.toggle('active', isOpen);
             button.classList.toggle('mobile-open', isOpen);
@@ -1421,7 +1420,8 @@
 
         // SS-60: Keep smartStockLastEmail on logout so login can pre-fill it
         function clearRememberEmail() {
-            // intentionally kept — email stays for pre-fill on next login visit
+            // BRD (Account Management): the login screen is username + password +
+            // submit only, so no remembered-credential state is kept here.
         }
 
         // Counter animation
@@ -1465,8 +1465,12 @@
             if (reviewsStats) counterObserver.observe(reviewsStats);
         });
 
-        loadAlerts();
-        setInterval(loadAlerts, 30000);
+        // Low-stock alerts are Admin-only; skip the request entirely for guests
+        // and Staff so no 403 noise appears in the console.
+        @if(Auth::check() && Auth::user()->isAdmin())
+            loadAlerts();
+            setInterval(loadAlerts, 30000);
+        @endif
     </script>
 </body>
 </html>

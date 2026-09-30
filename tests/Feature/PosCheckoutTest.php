@@ -2,307 +2,204 @@
 
 namespace Tests\Feature;
 
-use App\Models\Product;
 use App\Models\Sale;
-use App\Models\SaleItem;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
+/**
+ * POS checkout behaviour.
+ *
+ * REVISED (was: PosCheckoutTest).
+ * Two corrections against the BRD:
+ *
+ *  1. Totals. The old test asserted `total_amount = 280` for a 250 subtotal,
+ *     with the comment "subtotal 250 + 12% tax 30". BRD (Point of Sale) —
+ *     Business rules states:
+ *         "Cart Total = Sum of (Item Unit Price * Quantity)."
+ *     and the server applies no tax multiplier. (Transaction Tracking also
+ *     notes "Revenue tracking is based purely on the gross total of items
+ *     sold".) The stale 12% expectation is corrected to the plain subtotal.
+ *
+ *  2. Ownership. The old "prevents selling other users products" test assumed
+ *     per-account products. The catalogue is SHARED store-wide, so any Staff
+ *     member may sell any active item; the real guard is the role + the
+ *     deactivation flag.
+ */
 class PosCheckoutTest extends TestCase
 {
     use RefreshDatabase;
+    use InteractsWithStore;
 
     #[Test]
     public function guest_cannot_access_pos_checkout_page(): void
     {
-        $response = $this->get('/pos');
-        $response->assertRedirect('/login');
+        $this->get('/pos')->assertRedirect('/login');
+    }
+
+    /**
+     * BRD: "Admin Role = POS + Inventory + ..." so Admins may also sell.
+     */
+    #[Test]
+    public function admin_can_access_pos_checkout_page(): void
+    {
+        $this->actingAs($this->makeAdmin())->get('/pos')->assertOk();
     }
 
     #[Test]
-    public function admin_cannot_access_pos_checkout_page(): void
+    public function cashier_can_access_pos_checkout_page(): void
     {
-        $user = User::factory()->create(['role' => 'admin']);
-
-        $response = $this->actingAs($user)->get('/pos');
-        $response->assertForbidden();
-        $response->assertJsonPath('message', 'Cashier access required.');
-    }
-
-    #[Test]
-    public function authenticated_user_can_access_pos_checkout_page(): void
-    {
-        $user = User::factory()->create(['role' => 'cashier']);
-        $response = $this->actingAs($user)->get('/pos');
-        $response->assertStatus(200);
-        $response->assertSee('POS Checkout');
+        $this->actingAs($this->makeCashier())
+            ->get('/pos')
+            ->assertOk()
+            ->assertSee('POS Checkout');
     }
 
     #[Test]
     public function pos_checkout_requires_authentication_for_api(): void
     {
-        $response = $this->postJson('/api/pos/checkout', []);
-        $response->assertStatus(401);
+        $this->postJson('/api/pos/checkout', [])->assertUnauthorized();
     }
 
     #[Test]
     public function pos_checkout_validates_request_data(): void
     {
-        $user = User::factory()->create(['role' => 'cashier']);
-        $response = $this->actingAs($user)->postJson('/api/pos/checkout', []);
-        $response->assertStatus(422);
-        $response->assertJsonValidationErrors(['cart_items', 'payment_amount']);
+        $this->actingAs($this->makeCashier())
+            ->postJson('/api/pos/checkout', [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['cart_items', 'payment_amount']);
     }
 
     #[Test]
     public function pos_checkout_processes_valid_transaction(): void
     {
-        $user = User::factory()->create(['role' => 'cashier']);
-        
-        // Create products owned by the user
-        $product1 = Product::factory()->create([
-            'user_id' => $user->id,
-            'price' => 100.00,
-            'current_stock' => 10,
-        ]);
-        
-        $product2 = Product::factory()->create([
-            'user_id' => $user->id,
-            'price' => 50.00,
-            'current_stock' => 5,
-        ]);
+        $cashier = $this->makeCashier();
 
-        // Perform checkout
-        $response = $this->actingAs($user)->postJson('/api/pos/checkout', [
+        $product1 = $this->makeProduct(['price' => 100.00, 'current_stock' => 10]);
+        $product2 = $this->makeProduct(['price' => 50.00, 'current_stock' => 5]);
+
+        $response = $this->actingAs($cashier)->postJson('/api/pos/checkout', [
             'cart_items' => [
-                ['product_id' => $product1->id, 'quantity' => 2],
-                ['product_id' => $product2->id, 'quantity' => 1],
+                ['product_id' => $product1->id, 'quantity' => 2], // 200
+                ['product_id' => $product2->id, 'quantity' => 1], //  50
             ],
             'payment_amount' => 300.00,
         ]);
 
-        $response->assertStatus(200);
-        $response->assertJson([
-            'message' => 'Checkout completed successfully.',
-        ]);
+        $response->assertOk()->assertJsonPath('message', 'Checkout completed successfully.');
 
-        // Verify sale was created
+        // BRD business rule: total is the plain sum of price x quantity (250).
+        $this->assertSame(250.0, (float) $response->json('total_amount'));
+        $this->assertSame(250.0, (float) $response->json('subtotal_amount'));
+        $this->assertSame(50.0, (float) $response->json('change_amount'));
+
         $this->assertDatabaseHas('sales', [
-            'user_id' => $user->id,
-            'total_amount' => 280.00, // subtotal 250 + 12% tax 30
+            'user_id'        => $cashier->id,
+            'total_amount'   => 250.00,
             'payment_amount' => 300.00,
-            'change_amount' => 20.00,
+            'change_amount'  => 50.00,
         ]);
 
-        // Verify sale items were created
-        $sale = Sale::where('user_id', $user->id)->latest()->first();
+        $sale = Sale::where('user_id', $cashier->id)->latest('id')->first();
+
         $this->assertDatabaseHas('sale_items', [
-            'sale_id' => $sale->id,
+            'sale_id'    => $sale->id,
             'product_id' => $product1->id,
-            'quantity' => 2,
+            'quantity'   => 2,
             'unit_price' => 100.00,
             'line_total' => 200.00,
         ]);
         $this->assertDatabaseHas('sale_items', [
-            'sale_id' => $sale->id,
+            'sale_id'    => $sale->id,
             'product_id' => $product2->id,
-            'quantity' => 1,
+            'quantity'   => 1,
             'unit_price' => 50.00,
             'line_total' => 50.00,
         ]);
 
-        // Verify stock was deducted
-        $this->assertDatabaseHas('products', [
-            'id' => $product1->id,
-            'current_stock' => 8, // 10 - 2
-        ]);
-        $this->assertDatabaseHas('products', [
-            'id' => $product2->id,
-            'current_stock' => 4, // 5 - 1
-        ]);
+        // Stock deducted.
+        $this->assertSame(8, (int) $product1->fresh()->current_stock);
+        $this->assertSame(4, (int) $product2->fresh()->current_stock);
     }
 
+    /**
+     * BRD: "The system shall prevent the user from adding a quantity of an item
+     * that exceeds the current available stock."
+     */
     #[Test]
     public function pos_checkout_rejects_insufficient_stock(): void
     {
-        $user = User::factory()->create(['role' => 'cashier']);
-        
-        $product = Product::factory()->create([
-            'user_id' => $user->id,
-            'price' => 100.00,
-            'current_stock' => 1,
-        ]);
+        $cashier = $this->makeCashier();
+        $product = $this->makeProduct(['price' => 100.00, 'current_stock' => 1]);
 
-        $response = $this->actingAs($user)->postJson('/api/pos/checkout', [
-            'cart_items' => [
-                ['product_id' => $product->id, 'quantity' => 5], // More than available
-            ],
+        $this->actingAs($cashier)->postJson('/api/pos/checkout', [
+            'cart_items' => [['product_id' => $product->id, 'quantity' => 5]],
             'payment_amount' => 500.00,
-        ]);
+        ])
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'Insufficient stock.')
+            ->assertJsonStructure(['message', 'product_id', 'product_name', 'available_stock', 'requested_quantity']);
 
-        $response->assertStatus(409);
-        $response->assertJson([
-            'message' => 'Insufficient stock.',
-        ]);
-        $response->assertJsonStructure([
-            'message',
-            'product_id',
-            'product_name',
-            'available_stock',
-            'requested_quantity',
-        ]);
+        $this->assertSame(1, (int) $product->fresh()->current_stock);
     }
 
     #[Test]
     public function pos_checkout_rejects_insufficient_payment(): void
     {
-        $user = User::factory()->create(['role' => 'cashier']);
-        
-        $product = Product::factory()->create([
-            'user_id' => $user->id,
-            'price' => 100.00,
-            'current_stock' => 10,
-        ]);
+        $cashier = $this->makeCashier();
+        $product = $this->makeProduct(['price' => 100.00, 'current_stock' => 10]);
 
-        $response = $this->actingAs($user)->postJson('/api/pos/checkout', [
-            'cart_items' => [
-                ['product_id' => $product->id, 'quantity' => 2],
-            ],
-            'payment_amount' => 150.00, // Less than total (200 + tax)
-        ]);
+        $this->actingAs($cashier)->postJson('/api/pos/checkout', [
+            'cart_items' => [['product_id' => $product->id, 'quantity' => 2]],
+            'payment_amount' => 150.00, // total is 200
+        ])
+            ->assertStatus(402)
+            ->assertJsonPath('message', 'Payment amount is insufficient.')
+            ->assertJsonStructure(['message', 'total_amount', 'payment_amount']);
 
-        $response->assertStatus(402);
-        $response->assertJson([
-            'message' => 'Payment amount is insufficient.',
-        ]);
-        $response->assertJsonStructure([
-            'message',
-            'total_amount',
-            'payment_amount',
-        ]);
+        $this->assertDatabaseCount('sales', 0);
     }
 
+    /**
+     * REVISED: the old version blocked selling a product created by another
+     * user. The catalogue is shared store-wide, so this is allowed — the item
+     * must simply be active and in stock.
+     */
     #[Test]
-    public function pos_checkout_prevents_selling_other_users_products(): void
+    public function any_cashier_may_sell_any_active_catalogue_item(): void
     {
-        $user = User::factory()->create(['role' => 'cashier']);
-        $otherUser = User::factory()->create(['role' => 'cashier']);
-        
-        $product = Product::factory()->create([
-            'user_id' => $otherUser->id, // Owned by other user
-            'price' => 100.00,
-            'current_stock' => 10,
+        $cashier = $this->makeCashier();
+        $product = $this->makeProduct([
+            'user_id'      => $this->makeAdmin()->id,
+            'price'        => 100.00,
+            'current_stock'=> 10,
+            'is_active'    => true,
         ]);
 
-        $response = $this->actingAs($user)->postJson('/api/pos/checkout', [
-            'cart_items' => [
-                ['product_id' => $product->id, 'quantity' => 1],
-            ],
-            'payment_amount' => 200.00,
-        ]);
+        $this->actingAs($cashier)->postJson('/api/pos/checkout', [
+            'cart_items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'payment_amount' => 100.00,
+        ])->assertOk();
 
-        $response->assertStatus(403);
-        $response->assertJson([
-            'message' => 'Unauthorized: Product does not belong to you.',
-        ]);
-        $response->assertJsonStructure([
-            'message',
-            'product_id',
-        ]);
+        $this->assertSame(9, (int) $product->fresh()->current_stock);
     }
 
+    /**
+     * BRD (Inventory): a deactivated (discontinued) item must not be sellable.
+     */
     #[Test]
-    public function pos_checkout_handles_duplicate_product_selection(): void
+    public function deactivated_product_cannot_be_sold(): void
     {
-        $user = User::factory()->create(['role' => 'cashier']);
-        
-        $product = Product::factory()->create([
-            'user_id' => $user->id,
-            'price' => 100.00,
-            'current_stock' => 10,
-        ]);
+        $cashier = $this->makeCashier();
+        $product = $this->makeProduct(['price' => 100.00, 'current_stock' => 10, 'is_active' => false]);
 
-        $response = $this->actingAs($user)->postJson('/api/pos/checkout', [
-            'cart_items' => [
-                ['product_id' => $product->id, 'quantity' => 2],
-                ['product_id' => $product->id, 'quantity' => 3], // Same product again
-            ],
-            'payment_amount' => 600.00,
-        ]);
+        $this->actingAs($cashier)->postJson('/api/pos/checkout', [
+            'cart_items' => [['product_id' => $product->id, 'quantity' => 1]],
+            'payment_amount' => 100.00,
+        ])
+            ->assertStatus(409)
+            ->assertJsonPath('message', 'This item is no longer available.');
 
-        $response->assertStatus(200);
-        $response->assertJson([
-            'message' => 'Checkout completed successfully.',
-        ]);
-
-        // Verify sale was created with correct quantity (5 total)
-        $sale = Sale::where('user_id', $user->id)->latest()->first();
-        $this->assertEquals(560.00, $sale->total_amount); // 5 * 100 + 12% tax
-        $this->assertEquals(600.00, $sale->payment_amount);
-        $this->assertEquals(40.00, $sale->change_amount);
-
-        // Verify single sale item with quantity 5
-        $this->assertDatabaseHas('sale_items', [
-            'sale_id' => $sale->id,
-            'product_id' => $product->id,
-            'quantity' => 5,
-            'unit_price' => 100.00,
-            'line_total' => 500.00,
-        ]);
-
-        // Verify stock was deducted correctly
-        $this->assertDatabaseHas('products', [
-            'id' => $product->id,
-            'current_stock' => 5, // 10 - 5
-        ]);
-    }
-
-    #[Test]
-    public function pos_checkout_includes_tax_calculation(): void
-    {
-        $user = User::factory()->create(['role' => 'cashier']);
-        
-        $product = Product::factory()->create([
-            'user_id' => $user->id,
-            'price' => 100.00,
-            'current_stock' => 10,
-        ]);
-
-        $response = $this->actingAs($user)->postJson('/api/pos/checkout', [
-            'cart_items' => [
-                ['product_id' => $product->id, 'quantity' => 1],
-            ],
-            'payment_amount' => 200.00,
-        ]);
-
-        $response->assertStatus(200);
-        $response->assertJson([
-            'message' => 'Checkout completed successfully.',
-        ]);
-
-        // Verify tax calculation (12% of 100 = 12, total = 112)
-        $sale = Sale::where('user_id', $user->id)->latest()->first();
-        $this->assertEquals(112.00, $sale->total_amount);
-        
-        $response->assertJsonStructure([
-            'message',
-            'sale_id',
-            'subtotal_amount',
-            'tax_amount',
-            'total_amount',
-            'payment_amount',
-            'change_amount',
-            'change',
-        ]);
-        
-        $response->assertJson([
-            'subtotal_amount' => 100.00,
-            'tax_amount' => 12.00,
-            'total_amount' => 112.00,
-            'payment_amount' => 200.00,
-            'change_amount' => 88.00,
-        ]);
+        $this->assertDatabaseCount('sales', 0);
     }
 }

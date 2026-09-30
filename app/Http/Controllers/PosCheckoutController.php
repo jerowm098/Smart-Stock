@@ -30,6 +30,46 @@ class PosCheckoutController extends Controller
     }
 
     /**
+     * Cashier-safe product catalog for the POS screen.
+     *
+     * BRD (POS): "The system shall allow the user to search for an item by its
+     * name or ID" and staff may browse available hardware items.
+     *
+     * BRD (Inventory) Security keeps the full Admin inventory endpoints closed to
+     * Staff, so this endpoint exposes only the fields a cashier legitimately
+     * needs — no supplier data, no audit timestamps. Deactivated products are
+     * excluded so discontinued items cannot be rung up.
+     */
+    public function catalog(Request $request): JsonResponse
+    {
+        if (! Auth::check()) {
+            return response()->json(['message' => 'Authentication required.'], 401);
+        }
+
+        $search = trim((string) $request->query('search', ''));
+
+        $query = Product::query()
+            ->where('is_active', true)
+            // reorder_threshold is included because the POS stock badge needs it to
+            // show the same low/out-of-stock styling as the Admin inventory list.
+            ->select(['id', 'name', 'sku', 'category', 'price', 'current_stock', 'reorder_threshold'])
+            ->orderBy('name');
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'ilike', '%'.$search.'%')
+                    ->orWhere('sku', 'ilike', '%'.$search.'%');
+
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+            });
+        }
+
+        return response()->json($query->get());
+    }
+
+    /**
      * Process POS checkout - atomic transaction for sale and inventory deduction.
      */
     public function checkout(Request $request): JsonResponse
@@ -62,6 +102,16 @@ class PosCheckoutController extends Controller
 
             foreach ($cartItems as $cartItem) {
                 $product = Product::findOrFail($cartItem['product_id']);
+
+                // BRD (Inventory): discontinued items are deactivated, so they must
+                // not be sellable even if a stale cart still references them.
+                if (! $product->is_active) {
+                    return response()->json([
+                        'message' => 'This item is no longer available.',
+                        'product_id' => $product->id,
+                        'product_name' => $product->name,
+                    ], 409);
+                }
 
                 if ($product->current_stock < $cartItem['quantity']) {
                     return response()->json([

@@ -144,12 +144,32 @@ return new class extends Migration
     /**
      * List the index names currently defined on a table.
      *
+     * The production database is PostgreSQL, but the test suite runs on SQLite
+     * (see phpunit.xml), and `pg_indexes` does not exist there. Query the
+     * driver-specific catalogue so the migration works on both.
+     *
      * @return list<string>
      */
     private function indexNames(string $table): array
     {
-        return collect(DB::select('select indexname from pg_indexes where tablename = ?', [$table]))
-            ->pluck('indexname')
-            ->all();
+        $driver = DB::connection()->getDriverName();
+
+        $rows = match ($driver) {
+            'pgsql' => DB::select(
+                'select indexname from pg_indexes where tablename = ?',
+                [$table]
+            ),
+            'sqlite' => DB::select(
+                'select name as indexname from sqlite_master where type = ? and tbl_name = ?',
+                ['index', $table]
+            ),
+            'mysql' => DB::select(
+                'select distinct index_name as indexname from information_schema.statistics where table_schema = database() and table_name = ?',
+                [$table]
+            ),
+            default => [],
+        };
+
+        return collect($rows)->pluck('indexname')->all();
     }
 };

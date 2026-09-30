@@ -21,6 +21,10 @@ return new class extends Migration
             $table->decimal('total_amount', 10, 2);
             $table->decimal('payment_amount', 10, 2);
             $table->decimal('change_amount', 10, 2)->default(0);
+            // BRD (Transaction Tracking) Limitation: "The system relies entirely on
+            // the server's internal clock for timestamps." Sales therefore need a
+            // caller-supplied created_at so the 30-day demand window can be
+            // evaluated over historical data.
             $table->timestamps();
         });
     }

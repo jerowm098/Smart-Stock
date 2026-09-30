@@ -145,8 +145,12 @@
                                 <span>Change</span>
                                 <span id="summaryChange" class="change-amount">₱0.00</span>
                             </div>
+                            {{-- BRD (POS): "The system shall allow the user to click a single,
+                                 prominent 'Complete Sale' button to finalize the transaction."
+                                 Reliability: the button disables immediately after one click
+                                 to prevent accidental double-billing / double deduction. --}}
                             <button type="submit" class="pos-btn pos-btn-blue" id="checkoutBtn">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>Process Payment
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Complete Sale
                             </button>
                         </form>
                     </div>
@@ -579,7 +583,8 @@
         tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>';
         grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="spinner" aria-hidden="true"></span> Loading products...</div>';
         try {
-            const res = await fetch('/api/inventory/products');
+            // Cashier-safe catalog: excludes deactivated products and Admin-only fields.
+            const res = await fetch('/api/pos/products');
             if (!res.ok) throw new Error('Unable to load products');
             posProducts = await res.json();
             populateCategoryFilter();
@@ -787,7 +792,10 @@
 
     function updateChange() {
         const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const total = subtotal * 1.12;
+        // BRD (POS) Business rules: "Cart Total = Sum of (Item Unit Price * Quantity)."
+        // No tax multiplier — the server records total_amount as the plain subtotal
+        // (PosCheckoutController: "No tax applied: the store sells at listed price").
+        const total = subtotal;
         const payment = parseFloat(document.getElementById('payment_amount').value) || 0;
         const change = payment - total;
         const changeEl = document.getElementById('summaryChange');
@@ -800,11 +808,17 @@
         e.preventDefault();
         if (cart.length === 0) { showToast('Cart is empty', 'error'); return; }
         const btn = document.getElementById('checkoutBtn');
+        // BRD (POS) Business rules: "Cart Total = Sum of (Item Unit Price * Quantity)."
+        // Keep this in sync with the server, which records the plain subtotal with
+        // no tax multiplier applied.
         const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        const total = subtotal * 1.12;
+        const total = subtotal;
         const paymentAmount = parseFloat(document.getElementById('payment_amount').value) || 0;
         if (paymentAmount < total) { showToast('Insufficient funds.', 'error'); return; }
         if (!await showCheckoutConfirmModal(total, paymentAmount)) return;
+        // BRD (POS) Reliability: "The 'Complete Sale' button shall disable
+        // immediately after one click to prevent accidental double-billing or
+        // double-inventory deduction."
         btn.disabled = true;
         showToast('Processing payment...', 'info');
         try {
@@ -818,15 +832,19 @@
             if (res.ok) {
                 const data = await res.json();
                 showToast('Checkout completed! Change: ₱' + (data.change || 0).toFixed(2), 'success');
+                // BRD (POS) Constraint: "The system shall clear the cart and reset
+                // the POS interface to a blank state immediately after a sale is
+                // finalized." clearCart() re-enables the button for the next customer.
                 clearCart();
             } else {
                 const data = await res.json().catch(() => null);
                 showToast(data?.message || 'Checkout failed.', 'error');
+                // Failed sale — allow a retry, but only when the cart still has items.
+                btn.disabled = cart.length === 0;
             }
         } catch (e) {
             showToast('Connection error. Please try again.', 'error');
-        } finally {
-            btn.disabled = false;
+            btn.disabled = cart.length === 0;
         }
     }
 

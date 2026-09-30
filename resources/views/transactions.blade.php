@@ -181,7 +181,14 @@
 @push('scripts')
     <script>
     (function () {
-        let state = { page: 1, per_page: 15, search: '', cashier_id: '', date_from: '', date_to: '', last_page: 1, total: 0, cache: [] };
+        // BRD (Transaction Tracking) Usability: "Date range filters shall default
+        // to the current day ('Today') upon initially loading the dashboard."
+        const today = new Date();
+        const isoToday = today.getFullYear() + '-'
+            + String(today.getMonth() + 1).padStart(2, '0') + '-'
+            + String(today.getDate()).padStart(2, '0');
+
+        let state = { page: 1, per_page: 15, search: '', cashier_id: '', date_from: isoToday, date_to: isoToday, last_page: 1, total: 0, cache: [] };
 
         function qs() {
             const p = new URLSearchParams();
@@ -275,10 +282,16 @@
         window.resetFilters = function () {
             document.getElementById('fSearch').value = '';
             document.getElementById('fCashier').value = '';
-            document.getElementById('fFrom').value = '';
-            document.getElementById('fTo').value = '';
+            // BRD: "Date range filters shall default to the current day ('Today')."
+            // Reset returns to that same Today default rather than "all time".
+            const t = new Date();
+            const iso = t.getFullYear() + '-'
+                + String(t.getMonth() + 1).padStart(2, '0') + '-'
+                + String(t.getDate()).padStart(2, '0');
+            document.getElementById('fFrom').value = iso;
+            document.getElementById('fTo').value = iso;
             document.getElementById('fPerPage').value = '15';
-            state = { page: 1, per_page: 15, search: '', cashier_id: '', date_from: '', date_to: '', last_page: 1, total: 0, cache: state.cache };
+            state = { page: 1, per_page: 15, search: '', cashier_id: '', date_from: iso, date_to: iso, last_page: 1, total: 0, cache: state.cache };
             loadTxns();
         };
 
@@ -325,6 +338,11 @@
             return d.innerHTML;
         }
         window.escapeHtml = escapeHtml;
+
+        // Show the Today default in the visible date inputs so the UI matches the
+        // request actually being sent (BRD: date filters default to "Today").
+        document.getElementById('fFrom').value = state.date_from;
+        document.getElementById('fTo').value = state.date_to;
 
         loadTxns();
     })();

@@ -24,6 +24,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'is_active',
     ];
 
     /**
@@ -47,6 +48,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'role' => 'string',
+            'is_active' => 'boolean',
         ];
     }
 
@@ -59,10 +61,27 @@ class User extends Authenticatable
     }
 
     /**
-     * Check if user is a cashier.
+     * Check if user is a cashier (the BRD calls this role "Staff").
      */
     public function isCashier(): bool
     {
         return $this->role === 'cashier';
+    }
+
+    /**
+     * BRD (Account Management): an account may be deactivated by an Admin but
+     * never deleted, so historical sales stay linked to the employee.
+     */
+    public function isActive(): bool
+    {
+        return (bool) $this->is_active;
+    }
+
+    /**
+     * Limit queries to accounts an Admin may act on.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 }

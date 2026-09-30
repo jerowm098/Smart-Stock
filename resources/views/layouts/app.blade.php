@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -291,10 +291,99 @@
             thead th, tbody td { padding: 10px 10px; font-size: 12px; }
             .empty-state { padding: 32px 16px; font-size: 13px; }
         }
+    /* ================================================================
+       SHARED PAGE PRIMITIVES
+       These used to live in each page's own styles stack, so any page
+       that forgot the copy rendered as unstyled HTML. They are defined
+       once here instead.
+       ================================================================ */
+    .page-title { font-size: 22px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
+    .page-subtitle { color: #64748b; font-size: 14px; margin-bottom: 20px; }
+    .page-subtitle code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+        border-radius: 5px; padding: 1px 6px; font-size: 12px; color: #93c5fd;
+    }
+
+    .filter-bar {
+        display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+        background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px; padding: 16px; margin-bottom: 12px;
+    }
+    .filter-group { display: flex; flex-direction: column; gap: 6px; }
+    .filter-group label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .filter-group input, .filter-group select {
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+        color: #e2e8f0; font-size: 13px; border-radius: 8px; padding: 8px 10px;
+        outline: none; min-width: 160px;
+    }
+    .filter-group input:focus, .filter-group select:focus { border-color: #3b82f6; }
+    .filter-actions { display: flex; gap: 8px; margin-left: auto; }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none;
+        border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-primary:hover { filter: brightness(1.08); }
+    .btn-ghost {
+        background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+        color: #cbd5e1; border-radius: 8px; padding: 9px 16px; font-size: 13px;
+        font-weight: 500; cursor: pointer;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.08); }
+    .btn-ghost:disabled, .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .table-wrap {
+        background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+        border-radius: 12px; overflow-x: auto;
+    }
+    .data-table { width: 100%; min-width: 860px; border-collapse: collapse; }
+    .data-table thead th {
+        background: rgba(255,255,255,0.03); padding: 12px 16px; text-align: left;
+        font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase;
+        letter-spacing: 0.5px; white-space: nowrap;
+    }
+    .data-table tbody tr { border-top: 1px solid rgba(255,255,255,0.04); }
+    .data-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+    .data-table tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; vertical-align: middle; }
+    .data-table td.num, .data-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
+    .spinner {
+        display: inline-block; width: 14px; height: 14px; vertical-align: -2px;
+        border: 2px solid rgba(255,255,255,0.2); border-top-color: #60a5fa;
+        border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    body.light-theme .page-title { color: #0f172a; }
+    body.light-theme .page-subtitle { color: #475569; }
+    body.light-theme .page-subtitle code { background: rgba(15,23,42,0.06); border-color: rgba(15,23,42,0.12); color: #1d4ed8; }
+    body.light-theme .filter-bar { background: #fff; border-color: rgba(15,23,42,0.08); }
+    body.light-theme .filter-group input, body.light-theme .filter-group select { background: #fff; border-color: rgba(15,23,42,0.12); color: #0f172a; }
+    body.light-theme .table-wrap { background: #fff; border-color: rgba(15,23,42,0.08); }
+    body.light-theme .data-table thead th { background: rgba(15,23,42,0.02); color: #64748b; }
+    body.light-theme .data-table tbody tr { border-top-color: rgba(15,23,42,0.06); }
+    body.light-theme .data-table tbody td { color: #334155; }
+    body.light-theme .data-table tbody tr:hover { background: rgba(15,23,42,0.02); }
+    body.light-theme .btn-ghost { background: #fff; border-color: rgba(15,23,42,0.12); color: #334155; }
+    body.light-theme .empty-state { color: #94a3b8; }
+
+    @media print {
+        body { overflow: visible; }
+        .top-header, .sidebar, .filter-bar, .mobile-menu-overlay { display: none !important; }
+    }
     </style>
     @stack('styles')
 </head>
 <body>
+    @php
+        // Role flag resolved once at the top of the layout so both the header
+        // (alert bell) and the sidebar nav can gate Admin-only UI.
+        //
+        // BRD (Inventory) Security: low-stock alerts and the inventory/dashboard
+        // data behind them are Admin-only, so Staff never see the bell.
+        $isAdmin = auth()->user()?->isAdmin() ?? false;
+    @endphp
     <!-- TOP HEADER (FIXED) -->
     <header class="top-header">
         <div class="header-left">
@@ -327,6 +416,7 @@
                     <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                 </svg>
             </button>
+            @if($isAdmin)
             <div class="header-alert-wrapper">
                 <button type="button" class="header-btn header-btn-icon" onclick="toggleHeaderAlerts()" title="Notifications">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
@@ -340,6 +430,7 @@
                     <div id="headerAlertList"></div>
                 </div>
             </div>
+            @endif
             <div class="header-user" id="headerUserBtn" onclick="toggleUserDropdown(event)">
                 <div class="user-avatar">{{ Auth::user()->name ? substr(Auth::user()->name, 0, 1) : 'U' }}</div>
                 <div class="user-info">
@@ -368,14 +459,14 @@
     <aside class="sidebar" id="mobileNavigation">
         <div class="mobile-menu-header">
             <span class="mobile-menu-title">Smart-Stock</span>
-            <button type="button" class="mobile-menu-close" onclick="closeMobileMenu()" aria-label="Close navigation menu">×</button>
+            <button type="button" class="mobile-menu-close" onclick="closeMobileMenu()" aria-label="Close navigation menu">Ã—</button>
         </div>
         @php
             // Role-aware navigation.
-            // Cashier: exactly 3 tabs — Overview, Products, POS Checkout.
-            // Admin:   full set — Overview, Products, Suppliers,
-            //          Backups, Stock-In, POS Checkout, Transactions.
-            $isAdmin = auth()->user()?->isAdmin() ?? false;
+            // Cashier: exactly 3 tabs â€” Overview, Products, POS Checkout.
+            // Admin:   full set â€” Overview, Products, Suppliers, Stock-In,
+            //          POS Checkout, Transactions, User Accounts, Backups.
+            // NOTE: $isAdmin is already resolved at the top of this layout.
         @endphp
         <nav class="sidebar-nav">
             <div class="nav-label">{{ $isAdmin ? 'Home' : 'Main' }}</div>
@@ -385,16 +476,14 @@
                 </span>
                 <span>Overview</span>
             </a>
-            @if(!$isAdmin)
-            <a href="{{ route('products') }}" class="nav-item" id="navProducts" data-page="products">
-                <span class="nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                </span>
-                <span>Products</span>
-            </a>
-            @endif
             @if($isAdmin)
                 <div class="nav-label">Management</div>
+                {{-- BRD (Account Management) Business rules:
+                     "Staff Role = POS Access Only." / "Admin Role = POS + Inventory +
+                     Demand Suggestions + User Management."
+                     Inventory (Products) is Admin-only, so Staff see just Overview +
+                     POS Checkout. This matches the server: /api/inventory/products
+                     is an Admin-only route. --}}
                 <a href="{{ route('products') }}" class="nav-item" id="navProducts" data-page="products">
                     <span class="nav-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
@@ -403,7 +492,7 @@
                 </a>
                 <a href="{{ route('suppliers') }}" class="nav-item" id="navSuppliers" data-page="suppliers">
                     <span class="nav-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                     </span>
                     <span>Suppliers</span>
                 </a>
@@ -431,10 +520,22 @@
                     </span>
                     <span>Transactions</span>
                 </a>
+                <a href="{{ route('order-suggestions') }}" class="nav-item" id="navOrderSuggestions" data-page="order-suggestions">
+                    <span class="nav-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"></path><path d="M7 15l4-5 3 3 5-7"></path></svg>
+                    </span>
+                    <span>Order Suggestions</span>
+                </a>
                 @endif
             @endif
             @if($isAdmin)
                 <div class="nav-label">Settings</div>
+                <a href="{{ route('users') }}" class="nav-item" id="navUsers" data-page="users">
+                    <span class="nav-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    </span>
+                    <span>User Accounts</span>
+                </a>
                 <a href="{{ route('backups') }}" class="nav-item" id="navBackups" data-page="backups">
                     <span class="nav-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -485,24 +586,30 @@
             }
         }
 
+        /* Marks the current sidebar entry. Driven by each link's data-page
+           attribute rather than a hardcoded path chain — the chain silently
+           fell through to Overview for any route added later. */
         function setActiveNav() {
-            const path = window.location.pathname;
+            const path = window.location.pathname.replace(/\/+$/, '') || '/';
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
-            if (path.includes('/pos')) {
-                document.getElementById('navPos')?.classList.add('active');
-            } else if (path.includes('/products')) {
-                document.getElementById('navProducts').classList.add('active');
-            } else if (path.includes('/transactions')) {
-                document.getElementById('navTransactions')?.classList.add('active');
-            } else if (path.includes('/backups')) {
-                document.getElementById('navBackups')?.classList.add('active');
-            } else if (path.includes('/stock-in')) {
-                document.getElementById('navStockIn')?.classList.add('active');
-            } else if (path.includes('/suppliers')) {
-                document.getElementById('navSuppliers')?.classList.add('active');
-            } else {
-                document.getElementById('navOverview').classList.add('active');
+
+            const links = Array.from(document.querySelectorAll('.nav-item'));
+            const pathOf = item => new URL(item.href, window.location.origin).pathname.replace(/\/+$/, '') || '/';
+
+            // Exact match wins, so /order-suggestions can't be swallowed by
+            // a longer parent route. Then longest prefix for nested routes
+            // such as /products/12/edit.
+            let active = links.find(item => pathOf(item) === path)
+                      || links.filter(item => pathOf(item) !== '/')
+                             .sort((a, b) => pathOf(b).length - pathOf(a).length)
+                             .find(item => path.startsWith(pathOf(item)));
+
+            // No nav entry for this route (e.g. /home, /login).
+            if (!active) {
+                active = links.find(item => item.id === 'navOverview');
             }
+
+            active?.classList.add('active');
         }
 
         function toggleHeaderAlerts() {
@@ -527,12 +634,10 @@
             showToast('Settings coming soon!', 'success');
         }
 
-        // SS-60: On logout, keep smartStockLastEmail in localStorage so that
-        // the login page can auto-fill the email of the last logged-in user.
-        // Only remove it when a DIFFERENT user logs in successfully.
+        // BRD (Account Management): the login screen is username + password +
+        // submit only, so no credential pre-fill state is kept in localStorage.
         function handleLogout(e) {
-            // intentionally do NOT remove smartStockLastEmail here —
-            // the login page reads it to pre-fill the email field.
+            // nothing to clear — login no longer stores a remembered username.
         }
 
         // Close dropdowns when clicking outside
@@ -566,7 +671,7 @@
                 }
                 list.innerHTML = alerts.map(a => {
                     const severity = a.current_stock <= 5 ? 'critical' : 'low';
-                    const sku = escapeHtml(a.sku || '—');
+                    const sku = escapeHtml(a.sku || 'â€”');
                     const name = escapeHtml(a.name);
                     const stockLeft = a.current_stock;
                     const threshold = a.reorder_threshold;
@@ -586,7 +691,7 @@
                                 <span class="alert-date-tag">${lastDate}</span>
                             </div>
                         </div>
-                        <button class="alert-dismiss-btn" onclick="dismissAlert(${a.id}, event)" title="Dismiss">×</button>
+                        <button class="alert-dismiss-btn" onclick="dismissAlert(${a.id}, event)" title="Dismiss">Ã—</button>
                     </div>`;
                 }).join('');
             } catch (e) { console.error(e); }
@@ -700,8 +805,12 @@
             if (e.key === 'Escape') closeMobileMenu();
         });
 
-        loadAlerts();
-        setInterval(loadAlerts, 30000);
+        // Low-stock alerts are Admin-only (BRD Inventory Security). Staff and
+        // guests must not trigger the request, so the bell is hidden for them.
+        @if($isAdmin)
+            loadAlerts();
+            setInterval(loadAlerts, 30000);
+        @endif
     </script>
     @stack('scripts')
 </body>

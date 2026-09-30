@@ -267,7 +267,8 @@ class InventoryController extends Controller
             return response()->json([], 401);
         }
 
-        $lowStockProducts = Product::whereColumn('current_stock', '<=', 'reorder_threshold')
+        $lowStockProducts = Product::where('is_active', true)
+            ->whereColumn('current_stock', '<=', 'reorder_threshold')
             ->addSelect([
                 'last_received_at' => function ($query) {
                     $query->select('stock_ins.created_at')
@@ -289,16 +290,24 @@ class InventoryController extends Controller
         return response()->json($lowStockProducts);
     }
 /**
- * Get all products sorted by latest.
+ * Get all products for the Admin inventory master list.
+ *
+ * BRD (Inventory Management): the Admin must be able to see — and bring back —
+ * discontinued items, so deactivated products are included here and flagged via
+ * the `is_active` flag. Staff never reach this endpoint; the POS uses
+ * /api/pos/products, which filters them out.
  */
-public function getProducts(): JsonResponse
+public function getProducts(Request $request): JsonResponse
 {
     $user = $this->currentUser();
     if (! $user) {
         return response()->json([], 401);
     }
 
+    // ?include_inactive=0 lets a caller narrow the list back to active items.
     $products = Product::query()
+        ->when(! $request->boolean('include_inactive', true),
+            fn ($q) => $q->where('is_active', true))
         ->addSelect([
             'last_supplier_name' => function ($query) {
                 $query->select('suppliers.name')
@@ -322,16 +331,38 @@ public function getProducts(): JsonResponse
 }
 
     /**
-     * Remove a product.
+     * Deactivate a product instead of deleting it.
+     *
+     * BRD (Inventory Management): "Editing existing product details or
+     * deactivating discontinued items."
+     *
+     * Hard deletion would orphan historical sale_items / stock_ins /
+     * stock_adjustments rows, so `is_active` is toggled instead. The item
+     * disappears from the inventory master list and the POS catalog but its
+     * audit trail survives.
      */
-    public function destroy(Product $product): JsonResponse
+    public function destroy(Request $request, Product $product): JsonResponse
     {
         if (! $this->currentUser()) {
             return response()->json(['message' => 'Authentication required.'], 401);
         }
 
-        $product->delete();
-        return response()->json(['message' => 'Product deleted successfully']);
+        // ?reactivate=1 brings a discontinued item back into the catalogue.
+        if ($request->boolean('reactivate')) {
+            $product->update(['is_active' => true]);
+
+            return response()->json([
+                'message' => 'Product reactivated successfully',
+                'product' => $product->fresh(),
+            ]);
+        }
+
+        $product->update(['is_active' => false]);
+
+        return response()->json([
+            'message' => 'Product deactivated successfully',
+            'product' => $product->fresh(),
+        ]);
     }
 
     /**

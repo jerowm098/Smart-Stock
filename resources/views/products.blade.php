@@ -847,7 +847,7 @@
                         <td class="stock-cell stock-${s.class}">${p.current_stock}</td>
                         <td>${p.reorder_threshold}</td>
                         <td><span class="status-text stock-${s.class}">${s.label}</span></td>
-                        <td>${canManageProducts ? '<button class="action-link" onclick="openEditModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Edit</button>' : '<button class="action-link" onclick="openViewModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>View</button>'}${canAdjustStock ? '<button class="action-link" onclick="openAdjustModal(' + p.id + ', ' + p.current_stock + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Adjust</button>' : ''}${canManageProducts ? '<button class="action-link danger" onclick="deleteProduct(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>Delete</button>' : ''}</td>
+                        <td>${canManageProducts ? '<button class="action-link" onclick="openEditModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Edit</button>' : '<button class="action-link" onclick="openViewModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>View</button>'}${canAdjustStock ? '<button class="action-link" onclick="openAdjustModal(' + p.id + ', ' + p.current_stock + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Adjust</button>' : ''}${canManageProducts ? (p.is_active === false ? '<button class="action-link" onclick="setProductActive(' + p.id + ', true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Reactivate</button>' : '<button class="action-link danger" onclick="setProductActive(' + p.id + ', false)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>Deactivate</button>') : ''}${p.is_active === false ? '<span class="status-text" style="color:#94a3b8;">Inactive</span>' : ''}</td>
                     </tr>`;
                 }).join('');
             }
@@ -863,7 +863,15 @@
                     const img = getProductImage(p);
                     const editBtn = canManageProducts ? `<button class="action-link" onclick="openEditModal(${p.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Edit</button>` : `<button class="action-link" onclick="openViewModal(${p.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>View</button>`;
                     const adjBtn = canAdjustStock ? `<button class="action-link" onclick="openAdjustModal(${p.id}, ${p.current_stock})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Adjust</button>` : '';
-                    const delBtn = canManageProducts ? `<button class="action-link danger" onclick="deleteProduct(${p.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>Delete</button>` : '';
+                    // BRD (Inventory): "Editing existing product details or deactivating
+                    // discontinued items." Deactivation (not deletion) preserves the
+                    // sale_items / stock_ins audit trail, so a discontinued item can
+                    // be brought back later.
+                    const delBtn = canManageProducts
+                        ? (p.is_active === false
+                            ? `<button class="action-link" onclick="setProductActive(${p.id}, true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Reactivate</button>`
+                            : `<button class="action-link danger" onclick="setProductActive(${p.id}, false)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>Deactivate</button>`)
+                        : '';
                     return `<div class="product-card" id="card-${p.id}">
                         <img class="product-card-img" src="${img}" alt="${escapeHtml(p.name)}" loading="lazy" onerror="this.src='${productImages['default']}'">
                         <div class="product-card-body">
@@ -990,11 +998,27 @@
             }
         }
 
-        async function deleteProduct(id) {
-            if (!confirm('Are you sure you want to delete this product?')) return;
+        /**
+         * BRD (Inventory Management): "Editing existing product details or
+         * deactivating discontinued items."
+         *
+         * The product row is never removed from the database — `is_active` is
+         * toggled so historical sale_items / stock_ins / stock_adjustments rows
+         * keep pointing at a real product. A discontinued item can be
+         * reactivated later without losing its history.
+         */
+        async function setProductActive(id, active) {
+            const verb = active ? 'Reactivate' : 'Deactivate';
+            if (!active && !confirm(
+                'Deactivate this product?\n\n' +
+                'It will be hidden from the inventory list and the POS, but its ' +
+                'sales history is preserved and it can be reactivated later.'
+            )) return;
+
             try {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-                const res = await fetch(`/api/inventory/${id}`, {
+                const url = `/api/inventory/${id}` + (active ? '?reactivate=1' : '');
+                const res = await fetch(url, {
                     method: 'DELETE',
                     headers: {
                         'X-CSRF-TOKEN': csrfToken,
@@ -1002,11 +1026,12 @@
                     },
                 });
                 if (res.ok) {
-                    showToast('Product deleted', 'success');
+                    const data = await res.json().catch(() => ({}));
+                    showToast(data.message || `Product ${active ? 'reactivated' : 'deactivated'}`, 'success');
                     loadProducts();
                 } else {
                     const errData = await res.json().catch(() => null);
-                    showToast(errData?.message || 'Failed to delete product', 'error');
+                    showToast(errData?.message || `Failed to ${verb.toLowerCase()} product`, 'error');
                 }
             } catch (e) {
                 showToast('Failed to connect', 'error');
