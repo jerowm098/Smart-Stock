@@ -31,7 +31,7 @@ class TransactionSuggestionController extends Controller
      */
     public function page()
     {
-        return view('order-suggestions');
+        return view('admin.admin-order-suggestions');
     }
 
     /**

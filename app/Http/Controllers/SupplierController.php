@@ -14,7 +14,7 @@ class SupplierController extends Controller
      */
     public function index()
     {
-        return view('suppliers');
+        return view('admin.admin-suppliers');
     }
 
     /**

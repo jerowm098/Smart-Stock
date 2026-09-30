@@ -226,7 +226,7 @@ class DashboardController extends Controller
      */
     public function transactions(): \Illuminate\View\View
     {
-        return view('transactions');
+        return view('admin.admin-transactions');
     }
 
     /**

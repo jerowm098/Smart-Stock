@@ -42,7 +42,7 @@ class BackupController extends Controller
      */
     public function index(): \Illuminate\View\View
     {
-        return view('backups');
+        return view('admin.admin-backups');
     }
 
     /**

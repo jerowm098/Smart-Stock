@@ -26,7 +26,7 @@ class PosCheckoutController extends Controller
      */
     public function index()
     {
-        return view('pos');
+        return view('cashier.cashier-pos');
     }
 
     /**

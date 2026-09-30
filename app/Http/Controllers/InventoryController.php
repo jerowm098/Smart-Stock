@@ -26,10 +26,10 @@ class InventoryController extends Controller
         $user = Auth::user();
 
         if ($user?->isAdmin()) {
-            return view('overview');
+            return view('admin.admin-overview');
         }
 
-        return view('cashier-overview');
+        return view('cashier.cashier-overview');
     }
 
     /**
@@ -37,7 +37,7 @@ class InventoryController extends Controller
      */
     public function products()
     {
-        return view('products');
+        return view('admin.admin-products');
     }
 
     /**
@@ -45,7 +45,7 @@ class InventoryController extends Controller
      */
     public function stockIn()
     {
-        return view('stock-in');
+        return view('admin.admin-stock-in');
     }
 
     /**
