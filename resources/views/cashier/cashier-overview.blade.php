@@ -60,7 +60,6 @@
             </div>
             <div class="chart-container">
                 <canvas id="revenueChart"></canvas>
-                <div class="chart-loading" id="chartLoading"><span class="spinner"></span> Loading chart data...</div>
             </div>
         </div>
         <!-- Top Selling Products -->
@@ -70,34 +69,33 @@
                 <a href="{{ route('products') }}" class="section-link">View All →</a>
             </div>
             <div class="top-products-list" id="topProductsList">
-                <div class="list-loading" id="topLoading"><span class="spinner"></span> Loading top products...</div>
             </div>
         </div>
     </div>
 
     <!-- ====== RECENT SALES ACTIVITY ====== -->
-    <div class="section-header" style="margin-top: 28px;">
-        <h2 class="section-title">Recent Sales Activity</h2>
-    </div>
-    <div class="table-wrapper" id="recentSalesTable">
-        <table>
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Product</th>
-                    <th>Quantity</th>
-                    <th>Unit Price</th>
-                    <th>Line Total</th>
-                </tr>
-            </thead>
-            <tbody id="recentSalesBody">
-                <tr>
-                    <td colspan="5" class="empty-state">
-                        <span class="spinner" aria-hidden="true"></span> Loading recent sales...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="section-card">
+        <div class="section-card-header">
+            <div>
+                <h2 class="section-card-title">Recent Sales Activity</h2>
+                <p class="section-card-desc">Latest transactions and sales records</p>
+            </div>
+        </div>
+        <div class="table-wrapper" id="recentSalesTable">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Unit Price</th>
+                        <th>Line Total</th>
+                    </tr>
+                </thead>
+                <tbody id="recentSalesBody">
+                </tbody>
+            </table>
+        </div>
     </div>
 @endsection
 
@@ -263,25 +261,34 @@
         /* === TABLE === */
         .table-wrapper {
             background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.08);
             border-radius: 12px;
-            overflow-x: auto;
+            overflow-x: auto; overflow-y: visible;
         }
-        table { width: 100%; min-width: 600px; border-collapse: collapse; }
+        table { width: 100%; min-width: 600px; border-collapse: separate; border-spacing: 0; border: 1px solid rgba(255,255,255,0.08); table-layout: fixed; }
         thead th {
-            background: rgba(255,255,255,0.03);
-            padding: 12px 16px;
+            background: rgba(255,255,255,0.04);
+            padding: 14px 16px;
             text-align: left;
             font-size: 11px;
             font-weight: 600;
             color: #64748b;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            white-space: nowrap;
+            white-space: normal;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-right: 1px solid rgba(255,255,255,0.06);
+            line-height: 1.4;
         }
-        tbody tr { border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
-        tbody tr:hover { background: rgba(255,255,255,0.02); }
-        tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; }
+        thead th:last-child { border-right: none; }
+        tbody tr { border-top: 1px solid rgba(255,255,255,0.06); transition: background 0.15s; }
+        tbody tr:hover { background: rgba(255,255,255,0.03); }
+        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border-right: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+        tbody td:last-child { border-right: none; }
+        tbody tr:last-child td { border-bottom: none; }
+        /* Hide text until data loads */
+        #recentSalesTable.loading tbody td:not(.empty-state) { color: transparent; }
+        #recentSalesTable.loading tbody td.empty-state { color: #64748b; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
 
         /* === LIGHT THEME === */
@@ -368,15 +375,12 @@
 
         // ── Revenue Chart (single line: Revenue only) ───────────
         async function loadRevenueChart() {
-            const loading = document.getElementById('chartLoading');
             try {
                 const res = await fetch('/api/dashboard/revenue-chart');
                 if (!res.ok) throw new Error('Failed to load chart');
                 const d = await res.json();
-                if (loading) loading.style.display = 'none';
                 renderChart(d.labels, d.values);
             } catch (e) {
-                if (loading) loading.innerHTML = '<span style="color:#f87171;font-size:13px;">Unable to load chart</span>';
                 console.error('Chart load error:', e);
             }
         }
@@ -526,6 +530,8 @@
         }
 
         // ── Init ────────────────────────────────────────────────
+        // Show loading messages initially
+        document.getElementById('recentSalesBody').innerHTML = '<tr><td colspan="5" class="empty-state">Loading recent sales...</td></tr>';
         loadStats();
         loadRevenueChart();
         loadTopProducts();

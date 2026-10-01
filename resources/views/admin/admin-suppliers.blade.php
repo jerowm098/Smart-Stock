@@ -3,9 +3,11 @@
 @section('title', 'Suppliers - Smart-Stock')
 
 @section('content')
-    <div class="page-header">
-        <h1 class="page-title">Suppliers</h1>
-        <p class="page-subtitle">Manage your supplier directory and add new contacts</p>
+    <div class="page-header hero">
+        <div class="hero-content">
+            <h1 class="page-title">Suppliers</h1>
+            <p class="page-subtitle">Manage your supplier directory</p>
+        </div>
     </div>
 
     <div class="section-card">
@@ -88,13 +90,11 @@
                     </tr>
                 </thead>
                 <tbody id="supplierTableBody">
-                    <tr id="supplierLoadingRow"><td colspan="6" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading suppliers...</td></tr>
                 </tbody>
             </table>
         </div>
         <div class="grid-view hidden" id="gridView">
             <div id="supplierGridBody" class="product-grid">
-                <div class="empty-state" style="grid-column: 1/-1;"><span class="spinner" aria-hidden="true"></span> Loading suppliers...</div>
             </div>
         </div>
     </div>
@@ -131,9 +131,19 @@
 
 @push('styles')
     <style>
-        .page-title { font-size: 22px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
-        .page-subtitle { color: #64748b; font-size: 14px; margin-bottom: 0; }
-        .page-header { margin-bottom: 20px; }
+        .page-title { font-size: 30px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
+        .page-subtitle { color: #475569; font-size: 14px; margin: 0; line-height: 1.5; }
+        .page-header.hero .page-subtitle { margin-bottom: 0; }
+        .page-header.hero {
+            position: relative; overflow: hidden; border-radius: 16px;
+            border: 1px solid rgba(37,99,235,0.15); margin-bottom: 20px;
+            min-height: 140px; display: flex; align-items: flex-end;
+            padding: 28px 28px 24px; background: #ffffff;
+        }
+        .hero-content { position: relative; z-index: 1; max-width: 640px; }
+        body.light-theme .page-header.hero { background: #ffffff; border-color: rgba(37,99,235,0.15); }
+        body.light-theme .page-title { color: #0f172a; }
+        body.light-theme .page-subtitle { color: #475569; }
 
         /* SECTION CARD */
         .section-card {
@@ -249,19 +259,24 @@
 
         /* TABLE */
         .section-card .table-wrapper {
-            border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
-            margin: 0 16px 16px 16px; width: calc(100% - 32px); background: rgba(255,255,255,0.02);
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+            margin: 0 16px 16px 16px; width: calc(100% - 32px); overflow-x: auto; overflow-y: visible;
         }
-        body.light-theme .section-card .table-wrapper { border-color: rgba(15,23,42,0.1); background: #ffffff; }
-        table { width: 100%; min-width: 600px; border-collapse: collapse; }
-        thead th { background: rgba(255,255,255,0.03); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-        tbody tr { border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
-        tbody tr:hover { background: rgba(255,255,255,0.02); }
-        tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; }
+        body.light-theme .section-card .table-wrapper { border-color: rgba(15,23,42,0.12); background: #ffffff; }
+        table { width: 100%; min-width: 700px; border-collapse: separate; border-spacing: 0; border: 1px solid rgba(255,255,255,0.08); table-layout: fixed; }
+        thead th { background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border-bottom: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.06); line-height: 1.4; }
+        thead th:last-child { border-right: none; }
+        tbody tr { border-top: 1px solid rgba(255,255,255,0.06); transition: background 0.15s; }
+        tbody tr:hover { background: rgba(255,255,255,0.03); }
+        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border-right: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+        tbody td:last-child { border-right: none; }
+        tbody tr:last-child td { border-bottom: none; }
+        /* Hide text until data loads */
+        #tableView.loading tbody td:not(.empty-state) { color: transparent; }
+        #tableView.loading tbody td.empty-state { color: #64748b; }
         .status-text { font-size: 13px; font-weight: 500; }
         .status-text.stock-ok { color: #4ade80; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
-        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .hidden { display: none !important; }
 
@@ -414,8 +429,7 @@
         }
 
         function showLoadingSpinner() {
-            document.getElementById('supplierTableBody').innerHTML = '<tr id="supplierLoadingRow"><td colspan="6" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading suppliers...</td></tr>';
-            document.getElementById('supplierGridBody').innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="spinner" aria-hidden="true"></span> Loading suppliers...</div>';
+            // Loading states removed - no-op
         }
 
         function showTableError(message) {
@@ -430,9 +444,12 @@
                 if (!res.ok) throw new Error('Unable to load suppliers');
                 allSuppliers = await res.json();
                 filterSuppliers();
+                // Show text when data loads
+                document.getElementById('tableView').classList.remove('loading');
             } catch (e) {
                 showTableError('Unable to load suppliers. Please try again.');
                 showToast('Failed to load suppliers', 'error');
+                document.getElementById('tableView').classList.remove('loading');
             }
         }
 
@@ -602,6 +619,11 @@
             d.textContent = text || '';
             return d.innerHTML;
         }
+
+        // Initial render - show "Loading suppliers..." message
+        const tableView = document.getElementById('tableView');
+        tableView.classList.add('loading');
+        document.getElementById('supplierTableBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading suppliers...</td></tr>';
 
         loadSuppliers();
     </script>

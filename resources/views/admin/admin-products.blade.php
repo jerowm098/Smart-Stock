@@ -3,9 +3,11 @@
 @section('title', 'Products - Smart-Stock')
 
 @section('content')
-    <div class="page-header">
-        <h1 class="page-title">Products</h1>
-        <p class="page-subtitle">Browse the hardware item catalogue and current stock levels</p>
+    <div class="page-header hero">
+        <div class="hero-content">
+            <h1 class="page-title">Products</h1>
+            <p class="page-subtitle">Browse and manage your inventory</p>
+        </div>
     </div>
     <div class="section-card">
         <div class="section-card-header">
@@ -79,26 +81,34 @@
         </div>
         <div class="table-wrapper" id="tableView">
             <table>
+                <colgroup>
+                    <col span="1" style="width: 12%;">
+                    <col span="1" style="width: 22%;">
+                    <col span="1" style="width: 12%;">
+                    <col span="1" style="width: 10%;">
+                    <col span="1" style="width: 10%;">
+                    <col span="1" style="width: 10%;">
+                    <col span="1" style="width: 10%;">
+                    <col span="1" style="width: 14%;">
+                </colgroup>
                 <thead>
                     <tr>
                         <th>SKU / Code</th>
                         <th>Item Name</th>
                         <th>Category</th>
                         <th>Unit Price</th>
-                        <th>Current Stock Count</th>
-                        <th>Reorder Threshold</th>
+                        <th>Current Stock<br>Count</th>
+                        <th>Reorder<br>Threshold</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody id="productTableBody">
-                    <tr id="productLoadingRow"><td colspan="8" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>
                 </tbody>
             </table>
         </div>
         <div class="grid-view hidden" id="gridView">
             <div id="productGridBody" class="product-grid">
-                <div class="empty-state" style="grid-column: 1/-1;"><span class="spinner" aria-hidden="true"></span> Loading products...</div>
             </div>
         </div>
     </div>
@@ -259,9 +269,19 @@
 
 @push('styles')
     <style>
-        .page-title { font-size: 22px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
-        .page-subtitle { color: #64748b; font-size: 14px; margin-bottom: 0; }
-        .page-header { margin-bottom: 20px; }
+        .page-title { font-size: 30px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
+        .page-subtitle { color: #475569; font-size: 14px; margin: 0; line-height: 1.5; }
+        .page-header.hero .page-subtitle { margin-bottom: 0; }
+        .page-header.hero {
+            position: relative; overflow: hidden; border-radius: 16px;
+            border: 1px solid rgba(37,99,235,0.15); margin-bottom: 20px;
+            min-height: 140px; display: flex; align-items: flex-end;
+            padding: 28px 28px 24px; background: #ffffff;
+        }
+        .hero-content { position: relative; z-index: 1; max-width: 640px; }
+        body.light-theme .page-header.hero { background: #ffffff; border-color: rgba(37,99,235,0.15); }
+        body.light-theme .page-title { color: #0f172a; }
+        body.light-theme .page-subtitle { color: #475569; }
         .section-card {
             background: rgba(255,255,255,0.025);
             border: 1px solid rgba(255,255,255,0.07);
@@ -582,12 +602,24 @@
         .category-select option { background: #1e293b; color: #e2e8f0; }
         .search-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 8px 14px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; width: 240px; outline: none; transition: border-color 0.2s; }
         .search-input:focus { border-color: #3b82f6; } .search-input::placeholder { color: #64748b; }
-        .table-wrapper { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px; overflow-x: auto; }
-        table { width: 100%; min-width: 720px; border-collapse: collapse; }
-        thead th { background: rgba(255,255,255,0.03); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-        tbody tr { border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
-        tbody tr:hover { background: rgba(255,255,255,0.02); }
-        tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; }
+        .table-wrapper { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0 4px; overflow-x: auto; overflow-y: visible; }
+        table { width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 0 4px; border: none; table-layout: fixed; }
+        table colgroup col:nth-child(1) { width: 12%; }
+        table colgroup col:nth-child(2) { width: 22%; }
+        table colgroup col:nth-child(3) { width: 12%; }
+        table colgroup col:nth-child(4) { width: 10%; }
+        table colgroup col:nth-child(5) { width: 10%; }
+        table colgroup col:nth-child(6) { width: 10%; }
+        table colgroup col:nth-child(7) { width: 10%; }
+        table colgroup col:nth-child(8) { width: 14%; }
+        thead th { background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border: none; line-height: 1.4; }
+        thead th:first-child { border-top-left-radius: 9px; }
+        thead th:last-child { border-top-right-radius: 9px; }
+        tbody tr, tbody tr:hover { background: rgba(255,255,255,0.045); border: none; border-radius: 8px; transition: none; }
+        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border: none; vertical-align: middle; }
+        /* Hide text until data loads */
+        #tableView.loading tbody td:not(.empty-state) { color: transparent; }
+        #tableView.loading tbody td.empty-state { color: #64748b; }
         .stock-cell { font-weight: 600; } .stock-ok { color: #4ade80; } .stock-low { color: #fbbf24; } .stock-critical { color: #f87171; }
         .status-text { font-size: 13px; font-weight: 500; }
         .action-link { background: none; border: 1px solid transparent; padding: 4px 10px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; color: #60a5fa; text-decoration: none; transition: all 0.15s; margin-right: 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; }
@@ -648,10 +680,10 @@
         body.light-theme .sort-select { background-color: #ffffff; border-color: rgba(15,23,42,0.14); color: #0f172a; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); }
         body.light-theme .sort-select option { background: #ffffff; color: #0f172a; }
         body.light-theme .search-input::placeholder { color: #94a3b8; }
-        body.light-theme .table-wrapper { background: #ffffff; border-color: rgba(15,23,42,0.08); }
-        body.light-theme table thead th { background: rgba(15,23,42,0.02); color: #64748b; }
+        body.light-theme .table-wrapper { background: #ffffff; border-color: rgba(15,23,42,0.12); }
+        body.light-theme table thead th { background: rgba(100,116,139,0.16); color: #1e293b; }
         body.light-theme table tbody td { color: #475569; }
-        body.light-theme table tbody tr:hover { background: rgba(15,23,42,0.025); }
+        body.light-theme table tbody tr, body.light-theme table tbody tr:hover { background: rgba(15,23,42,0.04); }
         body.light-theme .empty-state { color: #94a3b8; }
         body.light-theme .modal { background: #ffffff; border-color: rgba(15,23,42,0.1); }
         body.light-theme .modal h2 { color: #0f172a; }
@@ -715,8 +747,8 @@
             .product-card-name { font-size: 13px; }
             .product-card-price { font-size: 14px; }
             .table-wrapper { border-radius: 10px; }
-            table { min-width: 600px; }
-            thead th, tbody td { padding: 10px 10px; font-size: 12px; }
+            table { min-width: 800px; }
+            thead th, tbody td { padding: 12px 14px; font-size: 12px; }
             .empty-state { padding: 32px 16px; font-size: 13px; }
             .modal { width: calc(100vw - 24px); padding: 20px; max-height: 95vh; }
             .modal h2 { font-size: 16px; }
@@ -788,8 +820,7 @@
         }
 
         function showLoadingSpinner() {
-            document.getElementById('productTableBody').innerHTML = '<tr id="productLoadingRow"><td colspan="8" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>';
-            document.getElementById('productGridBody').innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="spinner" aria-hidden="true"></span> Loading products...</div>';
+            // Loading states removed
         }
 
         function showTableError(message) {
@@ -798,16 +829,18 @@
         }
 
         async function loadProducts() {
-            showLoadingSpinner();
             try {
                 const res = await fetch('/api/inventory/products');
                 if (!res.ok) throw new Error('Unable to load products');
                 allProducts = await res.json();
                 populateCategoryFilter();
                 filterProducts();
+                // Show text when data loads
+                document.getElementById('tableView').classList.remove('loading');
             } catch (e) {
                 showTableError('Unable to load products. Please try again.');
                 showToast('Failed to load products', 'error');
+                document.getElementById('tableView').classList.remove('loading');
             }
         }
 
@@ -849,6 +882,11 @@
                 }).join('');
             }
         }
+
+        // Initial render - show "Loading products..." message
+        const tableView = document.getElementById('tableView');
+        tableView.classList.add('loading');
+        document.getElementById('productTableBody').innerHTML = '<tr><td colspan="8" class="empty-state">Loading products...</td></tr>';
 
         function renderGrid(products) {
             const grid = document.getElementById('productGridBody');

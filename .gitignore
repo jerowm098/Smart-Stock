@@ -31,3 +31,5 @@ plans/
 tmp_extract.py
 tmp_frames/
 tests/
+.vs
+.vscode

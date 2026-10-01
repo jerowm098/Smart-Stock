@@ -4,9 +4,11 @@
 
 @section('content')
 <div class="pos-page">
-    <div class="page-header">
-        <h1 class="page-title">POS Checkout</h1>
-        <p class="page-subtitle">Process sales, manage cart, and handle payments</p>
+    <div class="page-header hero">
+        <div class="hero-content">
+            <h1 class="page-title">POS Checkout</h1>
+            <p class="page-subtitle">Process sales and manage cart</p>
+        </div>
     </div>
 
     <!-- SECTION CARD 1: Search & Filter -->
@@ -88,14 +90,12 @@
                             </tr>
                         </thead>
                         <tbody id="posProductTableBody">
-                            <tr><td colspan="6" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>
                         </tbody>
                     </table>
                 </div>
                 <!-- Grid View -->
                 <div class="grid-view hidden" id="gridView">
                     <div id="posProductGridBody" class="product-grid">
-                        <div class="empty-state" style="grid-column: 1/-1;"><span class="spinner" aria-hidden="true"></span> Loading products...</div>
                     </div>
                 </div>
             </div>
@@ -169,9 +169,19 @@
 <style>
     /* ===== SHARED SECTION CARD STYLES (same as products.blade.php) ===== */
     .pos-page { padding: 0; }
-    .page-title { font-size: 22px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
-    .page-subtitle { color: #64748b; font-size: 14px; margin-bottom: 0; }
-    .page-header { margin-bottom: 20px; }
+    .page-title { font-size: 30px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
+    .page-subtitle { color: #475569; font-size: 14px; margin: 0; line-height: 1.5; }
+    .page-header.hero .page-subtitle { margin-bottom: 0; }
+    .page-header.hero {
+        position: relative; overflow: hidden; border-radius: 16px;
+        border: 1px solid rgba(37,99,235,0.15); margin-bottom: 20px;
+        min-height: 140px; display: flex; align-items: flex-end;
+        padding: 28px 28px 24px; background: #ffffff;
+    }
+    .hero-content { position: relative; z-index: 1; max-width: 640px; }
+    body.light-theme .page-header.hero { background: #ffffff; border-color: rgba(37,99,235,0.15); }
+    body.light-theme .page-title { color: #0f172a; }
+    body.light-theme .page-subtitle { color: #475569; }
     .section-card {
         background: rgba(255,255,255,0.025);
         border: 1px solid rgba(255,255,255,0.07);
@@ -260,15 +270,21 @@
 
     /* ===== TABLE ===== */
     .section-card .table-wrapper {
-        border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
-        margin: 0 16px 16px 16px; width: calc(100% - 32px); background: rgba(255,255,255,0.02);
+        background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+        margin: 0 16px 16px 16px; width: calc(100% - 32px); overflow-x: auto; overflow-y: visible;
     }
-    body.light-theme .section-card .table-wrapper { border-color: rgba(15,23,42,0.1); background: #ffffff; }
-    table { width: 100%; min-width: 500px; border-collapse: collapse; }
-    thead th { background: rgba(255,255,255,0.03); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-    tbody tr { border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
-    tbody tr:hover { background: rgba(255,255,255,0.02); }
-    tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; }
+    body.light-theme .section-card .table-wrapper { border-color: rgba(15,23,42,0.12); background: #ffffff; }
+    table { width: 100%; min-width: 600px; border-collapse: separate; border-spacing: 0; border: 1px solid rgba(255,255,255,0.08); table-layout: fixed; }
+    thead th { background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border-bottom: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.06); line-height: 1.4; }
+    thead th:last-child { border-right: none; }
+    tbody tr { border-top: 1px solid rgba(255,255,255,0.06); transition: background 0.15s; }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border-right: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+    tbody td:last-child { border-right: none; }
+    tbody tr:last-child td { border-bottom: none; }
+    /* Hide text until data loads */
+    #tableView.loading tbody td:not(.empty-state) { color: transparent; }
+    #tableView.loading tbody td.empty-state { color: #64748b; }
     body.light-theme table thead th { background: rgba(15,23,42,0.02); color: #64748b; }
     body.light-theme table tbody td { color: #475569; }
     body.light-theme table tbody tr:hover { background: rgba(15,23,42,0.025); }
@@ -578,8 +594,6 @@
     async function loadPosProducts() {
         const tbody = document.getElementById('posProductTableBody');
         const grid = document.getElementById('posProductGridBody');
-        tbody.innerHTML = '<tr><td colspan="6" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>';
-        grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="spinner" aria-hidden="true"></span> Loading products...</div>';
         try {
             // Cashier-safe catalog: excludes deactivated products and Admin-only fields.
             const res = await fetch('/api/pos/products');
@@ -897,6 +911,8 @@
     }
 
     // Initialize
+    // Show loading message initially
+    document.getElementById('posProductTableBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading products...</td></tr>';
     loadPosProducts();
 </script>
 <?php $__env->stopPush(); ?>

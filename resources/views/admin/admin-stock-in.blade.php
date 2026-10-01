@@ -3,9 +3,11 @@
 @section('title', 'Stock-In / Receiving - Smart-Stock')
 
 @section('content')
-    <div class="page-header">
-        <h1 class="page-title">Stock-In / Receiving</h1>
-        <p class="page-subtitle">Record incoming supplies and update inventory levels</p>
+    <div class="page-header hero">
+        <div class="hero-content">
+            <h1 class="page-title">Stock-In / Receiving</h1>
+            <p class="page-subtitle">Record incoming supplies</p>
+        </div>
     </div>
 
     <div class="section-card">
@@ -91,13 +93,11 @@
                     </tr>
                 </thead>
                 <tbody id="stockInTableBody">
-                    <tr id="stockInLoadingRow"><td colspan="7" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>
                 </tbody>
             </table>
         </div>
         <div class="grid-view hidden" id="gridView">
             <div id="stockInGridBody" class="product-grid">
-                <div class="empty-state" style="grid-column: 1/-1;"><span class="spinner" aria-hidden="true"></span> Loading products...</div>
             </div>
         </div>
     </div>
@@ -158,9 +158,19 @@
 
 @push('styles')
     <style>
-        .page-title { font-size: 22px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
-        .page-subtitle { color: #64748b; font-size: 14px; margin-bottom: 0; }
-        .page-header { margin-bottom: 20px; }
+        .page-title { font-size: 30px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
+        .page-subtitle { color: #475569; font-size: 14px; margin: 0; line-height: 1.5; }
+        .page-header.hero .page-subtitle { margin-bottom: 0; }
+        .page-header.hero {
+            position: relative; overflow: hidden; border-radius: 16px;
+            border: 1px solid rgba(37,99,235,0.15); margin-bottom: 20px;
+            min-height: 140px; display: flex; align-items: flex-end;
+            padding: 28px 28px 24px; background: #ffffff;
+        }
+        .hero-content { position: relative; z-index: 1; max-width: 640px; }
+        body.light-theme .page-header.hero { background: #ffffff; border-color: rgba(37,99,235,0.15); }
+        body.light-theme .page-title { color: #0f172a; }
+        body.light-theme .page-subtitle { color: #475569; }
 
         /* SECTION CARD */
         .section-card {
@@ -276,15 +286,19 @@
 
         /* TABLE */
         .section-card .table-wrapper {
-            border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
-            margin: 0 16px 16px 16px; width: calc(100% - 32px); background: rgba(255,255,255,0.02);
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+            margin: 0 16px 16px 16px; width: calc(100% - 32px); overflow-x: auto; overflow-y: visible;
         }
-        body.light-theme .section-card .table-wrapper { border-color: rgba(15,23,42,0.1); background: #ffffff; }
-        table { width: 100%; min-width: 720px; border-collapse: collapse; }
-        thead th { background: rgba(255,255,255,0.03); padding: 12px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
-        tbody tr { border-top: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
-        tbody tr:hover { background: rgba(255,255,255,0.02); }
-        tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; }
+        body.light-theme .section-card .table-wrapper { border-color: rgba(15,23,42,0.12); background: #ffffff; }
+        table { width: 100%; min-width: 800px; border-collapse: separate; border-spacing: 0 4px; border: none; table-layout: fixed; }
+        thead th { background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border: none; line-height: 1.4; }
+        thead th:first-child { border-top-left-radius: 9px; }
+        thead th:last-child { border-top-right-radius: 9px; }
+        tbody tr, tbody tr:hover { background: rgba(255,255,255,0.045); border: none; border-radius: 8px; transition: none; }
+        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border: none; vertical-align: middle; }
+        /* Hide text until data loads */
+        #tableView.loading tbody td:not(.empty-state) { color: transparent; }
+        #tableView.loading tbody td.empty-state { color: #64748b; }
         .stock-cell { font-weight: 600; }
         .stock-ok { color: #4ade80; }
         .stock-low { color: #fbbf24; }
@@ -295,7 +309,6 @@
         .stock-badge.critical { background: rgba(248,113,113,0.12); color: #f87171; }
         .text-muted { color: #64748b; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
-        .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: #3b82f6; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .hidden { display: none !important; }
         .action-link { background: none; border: 1px solid transparent; padding: 4px 10px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; color: #60a5fa; text-decoration: none; transition: all 0.15s; margin-right: 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; }
@@ -397,10 +410,9 @@
             background-size: 12px;
         }
         body.light-theme .sort-select option { background: #ffffff; color: #0f172a; }
-        body.light-theme thead th { background: rgba(15,23,42,0.02); color: #64748b; }
+        body.light-theme thead th { background: rgba(100,116,139,0.16); color: #1e293b; }
         body.light-theme tbody td { color: #334155; }
-        body.light-theme tbody tr { border-top-color: rgba(15,23,42,0.06); }
-        body.light-theme tbody tr:hover { background: rgba(15,23,42,0.025); }
+        body.light-theme tbody tr, body.light-theme tbody tr:hover { background: rgba(15,23,42,0.04); }
         body.light-theme .empty-state { color: #94a3b8; }
         body.light-theme .modal { background: #ffffff; border-color: rgba(15,23,42,0.1); }
         body.light-theme .modal h2 { color: #0f172a; }
@@ -464,8 +476,7 @@
         }
 
         function showLoadingSpinner() {
-            document.getElementById('stockInTableBody').innerHTML = '<tr id="stockInLoadingRow"><td colspan="7" class="empty-state"><span class="spinner" aria-hidden="true"></span> Loading products...</td></tr>';
-            document.getElementById('stockInGridBody').innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><span class="spinner" aria-hidden="true"></span> Loading products...</div>';
+            document.getElementById('tableView')?.classList.add('loading');
         }
 
         function showTableError(message) {
@@ -484,6 +495,10 @@
             } catch (e) {
                 showTableError('Unable to load products. Please try again.');
                 showToast('Failed to load products', 'error');
+            } finally {
+                // MUST clear this, otherwise '#tableView.loading tbody td' keeps
+                // color:transparent and every row renders invisible.
+                document.getElementById('tableView').classList.remove('loading');
             }
         }
 
@@ -786,6 +801,11 @@
             d.textContent = str;
             return d.innerHTML;
         }
+
+        // Initial render - show "Loading products..." message
+        const tableView = document.getElementById('tableView');
+        tableView.classList.add('loading');
+        document.getElementById('stockInTableBody').innerHTML = '<tr><td colspan="7" class="empty-state">Loading products...</td></tr>';
 
         loadProducts();
         loadSuppliers();

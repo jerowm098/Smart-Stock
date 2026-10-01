@@ -3,70 +3,84 @@
 @section('title', 'Transaction History - Smart-Stock')
 
 @section('content')
-    <h1 class="page-title">Transaction History</h1>
-    <p class="page-subtitle">Lahat ng natapos na benta, kasama kung sinong cashier ang humawak. Admin lang ang makakakita nito.</p>
+    <header class="page-header hero">
+        <div class="hero-content">
+            <h1 class="page-title">Transaction History</h1>
+            <p class="page-subtitle">View all completed sales</p>
+        </div>
+    </header>
 
     <!-- ====== FILTERS ====== -->
-    <div class="filter-bar">
-        <div class="filter-group">
-            <label for="fSearch">Search</label>
-            <input type="text" id="fSearch" placeholder="Receipt no, product, SKU..." autocomplete="off">
+    <div class="white-form">
+        <div class="section-card-header">
+            <h2 class="section-card-title">Search & Filter</h2>
+            <p class="section-card-desc">Find transactions by receipt, product, or date range</p>
         </div>
-        <div class="filter-group">
-            <label for="fCashier">Cashier</label>
-            <select id="fCashier">
-                <option value="">All cashiers</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label for="fFrom">From</label>
-            <input type="date" id="fFrom">
-        </div>
-        <div class="filter-group">
-            <label for="fTo">To</label>
-            <input type="date" id="fTo">
-        </div>
-        <div class="filter-group">
-            <label for="fPerPage">Rows</label>
-            <select id="fPerPage">
-                <option value="10">10</option>
-                <option value="15" selected>15</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
-            </select>
-        </div>
-        <div class="filter-actions">
-            <button class="btn-primary" onclick="applyFilters()">Apply</button>
-            <button class="btn-ghost" onclick="resetFilters()">Reset</button>
-            <button class="btn-export" onclick="exportCsv()" title="Download filtered transactions as CSV (Excel-compatible)">⬇ Export CSV</button>
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label for="fSearch">Search</label>
+                <input type="text" id="fSearch" placeholder="Receipt no, product, SKU..." autocomplete="off">
+            </div>
+            <div class="filter-group">
+                <label for="fCashier">Cashier</label>
+                <select id="fCashier">
+                    <option value="">All cashiers</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="fFrom">From</label>
+                <input type="date" id="fFrom" value="">
+            </div>
+            <div class="filter-group">
+                <label for="fTo">To</label>
+                <input type="date" id="fTo" value="">
+            </div>
+            <div class="filter-group">
+                <label for="fPerPage">Rows</label>
+                <select id="fPerPage">
+                    <option value="10">10</option>
+                    <option value="15" selected>15</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button class="btn-primary" onclick="applyFilters()">Apply</button>
+                <button class="btn-ghost" onclick="resetFilters()">Reset</button>
+                <button class="btn-export" onclick="exportCsv()" title="Download filtered transactions as CSV (Excel-compatible)">⬇ Export CSV</button>
+            </div>
         </div>
     </div>
 
     <div class="result-meta" id="resultMeta">Loading...</div>
 
     <!-- ====== TABLE ====== -->
-    <div class="table-wrapper">
-        <table>
-            <thead>
-                <tr>
-                    <th>Receipt No</th>
-                    <th>Date</th>
-                    <th>Cashier</th>
-                    <th>Items</th>
-                    <th>Total</th>
-                    <th>Payment</th>
-                    <th>Change</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="txnBody">
-                <tr>
-                    <td colspan="8" class="empty-state">
-                        <span class="spinner" aria-hidden="true"></span> Loading transactions...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="white-form">
+        <div class="section-card-header">
+            <div>
+                <h2 class="section-card-title">Transaction History</h2>
+                <p class="section-card-desc">View all completed sales and receipts</p>
+            </div>
+        </div>
+        <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Receipt No</th>
+                            <th>Date</th>
+                            <th>Cashier</th>
+                            <th>Items</th>
+                            <th>Total</th>
+                            <th>Payment</th>
+                            <th>Change</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="txnBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 
     <!-- ====== PAGINATION ====== -->
@@ -89,8 +103,64 @@
 
 @push('styles')
     <style>
-        .page-title { font-size: 22px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
-        .page-subtitle { color: #64748b; font-size: 14px; margin-bottom: 20px; }
+        .white-form {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            margin-bottom: 20px;
+        }
+        .white-form:last-child {
+            margin-bottom: 0;
+        }
+        body.light-theme .white-form {
+            background: #ffffff;
+            border-color: rgba(15, 23, 42, 0.08);
+        }
+        .section-card-header {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        }
+        .section-card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 6px 0;
+        }
+        .section-card-desc {
+            font-size: 13px;
+            color: #64748b;
+            margin: 0;
+        }
+        .table-wrapper {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            overflow-x: auto;
+            overflow-y: visible;
+        }
+        .page-title { font-size: 30px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
+            overflow-y: visible;
+        }
+        .page-title { font-size: 30px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
+        .page-subtitle { color: #475569; font-size: 14px; margin: 0; line-height: 1.5; }
+        .page-header.hero .page-subtitle { margin-bottom: 0; }
+        .page-header.hero {
+            position: relative;
+            overflow: hidden;
+            border-radius: 16px;
+            border: 1px solid rgba(37,99,235,0.15);
+            margin-bottom: 20px;
+            min-height: 140px;
+            display: flex;
+            align-items: flex-end;
+            padding: 28px 28px 24px;
+            background: #ffffff;
+        }
+        .hero-content { position: relative; z-index: 1; max-width: 640px; }
+        body.light-theme .page-header.hero { background: #ffffff; border-color: rgba(37,99,235,0.15); }
+        body.light-theme .page-title { color: #0f172a; }
         .filter-bar {
             display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
             background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
@@ -120,19 +190,20 @@
         .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
         .result-meta { font-size: 12px; color: #64748b; margin-bottom: 12px; }
         .table-wrapper {
-            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
-            /* Matches the shared frame so the header band's rounded corners
-               line up with this wrapper's outline. */
-            border-radius: var(--table-radius, 12px); overflow-x: auto;
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px; overflow-x: auto; overflow-y: visible;
         }
-        table { width: 100%; min-width: 760px; border-collapse: collapse; }
+        table { width: 100%; min-width: 800px; border-collapse: separate; border-spacing: 0; border: 1px solid rgba(255,255,255,0.08); table-layout: fixed; }
         thead th {
-            background: rgba(255,255,255,0.03); padding: 12px 16px; text-align: left;
-            font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+            background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left;
+            font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border-bottom: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.06); line-height: 1.4;
         }
-        tbody tr { border-top: 1px solid rgba(255,255,255,0.04); }
-        tbody tr:hover { background: rgba(255,255,255,0.02); }
-        tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; vertical-align: middle; }
+        thead th:last-child { border-right: none; }
+        tbody tr { border-top: 1px solid rgba(255,255,255,0.06); }
+        tbody tr:hover { background: rgba(255,255,255,0.03); }
+        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border-right: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+        tbody td:last-child { border-right: none; }
+        tbody tr:last-child td { border-bottom: none; }
         .receipt-no { font-family: monospace; font-weight: 700; color: #60a5fa; }
         .cashier-name { font-weight: 600; color: #f8fafc; }
         .cashier-email { font-size: 11px; color: #64748b; }
@@ -183,14 +254,19 @@
 @push('scripts')
     <script>
     (function () {
-        // BRD (Transaction Tracking) Usability: "Date range filters shall default
-        // to the current day ('Today') upon initially loading the dashboard."
+        // BRD (Transaction Tracking): Default date range shows last 30 days so
+        // seeded demo sales and historical transactions are visible by default.
         const today = new Date();
         const isoToday = today.getFullYear() + '-'
             + String(today.getMonth() + 1).padStart(2, '0') + '-'
             + String(today.getDate()).padStart(2, '0');
+        const thirtyDaysAgo = new Date(today);
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+        const isoThirtyDaysAgo = thirtyDaysAgo.getFullYear() + '-'
+            + String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0') + '-'
+            + String(thirtyDaysAgo.getDate()).padStart(2, '0');
 
-        let state = { page: 1, per_page: 15, search: '', cashier_id: '', date_from: isoToday, date_to: isoToday, last_page: 1, total: 0, cache: [] };
+        let state = { page: 1, per_page: 15, search: '', cashier_id: '', date_from: isoThirtyDaysAgo, date_to: isoToday, last_page: 1, total: 0, cache: [] };
 
         function qs() {
             const p = new URLSearchParams();
@@ -206,6 +282,8 @@
         async function loadTxns() {
             const body = document.getElementById('txnBody');
             const meta = document.getElementById('resultMeta');
+            // Show loading message
+            body.innerHTML = '<tr><td colspan="8" class="empty-state">Loading transactions...</td></tr>';
             try {
                 const res = await fetch('/api/dashboard/transactions?' + qs());
                 if (!res.ok) throw new Error('Failed (' + res.status + ')');
@@ -284,16 +362,20 @@
         window.resetFilters = function () {
             document.getElementById('fSearch').value = '';
             document.getElementById('fCashier').value = '';
-            // BRD: "Date range filters shall default to the current day ('Today')."
-            // Reset returns to that same Today default rather than "all time".
+            // Reset to last 30 days so seeded demo data is visible
             const t = new Date();
-            const iso = t.getFullYear() + '-'
+            const thirtyDaysAgo = new Date(t);
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 29);
+            const iso = thirtyDaysAgo.getFullYear() + '-'
+                + String(thirtyDaysAgo.getMonth() + 1).padStart(2, '0') + '-'
+                + String(thirtyDaysAgo.getDate()).padStart(2, '0');
+            const isoToday = t.getFullYear() + '-'
                 + String(t.getMonth() + 1).padStart(2, '0') + '-'
                 + String(t.getDate()).padStart(2, '0');
             document.getElementById('fFrom').value = iso;
-            document.getElementById('fTo').value = iso;
+            document.getElementById('fTo').value = isoToday;
             document.getElementById('fPerPage').value = '15';
-            state = { page: 1, per_page: 15, search: '', cashier_id: '', date_from: iso, date_to: iso, last_page: 1, total: 0, cache: state.cache };
+            state = { page: 1, per_page: 15, search: '', cashier_id: '', date_from: iso, date_to: isoToday, last_page: 1, total: 0, cache: state.cache };
             loadTxns();
         };
 

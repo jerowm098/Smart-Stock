@@ -59,8 +59,11 @@ auth.json
 
 *.pdf
 myFiles/
+.venv
+*.mp4
 plans/
 tmp_extract.py
 tmp_frames/
-*.mp4
 tests/
+.vs
+.vscode

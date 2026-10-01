@@ -3,46 +3,100 @@
 @section('title', 'Backups - Smart-Stock')
 
 @section('content')
-    <h1 class="page-title">Backups</h1>
-    <p class="page-subtitle">Regular na kopya ng database. Admin lang ang makakakita at makakapag-download nito.</p>
-
-    <!-- ====== POLICY CARD ====== -->
-    <div class="policy-card">
-        <div>
-            <div class="policy-title">Backup Policy (SS-39)</div>
-            <div class="policy-text" id="policyText">Auto daily 02:00 (Asia/Manila) · keep newest 7 · Supabase PostgreSQL JSON dump</div>
-            <div class="policy-sub" id="driverText">Loading driver...</div>
+    <div class="page-header hero">
+        <div class="hero-content">
+            <h1 class="page-title">Backups</h1>
+            <p class="page-subtitle">Database backups for admin</p>
         </div>
-        <button class="btn-primary" id="runBtn" onclick="runBackup()">▶ Run Backup Now</button>
     </div>
 
-    <div class="result-meta" id="resultMeta">Loading...</div>
+    <!-- ====== POLICY CARD ====== -->
+    <div class="white-form">
+        <div class="section-card-header">
+            <h2 class="section-card-title">Backup Settings</h2>
+            <p class="section-card-desc">Configure and manage database backup policies</p>
+        </div>
+        <div class="policy-card">
+            <div>
+                <div class="policy-title">Backup Policy (SS-39)</div>
+                <div class="policy-text" id="policyText">Auto daily 02:00 (Asia/Manila) · keep newest 7 · Supabase PostgreSQL JSON dump</div>
+                <div class="policy-sub" id="driverText"></div>
+            </div>
+            <button class="btn-primary" id="runBtn" onclick="runBackup()">▶ Run Backup Now</button>
+        </div>
+    </div>
 
     <!-- ====== TABLE ====== -->
-    <div class="table-wrapper">
-        <table>
-            <thead>
-                <tr>
-                    <th>Filename</th>
-                    <th>Type</th>
-                    <th>Size</th>
-                    <th>Created</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="backupBody">
-                <tr>
-                    <td colspan="5" class="empty-state">
-                        <span class="spinner" aria-hidden="true"></span> Loading backups...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="white-form">
+        <div class="section-card-header">
+            <div class="section-card-header-row">
+                <div>
+                    <h2 class="section-card-title">Backup History</h2>
+                    <p class="section-card-desc">View all database backup records</p>
+                </div>
+                <!-- The count lives in the header rather than floating between
+                     the two cards, where it read as loose body text. -->
+                <div class="result-meta" id="resultMeta"></div>
+            </div>
+        </div>
+        <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Filename</th>
+                            <th>Type</th>
+                            <th>Size</th>
+                            <th>Created</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="backupBody">
+                        <tr><td colspan="5" class="empty-state">Loading backups...</td></tr>
+                    </tbody>
+                </table>
+            </div>
     </div>
 @endsection
 
 @push('styles')
     <style>
+        .white-form {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            margin-bottom: 20px;
+        }
+        .white-form:last-child {
+            margin-bottom: 0;
+        }
+        body.light-theme .white-form {
+            background: #ffffff;
+            border-color: rgba(15, 23, 42, 0.08);
+        }
+        .section-card-header {
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        }
+        .section-card-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 0 0 6px 0;
+        }
+        .section-card-desc {
+            font-size: 13px;
+            color: #64748b;
+            margin: 0;
+        }
+        .table-wrapper {
+            background: transparent;
+            border: none;
+            border-radius: 0;
+            overflow-x: auto;
+            overflow-y: visible;
+        }
         .page-title { font-size: 22px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
         .page-subtitle { color: #64748b; font-size: 14px; margin-bottom: 20px; }
         .policy-card {
@@ -58,21 +112,30 @@
             border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
         }
         .btn-primary:disabled { opacity: 0.5; cursor: wait; }
-        .result-meta { font-size: 12px; color: #64748b; margin-bottom: 12px; }
+        .result-meta { font-size: 12px; color: #64748b; white-space: nowrap; }
+        /* Same flex row the Products/Users cards use, so the count sits at the
+           top-right of the header instead of below it. */
+        .section-card-header-row {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+        }
         .table-wrapper {
-            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
-            /* Matches the shared frame so the header band's rounded corners
-               line up with this wrapper's outline. */
-            border-radius: var(--table-radius, 12px); overflow-x: auto;
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px; overflow-x: auto; overflow-y: visible;
         }
-        table { width: 100%; min-width: 680px; border-collapse: collapse; }
+        table { width: 100%; min-width: 680px; border-collapse: separate; border-spacing: 0; border: 1px solid rgba(255,255,255,0.08); table-layout: fixed; }
         thead th {
-            background: rgba(255,255,255,0.03); padding: 12px 16px; text-align: left;
-            font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap;
+            background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left;
+            font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border-bottom: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.06); line-height: 1.4;
         }
-        tbody tr { border-top: 1px solid rgba(255,255,255,0.04); }
-        tbody tr:hover { background: rgba(255,255,255,0.02); }
-        tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; }
+        thead th:last-child { border-right: none; }
+        tbody tr { border-top: 1px solid rgba(255,255,255,0.06); }
+        tbody tr:hover { background: rgba(255,255,255,0.03); }
+        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border-right: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+        tbody td:last-child { border-right: none; }
+        tbody tr:last-child td { border-bottom: none; }
         .file-name { font-family: monospace; font-size: 12px; color: #e2e8f0; }
         .type-pill {
             display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
@@ -90,6 +153,17 @@
         }
         .btn-del:hover { background: rgba(248,113,113,0.2); }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
+        .page-title { font-size: 30px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
+        .page-subtitle { color: #475569; font-size: 14px; margin: 0; line-height: 1.5; }
+        .page-header.hero .page-subtitle { margin-bottom: 0; }
+        .page-header.hero {
+            position: relative; overflow: hidden; border-radius: 16px;
+            border: 1px solid rgba(37,99,235,0.15); margin-bottom: 20px;
+            min-height: 140px; display: flex; align-items: flex-end;
+            padding: 28px 28px 24px; background: #ffffff;
+        }
+        .hero-content { position: relative; z-index: 1; max-width: 640px; }
+        body.light-theme .page-header.hero { background: #ffffff; border-color: rgba(37,99,235,0.15); }
         body.light-theme .page-title { color: #0f172a; }
         body.light-theme .policy-card { background: rgba(37,99,235,0.05); border-color: rgba(37,99,235,0.2); }
         body.light-theme .policy-text { color: #475569; }

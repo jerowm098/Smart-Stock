@@ -3,66 +3,109 @@
 @section('title', 'Order Suggestions - Smart-Stock')
 
 @section('content')
-    <h1 class="page-title">Order Suggestions</h1>
-    <p class="page-subtitle">
-        Automated demand forecasting. Figures come from the nightly
-        <code>forecast:orders</code> job &mdash; 30-day sales velocity, 7-day reorder
-        point, and a suggested top-up to restore 30 days of supply.
-    </p>
-
-    <!-- ====== TOOLBAR ====== -->
-    <div class="filter-bar">
-        <div class="filter-group">
-            <label for="fStatus">Show</label>
-            <select id="fStatus">
-                <option value="active">Needs action</option>
-                <option value="ordered">Ordered</option>
-                <option value="dismissed">Dismissed</option>
-                <option value="all">All</option>
-            </select>
-        </div>
-        <div class="filter-actions">
-            <button class="btn-primary" onclick="loadSuggestions()">Refresh</button>
-            <button class="btn-ghost" onclick="recompute()">Recompute now</button>
-            <button class="btn-ghost" onclick="exportCsv()">Export CSV</button>
+    <div class="page-header hero">
+        <div class="hero-content">
+            <h1 class="page-title">Order Suggestions</h1>
+            <p class="page-subtitle">Automated demand forecasting</p>
         </div>
     </div>
 
-    <div id="formulaNote" class="formula-note"></div>
+    <!-- ====== TOOLBAR ====== -->
+    <div class="section-card">
+        <div class="section-card-header">
+            <h2 class="section-card-title">Filter Options</h2>
+            <p class="section-card-desc">Adjust view settings and recompute forecasts</p>
+        </div>
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label for="fStatus">Show</label>
+                <select id="fStatus">
+                    <option value="active">Needs action</option>
+                    <option value="ordered">Ordered</option>
+                    <option value="dismissed">Dismissed</option>
+                    <option value="all">All</option>
+                </select>
+            </div>
+            <div class="filter-actions">
+                <button class="btn-primary" onclick="loadSuggestions()">Refresh</button>
+                <button class="btn-ghost" onclick="recompute()">Recompute now</button>
+                <button class="btn-ghost" onclick="exportCsv()">Export CSV</button>
+            </div>
+        </div>
+    </div>
 
     <!-- ====== SUGGESTION LIST ====== -->
-    <div class="table-wrap">
-        <table class="data-table sug-table">
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th>SKU</th>
-                    <th class="num">In Stock</th>
-                    <th class="num">Avg Daily</th>
-                    <th class="num">Reorder Pt</th>
-                    <th class="num">Suggested</th>
-                    <th class="num">Est. Cost</th>
-                    <th>Urgency</th>
-                    <th class="num">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="sugTableBody">
-                <tr>
-                    <td colspan="9" class="empty-state">
-                        <span class="spinner" aria-hidden="true"></span> Loading suggestions...
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="section-card">
+        <div class="section-card-header">
+            <div>
+                <h2 class="section-card-title">Order Suggestions</h2>
+                <p class="section-card-desc">Automated demand forecasting and reorder recommendations</p>
+            </div>
+        </div>
+        <div class="table-wrapper">
+                <table class="data-table sug-table">
+                    <thead>
+                        <tr>
+                            <th>Item</th>
+                            <th>SKU</th>
+                            <th class="num">In Stock</th>
+                            <th class="num">Avg Daily</th>
+                            <th class="num">Reorder Pt</th>
+                            <th class="num">Suggested</th>
+                            <th class="num">Est. Cost</th>
+                            <th>Urgency</th>
+                            <th class="num">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sugTableBody">
+                        </tbody>
+                </table>
+        </div>
     </div>
 
     <style>
-        .formula-note { margin: 0 0 16px; padding: 10px 14px; border-radius: 10px;
-            background: rgba(59,130,246,.08); border: 1px solid rgba(59,130,246,.22);
-            color: #93c5fd; font-size: 12.5px; }
-        body.light-theme .formula-note { background: rgba(59,130,246,.06); color: #1d4ed8; }
-        .formula-note code { background: rgba(0,0,0,.25); padding: 1px 6px; border-radius: 5px; }
-
+        .section-card {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+            margin-bottom: 16px;
+            overflow: hidden;
+        }
+        body.light-theme .section-card {
+            background: #ffffff;
+            border-color: rgba(15,23,42,0.08);
+        }
+        .section-card-header {
+            padding: 18px 20px 16px 20px;
+        }
+        .section-card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin: 0 0 3px 0;
+        }
+        body.light-theme .section-card-title { color: #1e293b; }
+        .section-card-desc {
+            font-size: 13px;
+            color: #64748b;
+            margin: 0;
+        }
+        body.light-theme .section-card-desc { color: #94a3b8; }
+        .section-card .filter-bar {
+            margin: 14px 16px 16px 16px;
+        }
+        .section-card .table-wrapper {
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            margin: 0 16px 16px 16px;
+            width: calc(100% - 32px);
+            background: rgba(255,255,255,0.02);
+        }
+        body.light-theme .section-card .table-wrapper {
+            border-color: rgba(15,23,42,0.1);
+            background: #ffffff;
+        }
+        .sug-name { font-weight: 600; color: #f8fafc; margin-bottom: 3px; }
         /* The shared .data-table sets min-width:860px, which is wider than the
            content area beside the 240px sidebar on a ~1100px viewport — that
            forced a horizontal scroll and pushed the nowrap CRITICAL badge over
@@ -83,7 +126,25 @@
            drawing the buttons over the Urgency column. */
         .sug-table th:nth-child(9), .sug-table td:nth-child(9) { width: 16%; }
         .sug-table thead th { letter-spacing: 0.2px; }
-        .sug-table tbody td, .sug-table thead th { padding: 12px 8px; }
+        .sug-table tbody td { padding: 12px 8px; }
+        .section-card .table-wrapper .sug-table thead th { padding: 14px 8px; }
+        .section-card .table-wrapper .sug-table { border-collapse: separate; border-spacing: 0 4px; border: none; }
+        .section-card .table-wrapper .sug-table th,
+        .section-card .table-wrapper .sug-table td { border: none; }
+        .section-card .table-wrapper .sug-table tbody tr,
+        .section-card .table-wrapper .sug-table tbody tr:hover {
+            background: rgba(255,255,255,0.045);
+            border: none;
+            border-radius: 8px;
+            transition: none;
+        }
+        body.light-theme .section-card .table-wrapper .sug-table tbody tr,
+        body.light-theme .section-card .table-wrapper .sug-table tbody tr:hover { background: rgba(15,23,42,0.04); }
+        /* The generic `.sug-table tbody td` above is (0,1,2) and outranks the
+           shared `.empty-state { padding: 48px }` (0,1,0), which squashed the
+           loading/empty row to 40px while Products/Transactions render 112.8px.
+           Scope the placeholder back so every tab's loading row matches. */
+        .section-card .table-wrapper .sug-table tbody td.empty-state { padding: 48px; font-size: 14px; }
 
         .sug-name { font-weight: 600; color: #f8fafc; margin-bottom: 3px; }
         body.light-theme .sug-name { color: #0f172a; }
@@ -96,7 +157,7 @@
             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
             overflow: hidden; cursor: help;
         }
-        .days-left { font-size: 11.5px; color: #94a3b8; margin-top: 4px; white-space: nowrap; }
+        .days-left { display: none; }
         .btn-mini { padding:5px 11px; font-size:12px; border-radius:7px; border:1px solid rgba(148,163,184,.3);
             background:transparent; color:inherit; cursor:pointer; white-space:nowrap; }
         /* Two buttons per row keeps each column narrow enough to fit.
@@ -111,6 +172,19 @@
         .btn-mini.ok   { border-color:rgba(16,185,129,.4); color:#34d399; }
         .btn-mini.ok:hover { background:rgba(16,185,129,.12); }
         .btn-mini + .btn-mini { margin-left:6px; }
+        .page-title { font-size: 30px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
+        .page-subtitle { color: #475569; font-size: 14px; margin: 0; line-height: 1.5; }
+        .page-header.hero .page-subtitle { margin-bottom: 0; }
+        .page-header.hero {
+            position: relative; overflow: hidden; border-radius: 16px;
+            border: 1px solid rgba(37,99,235,0.15); margin-bottom: 20px;
+            min-height: 140px; display: flex; align-items: flex-end;
+            padding: 28px 28px 24px; background: #ffffff;
+        }
+        .hero-content { position: relative; z-index: 1; max-width: 640px; }
+        body.light-theme .page-header.hero { background: #ffffff; border-color: rgba(37,99,235,0.15); }
+        body.light-theme .page-title { color: #0f172a; }
+        body.light-theme .page-subtitle { color: #475569; }
     </style>
 @endsection
 
@@ -133,17 +207,6 @@
         alert(message);
     }
 
-    function renderFormulas(f) {
-        const note = document.getElementById('formulaNote');
-        if (!f || !note) return;
-        note.innerHTML =
-            `<strong>Forecast rules:</strong> ` +
-            `daily velocity = units sold / ${f.window_days} days &nbsp;•&nbsp; ` +
-            `reorder point = velocity &times; ${f.safety_days} days &nbsp;•&nbsp; ` +
-            `suggested qty = (velocity &times; ${f.cover_days} days) &minus; current stock &nbsp;•&nbsp; ` +
-            `items with &lt; 7 days of history fall back to a static ${f.fallback_threshold}-unit threshold.`;
-    }
-
     async function loadSuggestions() {
         STATUS_FILTER = document.getElementById('fStatus').value;
         const tbody = document.getElementById('sugTableBody');
@@ -154,12 +217,15 @@
             if (!res.ok) throw new Error('Unable to load suggestions');
             const data = await res.json();
 
-            renderFormulas(data.formulas);
             renderSuggestions(data.suggestions || []);
         } catch (e) {
             tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Unable to load suggestions.</td></tr>';
         }
     }
+
+    // Initial render - show loading message
+    document.getElementById('sugTableBody').innerHTML = '<tr><td colspan="9" class="empty-state">Loading suggestions...</td></tr>';
+    loadSuggestions();
 
     function renderSuggestions(rows) {
         const tbody = document.getElementById('sugTableBody');
@@ -171,7 +237,6 @@
 
         tbody.innerHTML = rows.map(s => {
             const actionable = s.status === 'active';
-            const daysLeft   = s.days_until_out !== null ? `${s.days_until_out} days left` : '—';
 
             return `
             <tr>
@@ -187,7 +252,6 @@
                 <td class="num">${peso(s.est_cost)}</td>
                 <td>
                     <span class="urgency-badge ${escapeHtml(s.urgency)}">${escapeHtml(s.urgency)}</span>
-                    <div class="days-left">${escapeHtml(daysLeft)}</div>
                 </td>
                 <td class="num">
                     ${actionable ? `

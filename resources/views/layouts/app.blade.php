@@ -227,20 +227,7 @@
         }
 
 
-        /* SPINNER (SS-48) - reusable loading indicator for inventory fetches */
-        .spinner {
-            display: inline-block;
-            width: 18px;
-            height: 18px;
-            border: 2px solid rgba(255,255,255,0.15);
-            border-top-color: #60a5fa;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-            vertical-align: middle;
-            margin-right: 8px;
-        }
-        body.light-theme .spinner { border-color: rgba(15,23,42,0.12); border-top-color: #2563eb; }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        /* SPINNER REMOVED */
 
         /* TOAST */
         .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; z-index: 300; display: none; animation: slideUp 0.3s ease; }
@@ -384,12 +371,7 @@
     .data-table tbody td { padding: 12px 16px; font-size: 13px; color: #cbd5e1; vertical-align: middle; }
     .data-table td.num, .data-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
     .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
-    .spinner {
-        display: inline-block; width: 14px; height: 14px; vertical-align: -2px;
-        border: 2px solid rgba(255,255,255,0.2); border-top-color: #60a5fa;
-        border-radius: 50%; animation: spin 0.7s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    /* SPINNER REMOVED */
 
     body.light-theme .page-title { color: #0f172a; }
     body.light-theme .page-subtitle { color: #475569; }

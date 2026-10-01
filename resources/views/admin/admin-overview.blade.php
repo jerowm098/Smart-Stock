@@ -7,7 +7,6 @@
 
     <header class="page-header hero">
         <div class="hero-content">
-            <span class="hero-eyebrow">Welcome back</span>
             <h1 class="page-title">Overview</h1>
             <p class="page-subtitle">Hello {{ ucfirst(Auth::user()->role) }} {{ ucwords(Auth::user()->name) }}, here is and overview of your inventory dashboard.</p>
         </div>
@@ -62,7 +61,7 @@
     <!-- ====== CHART + TOP SELLING ROW ====== -->
     <div class="chart-top-row">
         <!-- Revenue Chart (75%) -->
-        <div class="chart-panel is-loading" id="revenuePanel">
+        <div class="chart-panel" id="revenuePanel">
             <div class="section-header">
                 <h2 class="section-title">Revenue Overview</h2>
                 <div class="panel-controls">
@@ -74,11 +73,10 @@
             </div>
             <div class="chart-container" id="revenueBox">
                 <canvas id="revenueChart"></canvas>
-                <div class="chart-loading" id="chartLoading"><span class="spinner"></span> Loading chart data...</div>
             </div>
         </div>
         <!-- Top Selling Products (25%) -->
-        <div class="top-products-panel is-loading" id="topPanel">
+        <div class="top-products-panel" id="topPanel">
             <div class="section-header">
                 <h2 class="section-title">Top Selling</h2>
                 <div class="panel-controls">
@@ -88,13 +86,12 @@
                 </div>
             </div>
             <div class="top-products-list" id="topProductsList">
-                <div class="list-loading" id="topLoading"><span class="spinner"></span> Loading top products...</div>
             </div>
         </div>
     </div>
 
     <!-- ====== SS-35: RESTOCK SUGGESTIONS (Admin only, demand-based) ====== -->
-    <div class="content-panel is-loading" id="suggestPanel">
+    <div class="content-panel" id="suggestPanel">
         <div class="section-header">
             <h2 class="section-title">Order Suggestions</h2>
             <div class="panel-controls">
@@ -111,8 +108,7 @@
                 </a>
             </div>
         </div>
-        <div class="table-wrapper table-scroll is-loading" id="suggestTable">
-            <div class="table-loading" id="suggestLoading"><span class="spinner"></span> Loading order suggestions...</div>
+        <div class="table-wrapper table-scroll" id="suggestTable">
             <table>
                 <thead>
                     <tr>
@@ -135,7 +131,7 @@
 
     <!-- ====== SS-24 TRANSACTION HISTORY + SS-40 STOCK-INS (stacked, full width) ====== -->
     <div class="split-row">
-        <div class="content-panel is-loading" id="salesPanel">
+        <div class="content-panel" id="salesPanel">
             <div class="section-header">
                 <h2 class="section-title">Transaction History</h2>
                 <div class="panel-controls">
@@ -145,8 +141,7 @@
                     </a>
                 </div>
             </div>
-            <div class="table-wrapper table-scroll is-loading" id="recentSalesTable">
-                <div class="table-loading" id="salesLoading"><span class="spinner"></span> Loading recent sales...</div>
+            <div class="table-wrapper table-scroll" id="recentSalesTable">
                 <table>
                     <thead>
                         <tr>
@@ -163,7 +158,7 @@
         </div>
 
         <!-- ====== SS-40: RECENT STOCK-IN ACTIVITY ====== -->
-        <div class="content-panel is-loading" id="stockInPanel">
+        <div class="content-panel" id="stockInPanel">
             <div class="section-header">
                 <h2 class="section-title">Recent Stock-In Activity</h2>
                 <div class="panel-controls">
@@ -172,8 +167,7 @@
                     </a>
                 </div>
             </div>
-            <div class="table-wrapper table-scroll is-loading" id="stockInTable">
-                <div class="table-loading" id="stockInLoading"><span class="spinner"></span> Loading recent stock-ins...</div>
+            <div class="table-wrapper table-scroll" id="stockInTable">
                 <table>
                     <thead>
                         <tr>
@@ -226,9 +220,9 @@
             /* Height system — every panel keeps the SAME height whether it is
                loading or loaded, so a spinner simply appears inside a stable
                box instead of the panel growing when data lands. */
-            --row-h:      44px;   /* one height for every data row          */
-            --row-pad-y:  10px;   /* cell padding that produces --row-h      */
-            --th-h:       38px;   /* one height for every header row        */
+            --row-h:      53px;   /* one height for every data row          */
+            --row-pad-y:  14px;   /* cell padding that produces --row-h      */
+            --th-h:       43px;   /* one height for every header row        */
             --list-rows:  5;      /* rows every panel shows (matches API)   */
             --header-row: 42px;   /* section header (30px control + 12 gap)  */
 
@@ -267,11 +261,11 @@
             border-radius: 16px;
             border: 1px solid rgba(96,165,250,0.18);
             margin-bottom: var(--section-gap);
-            min-height: 190px;
+            min-height: 140px;
             display: flex;
             align-items: flex-end;
             justify-content: flex-start;
-            padding: var(--sp-10) var(--sp-10) var(--sp-9);
+            padding: 28px 28px 24px;
             background: #13294f;
         }
         .ov .hero-decor { position: absolute; inset: 0; pointer-events: none; }
@@ -395,19 +389,7 @@
             flex: 1;
             min-height: 0; /* lets the canvas shrink instead of overflowing */
         }
-        .ov .chart-panel.is-loading canvas { display: none; }
         .ov .chart-container canvas { width: 100% !important; height: 100% !important; }
-        .ov .chart-loading,
-        .ov .list-loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: var(--sp-3);
-            width: 100%;
-            color: #64748b;
-            font-size: var(--fs-md);
-        }
-        .ov .chart-loading { position: absolute; inset: 0; }
 
         /* === TOP PRODUCTS LIST === */
         /* Always reserves the full 5-row height; the spinner sits centred in
@@ -650,7 +632,6 @@
             font-size: var(--fs-md);
             min-height: calc(var(--table-h) - var(--th-h));
         }
-        .ov .table-scroll.is-loading table tbody:empty { display: none; }
         /* Order Suggestions keeps the same shared floor as every other table
            so all three read as one system; it grows if rows run long. */
         .ov #suggestTable.table-scroll { min-height: var(--suggest-h); }
@@ -660,12 +641,17 @@
         .ov thead th {
             /* background, colour and corner radius come from the shared
                table frame in layouts/app.blade.php so this page matches
-               every other table. Only rhythm lives here. */
-            padding: var(--sp-3) var(--cell-x);
+               every other table. Only rhythm lives here — and the rhythm is
+               the same 14px vertical padding every other table uses, so the
+               header reads at the same height as Products / User Accounts. */
+            padding: 14px var(--cell-x);
             text-align: left;
             font-size: var(--fs-label);
             font-weight: 600;
-            line-height: var(--lh-tight);
+            /* 1.4 reproduces the `normal` line-height the other tabs inherit
+               (11px -> 15.4px). Inheriting .ov's --lh-body of 1.5 would make
+               every header 16.5px and the header row 1.1px too tall. */
+            line-height: 1.4;
             letter-spacing: var(--track-caps);
             text-transform: uppercase;
             /* Headers wrap at word boundaries. `nowrap` here would make the
@@ -717,23 +703,41 @@
         /* === LOADING vs LOADED ===
            Panels keep their loaded height throughout; only the contents
            change (spinner → rows). Loaded rows fade in on arrival. */
-        .ov .table-scroll:not(.is-loading) tbody tr,
-        .ov .top-products-panel:not(.is-loading) .top-product-item {
+        .ov .table-scroll tbody tr,
+        .ov .top-products-panel .top-product-item {
             animation: ovFadeUp 0.35s ease both;
         }
-        .ov .table-scroll:not(.is-loading) tbody tr:nth-child(2) { animation-delay: 0.03s; }
-        .ov .table-scroll:not(.is-loading) tbody tr:nth-child(3) { animation-delay: 0.06s; }
-        .ov .table-scroll:not(.is-loading) tbody tr:nth-child(4) { animation-delay: 0.09s; }
-        .ov .table-scroll:not(.is-loading) tbody tr:nth-child(5) { animation-delay: 0.12s; }
+        .ov .table-scroll tbody tr:nth-child(2) { animation-delay: 0.03s; }
+        .ov .table-scroll tbody tr:nth-child(3) { animation-delay: 0.06s; }
+        .ov .table-scroll tbody tr:nth-child(4) { animation-delay: 0.09s; }
+        .ov .table-scroll tbody tr:nth-child(5) { animation-delay: 0.12s; }
         @keyframes ovFadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
         /* Empty state fills the loaded body so an empty panel still looks
-           intentional instead of collapsing to just the header. */
+           intentional instead of collapsing to just the header.
+           Padding and font-size deliberately mirror `.ov tbody td` so the
+           loading/placeholder row is pixel-identical in height to a real data
+           row (10px 16px / 13px) and the panel does not jump when the fetch
+           resolves. */
         .ov .empty-state {
             text-align: center;
             color: #475569;
-            padding: var(--sp-8) var(--cell-x);
-            font-size: var(--fs-base);
+            padding: var(--row-pad-y) var(--cell-x);
+            font-size: var(--fs-md);
+            vertical-align: middle;
+        }
+        /* The row fill must reach the bottom of the reserved panel. A single
+           placeholder row at data-row height leaves 150-180px of dead white
+           under it, which reads as "the colour shrank". Stretching the row to
+           the reserved body height makes the fill continuous, exactly like the
+           loading block on the Products tab. */
+        .ov .table-scroll tbody tr:has(> td.empty-state:only-child) {
+            height: calc(var(--table-h) - var(--th-h));
+        }
+        .ov #suggestTable.table-scroll tbody tr:has(> td.empty-state:only-child) {
+            height: calc(var(--suggest-h) - var(--th-h));
+        }
+        .ov .table-scroll tbody tr:has(> td.empty-state:only-child) td {
             vertical-align: middle;
         }
         .ov .empty-state-sm {
@@ -846,8 +850,8 @@
                 --header-gap:   var(--sp-4);
                 --cell-x:       var(--sp-5);
                 --control-gap:  var(--sp-3);
-                --row-h:      42px;
-                --th-h:       36px;
+                --row-h:      51px;
+                --th-h:       41px;
                 --header-row: 38px;
                 --fs-h1: 20px;
                 --fs-h2: 15px;
@@ -945,19 +949,13 @@
         // The panel is already at full height, so the chart can render as
         // soon as the data arrives — nothing has to resize first.
         async function loadRevenueChart() {
-            const panel = document.getElementById('revenuePanel');
-            const loading = document.getElementById('chartLoading');
             try {
                 const res = await fetch('/api/dashboard/revenue-chart');
                 if (!res.ok) throw new Error('Failed to load chart');
                 const d = await res.json();
-                if (panel) panel.classList.remove('is-loading');
-                if (loading) loading.remove();
                 renderChart(d.labels, d.values);
                 requestAnimationFrame(() => { if (revenueChartInstance) revenueChartInstance.resize(); });
             } catch (e) {
-                if (panel) panel.classList.remove('is-loading');
-                if (loading) loading.innerHTML = '<span class="empty-state-sm" style="color:#f87171;">Unable to load chart</span>';
                 console.error('Chart load error:', e);
             }
         }
@@ -1027,17 +1025,12 @@
         }
 
         // ── Top Selling Products ────────────────────────────────
-        // The panel is already at full height; rows simply replace the spinner.
         async function loadTopProducts() {
-            const panel = document.getElementById('topPanel');
             const el = document.getElementById('topProductsList');
-            const loading = document.getElementById('topLoading');
             try {
                 const res = await fetch('/api/dashboard/top-products');
                 if (!res.ok) throw new Error('Failed');
                 const items = await res.json();
-                if (loading) loading.remove();
-                if (panel) panel.classList.remove('is-loading');
                 if (items.length === 0) {
                     el.innerHTML = '<div class="empty-state empty-state-sm">No sales data yet</div>';
                     return;
@@ -1058,8 +1051,6 @@
                         </div>`;
                 }).join('');
             } catch (e) {
-                if (loading) loading.remove();
-                if (panel) panel.classList.remove('is-loading');
                 el.innerHTML = '<div class="empty-state empty-state-sm">Unable to load data</div>';
                 console.error('Top products error:', e);
             }
@@ -1127,24 +1118,11 @@
         // slow down). No demand-window selector: the BRD fixes it at 30 days.
         async function loadRestockSuggestions() {
             const body = document.getElementById('suggestBody');
-            const wrap = document.getElementById('suggestTable');
-            const panel = document.getElementById('suggestPanel');
-            if (wrap && !wrap.classList.contains('is-loading')) {
-                wrap.classList.add('is-loading');
-                if (panel) panel.classList.add('is-loading');
-                if (!wrap.querySelector('.table-loading')) {
-                    const d = document.createElement('div');
-                    d.className = 'table-loading';
-                    d.innerHTML = '<span class="spinner"></span> Loading order suggestions...';
-                    wrap.prepend(d);
-                }
-            }
             try {
                 const res = await fetch('/api/dashboard/restock-suggestions');
                 if (!res.ok) throw new Error('Failed (' + res.status + ')');
                 const d = await res.json();
                 const items = d.suggestions || [];
-                settle(body);
                 if (items.length === 0) {
                     body.innerHTML = '<tr><td colspan="7" class="empty-state">All stocks healthy — no restock needed right now.</td></tr>';
                     return;
@@ -1160,7 +1138,6 @@
                         <td data-label="Why" class="suggest-why">${escapeHtml(briefReason(s.reason))}</td>
                     </tr>`).join('');
             } catch (e) {
-                settle(body);
                 body.innerHTML = '<tr><td colspan="7" class="empty-state">Unable to load suggestions</td></tr>';
                 console.error('Suggestions load error:', e);
             }
@@ -1186,20 +1163,8 @@
         }
 
         // ── Helpers ─────────────────────────────────────────────
-        /* Drop the loading state from the table and its panel. Called on BOTH
-           success and failure so a broken endpoint never leaves a spinner
-           stuck on screen. */
         function settle(body) {
-            if (!body) return;
-            body.classList.remove('is-loading');
-            const wrap = body.closest('.table-scroll');
-            if (wrap) {
-                wrap.classList.remove('is-loading');
-                const loader = wrap.querySelector('.table-loading');
-                if (loader) loader.remove();
-                const panel = wrap.closest('.content-panel');
-                if (panel) panel.classList.remove('is-loading');
-            }
+            // No-op - loading states removed
         }
 
         function escapeHtml(text) {
@@ -1213,6 +1178,10 @@
         window.exportSummaryCsv = exportSummaryCsv;
 
         // ── Init ────────────────────────────────────────────────
+        // Show loading messages initially
+        document.getElementById('suggestBody').innerHTML = '<tr><td colspan="7" class="empty-state">Loading suggestions...</td></tr>';
+        document.getElementById('recentSalesBody').innerHTML = '<tr><td colspan="5" class="empty-state">Loading recent sales...</td></tr>';
+        document.getElementById('stockInBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading stock-in activity...</td></tr>';
         loadStats();
         loadRevenueChart();
         loadTopProducts();
