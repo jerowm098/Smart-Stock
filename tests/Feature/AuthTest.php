@@ -34,22 +34,30 @@ class AuthTest extends TestCase
     // Web login
     // -------------------------------------------------------------------------
 
+    /**
+     * Sign-in is presented as a modal on the homepage, not a standalone page.
+     * The route is kept only so old bookmarks land somewhere useful.
+     */
     #[Test]
-    public function login_page_is_accessible_to_guests(): void
+    public function login_route_redirects_guests_to_the_homepage_modal(): void
     {
         $this->get('/login')
+            ->assertRedirect(route('home'));
+
+        // The form itself is present on the homepage, inside the modal.
+        $this->get('/home')
             ->assertOk()
             ->assertSee('Sign In')
             ->assertSee('name="username"', false);
     }
 
     /**
-     * BRD Usability: the screen holds only username, password and submit.
+     * BRD Usability: the surface holds only username, password and submit.
      */
     #[Test]
-    public function login_page_has_no_remember_me_checkout(): void
+    public function login_form_has_no_remember_me_checkout(): void
     {
-        $this->get('/login')
+        $this->get('/home')
             ->assertOk()
             ->assertDontSee('name="remember"', false)
             ->assertDontSee('Remember me');

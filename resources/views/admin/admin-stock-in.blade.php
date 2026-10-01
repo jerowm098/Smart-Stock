@@ -173,7 +173,6 @@
         body.light-theme .section-card {
             background: #ffffff;
             border-color: rgba(15,23,42,0.08);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
         }
         .section-card-header { padding: 18px 20px 16px 20px; }
         .section-card-header-row {
@@ -253,13 +252,12 @@
 
         /* BUTTONS & TOGGLE */
         .btn-add {
-            background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none; border-radius: 8px;
+            background: #2563eb; color: #fff; border: none; border-radius: 8px;
             padding: 0 18px; height: 36px; font-size: 13px; font-weight: 600; cursor: pointer;
             font-family: 'Inter', sans-serif; display: inline-flex; align-items: center; gap: 6px;
             transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
-            box-shadow: 0 2px 6px rgba(59,130,246,0.25);
         }
-        .btn-add:hover { opacity: 0.9; box-shadow: 0 4px 12px rgba(59,130,246,0.35); transform: translateY(-1px); }
+        .btn-add:hover { opacity: 0.9; transform: translateY(-1px); }
         .section-card-toolbar { display: flex; justify-content: flex-end; padding: 6px 20px 10px 20px; }
         .view-toggle {
             display: flex; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
@@ -312,9 +310,9 @@
             background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 12px; overflow: hidden; transition: all 0.2s; cursor: default;
         }
-        .product-card:hover { border-color: rgba(59,130,246,0.3); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+        .product-card:hover { border-color: rgba(59,130,246,0.3); transform: translateY(-2px); }
         body.light-theme .product-card { background: #ffffff; border-color: rgba(15,23,42,0.08); }
-        body.light-theme .product-card:hover { border-color: rgba(59,130,246,0.3); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+        body.light-theme .product-card:hover { border-color: rgba(59,130,246,0.3); }
         .product-card-img { width: 100%; height: 160px; object-fit: cover; background: rgba(255,255,255,0.03); display: block; }
         body.light-theme .product-card-img { background: #f1f5f9; }
         .product-card-body { padding: 14px; }
@@ -343,7 +341,7 @@
         /* MODAL */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; }
         .modal-overlay.active { display: flex; }
-        .modal { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 28px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.4); }
+        .modal { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 28px; width: 100%; max-width: 520px; max-height: 90vh; overflow-y: auto; }
         .modal h2 { color: #f8fafc; font-size: 18px; font-weight: 700; margin-bottom: 20px; }
         .receive-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
         .receive-form-grid .form-group.full-width { grid-column: 1 / -1; }
@@ -363,7 +361,7 @@
         .modal-actions .btn { padding: 9px 18px; border: none; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: opacity 0.15s; }
         .modal-actions .btn:hover { opacity: 0.9; }
         .btn-cancel { background: rgba(255,255,255,0.1); color: #e2e8f0; }
-        .btn-submit { background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; }
+        .btn-submit { background: #2563eb; color: #fff; }
         .form-hint { color: #475569; font-size: 11px; margin-top: 4px; display: block; }
 
         /* LIGHT THEME */
@@ -399,7 +397,7 @@
             background-size: 12px;
         }
         body.light-theme .sort-select option { background: #ffffff; color: #0f172a; }
-        body.light-theme thead th { background: #f8fafc; color: #64748b; }
+        body.light-theme thead th { background: rgba(15,23,42,0.02); color: #64748b; }
         body.light-theme tbody td { color: #334155; }
         body.light-theme tbody tr { border-top-color: rgba(15,23,42,0.06); }
         body.light-theme tbody tr:hover { background: rgba(15,23,42,0.025); }

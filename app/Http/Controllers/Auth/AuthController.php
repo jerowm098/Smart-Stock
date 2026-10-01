@@ -8,21 +8,27 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\View\View;
 
 class AuthController extends Controller
 {
     /**
-     * Show the login page.
-     * Redirects already-authenticated users by role.
+     * Sign-in surface.
+     *
+     * There is no standalone login page any more: the homepage presents the
+     * form as a modal (auth/login-card.blade.php, shared with the guest
+     * landing page), so guests never leave /home to sign in. This route stays
+     * as a redirect rather than being deleted so that an existing bookmark or
+     * a hand-typed URL lands somewhere useful instead of a 404.
+     *
+     * Authenticated users are routed by role, as before.
      */
-    public function showLogin(): View|RedirectResponse
+    public function showLogin(): RedirectResponse
     {
         if (Auth::check()) {
             return $this->redirectForRole(Auth::user());
         }
 
-        return view('auth.login');
+        return redirect()->route('home');
     }
 
     /**

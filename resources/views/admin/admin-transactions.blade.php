@@ -104,7 +104,7 @@
         }
         .filter-actions { display: flex; gap: 8px; margin-left: auto; }
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none;
+            background: #2563eb; color: #fff; border: none;
             border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
         }
         .btn-export {
@@ -121,7 +121,9 @@
         .result-meta { font-size: 12px; color: #64748b; margin-bottom: 12px; }
         .table-wrapper {
             background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 12px; overflow-x: auto;
+            /* Matches the shared frame so the header band's rounded corners
+               line up with this wrapper's outline. */
+            border-radius: var(--table-radius, 12px); overflow-x: auto;
         }
         table { width: 100%; min-width: 760px; border-collapse: collapse; }
         thead th {
@@ -152,7 +154,7 @@
         .note-card {
             background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
             padding: 28px; max-width: 520px; width: 92%; max-height: 85vh; overflow-y: auto;
-            text-align: center; box-shadow: 0 25px 50px rgba(0,0,0,0.4);
+            text-align: center;
         }
         .note-title { font-size: 17px; font-weight: 700; color: #f8fafc; margin: 0 0 6px 0; }
         .note-message { font-size: 13px; color: #94a3b8; margin: 0 0 16px 0; }
@@ -162,14 +164,14 @@
         .txn-row.header { background: rgba(255,255,255,0.03); font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 600; }
         .txn-row.totals { background: rgba(74,222,128,0.06); font-weight: 700; }
         .note-btn {
-            background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none;
+            background: #2563eb; color: #fff; border: none;
             border-radius: 8px; padding: 10px 28px; font-size: 13px; font-weight: 600; cursor: pointer;
         }
         body.light-theme .page-title { color: #0f172a; }
         body.light-theme .filter-bar { background: #fff; border-color: rgba(15,23,42,0.08); }
         body.light-theme .filter-group input, body.light-theme .filter-group select { background: #fff; border-color: rgba(15,23,42,0.12); color: #0f172a; }
         body.light-theme .table-wrapper { background: #fff; border-color: rgba(15,23,42,0.08); }
-        body.light-theme table thead th { background: #f8fafc; }
+        body.light-theme table thead th { background: rgba(15,23,42,0.02); }
         body.light-theme table tbody td { color: #475569; }
         body.light-theme .cashier-name { color: #0f172a; }
         body.light-theme .note-card { background: #fff; border-color: rgba(15,23,42,0.1); }

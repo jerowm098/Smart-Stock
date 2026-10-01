@@ -54,14 +54,16 @@
         .policy-text { font-size: 13px; color: #cbd5e1; }
         .policy-sub { font-size: 12px; color: #64748b; margin-top: 4px; font-family: monospace; }
         .btn-primary {
-            background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none;
+            background: #2563eb; color: #fff; border: none;
             border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
         }
         .btn-primary:disabled { opacity: 0.5; cursor: wait; }
         .result-meta { font-size: 12px; color: #64748b; margin-bottom: 12px; }
         .table-wrapper {
             background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 12px; overflow-x: auto;
+            /* Matches the shared frame so the header band's rounded corners
+               line up with this wrapper's outline. */
+            border-radius: var(--table-radius, 12px); overflow-x: auto;
         }
         table { width: 100%; min-width: 680px; border-collapse: collapse; }
         thead th {
@@ -92,7 +94,7 @@
         body.light-theme .policy-card { background: rgba(37,99,235,0.05); border-color: rgba(37,99,235,0.2); }
         body.light-theme .policy-text { color: #475569; }
         body.light-theme .table-wrapper { background: #fff; border-color: rgba(15,23,42,0.08); }
-        body.light-theme table thead th { background: #f8fafc; }
+        body.light-theme table thead th { background: rgba(15,23,42,0.02); }
         body.light-theme table tbody td { color: #475569; }
         body.light-theme .file-name { color: #0f172a; }
     </style>

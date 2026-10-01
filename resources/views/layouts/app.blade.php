@@ -41,30 +41,58 @@
 
         /* TOP HEADER - FIXED */
         .top-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 40px; background: #253347; border-bottom: 1px solid rgba(255,255,255,0.08); position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 64px; }
-        .header-center { display: flex; align-items: center; gap: 4px; margin-left: 12px; }
+        /* `space-between` only centres the middle child when the left and
+           right clusters are the same width. The right cluster is always
+           wider, so pin the nav to the true centre instead. */
+        .header-center {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
         .header-center-btn {
             display: inline-flex; align-items: center; padding: 0 16px; height: 36px; border-radius: 8px;
             border: none; color: #94a3b8; font-size: 14px; font-weight: 500;
-            text-decoration: none; transition: color 0.15s, font-weight 0.15s; background: none; cursor: pointer;
+            text-decoration: none; transition: color 0.15s, background 0.15s, font-weight 0.15s; background: none; cursor: pointer;
             font-family: 'Inter', sans-serif;
         }
-        .header-center-btn:hover { color: #1e293b; }
-        .header-center-btn.active { color: #0f172a; font-weight: 700; }
-        body.light-theme .header-center-btn { color: #94a3b8; }
-        body.light-theme .header-center-btn:hover { color: #1e293b; }
-        body.light-theme .header-center-btn.active { color: #0f172a; font-weight: 700; }
+        /* Dark theme (default): the active tab is near-white so it reads on
+           the dark header, and inactive tabs sit back in muted gray. The
+           light theme below keeps the usual dark-on-light treatment. */
+        .header-center-btn:hover { color: #e2e8f0; }
+        .header-center-btn.active { color: #ffffff; font-weight: 700; background: rgba(255,255,255,0.10); }
+        body.light-theme .header-center-btn { color: #64748b; }
+        body.light-theme .header-center-btn:hover { color: #0f172a; }
+        body.light-theme .header-center-btn.active { color: #0f172a; font-weight: 700; background: rgba(15,23,42,0.06); }
         .header-brand { display: flex; align-items: center; gap: 10px; flex-shrink: 0; text-decoration: none; }
         .header-brand:hover .brand-name { color: #cbd5e1; }
         body.light-theme .header-brand:hover .brand-name { color: #334155; }
-        .header-brand .brand-mark { width: 36px; height: 36px; flex: 0 0 36px; border-radius: 10px; object-fit: contain; display: block; background: rgba(255,255,255,0.1); padding: 6px; }
-        /* Invert logo on dark theme so it's visible */
-        body:not(.light-theme) .brand-mark { filter: brightness(0) invert(1); }
-        body.light-theme .brand-mark { background: rgba(0,0,0,0.06); }
-        .header-brand .brand-name { color: #f8fafc; font-size: 18px; font-weight: 700; line-height: 1.2; }
-        .header-brand .brand-subtitle { color: #94a3b8; font-size: 11px; line-height: 1.2; }
+        /* Inline SVG mark so it carries real colour on both themes — the old
+           PNG was a flat black graphic that needed an invert filter. */
+        .header-brand .brand-mark { width: 50px; height: 40px; flex: 0 0 auto; display: block; }
+        .header-brand .brand-mark .mk-up { fill: #22c55e; }
+        .header-brand .brand-mark .mk-down { fill: #ef4444; }
+        .header-brand .brand-mark .mk-axis { fill: none; stroke: #94a3b8; stroke-width: 4; stroke-linecap: square; }
+        .header-brand .brand-mark .mk-arrow { fill: none; stroke: #22c55e; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+        body.light-theme .header-brand .brand-mark .mk-up { fill: #16a34a; }
+        body.light-theme .header-brand .brand-mark .mk-down { fill: #dc2626; }
+        body.light-theme .header-brand .brand-mark .mk-axis { stroke: #64748b; }
+        body.light-theme .header-brand .brand-mark .mk-arrow { stroke: #16a34a; }
+        .header-brand .brand-name { color: #f8fafc; font-size: 17px; font-weight: 700; line-height: 1.05; letter-spacing: 0.01em; }
+        .header-brand .brand-subtitle { color: #94a3b8; font-size: 17px; font-weight: 300; line-height: 1.05; letter-spacing: 0.06em; }
         .header-right { display: flex; align-items: center; gap: 12px; }
         .header-btn { cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 14px; font-weight: 500; transition: background 0.15s; user-select: none; background: none; min-height: 40px; }
-        #themeToggleBtn { padding: 8px; }
+        /* Square the theme toggle. Fixed width and height plus centered
+           content stop the SVG's 17x17 box from stretching the button wide. */
+        #themeToggleBtn {
+            padding: 0;
+            width: 40px;
+            min-width: 40px;
+            height: 40px;
+            justify-content: center;
+        }
         .header-btn:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
         .header-badge { background: #ef4444; color: #fff; border-radius: 8px; min-width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; font-size: 10px; font-weight: 700; }
         .header-badge.hidden { display: none; }
@@ -72,11 +100,14 @@
         .header-user:hover { background: rgba(255,255,255,0.05); }
         .user-avatar {
             width: 32px; height: 32px; flex: 0 0 32px; border-radius: 50%;
-            background: linear-gradient(135deg, #60a5fa, #2563eb);
+            /* Flat slate fill — the old blue gradient read as a floating badge. */
+            background: #334155;
+            border: 1px solid rgba(255,255,255,0.12);
             display: flex; align-items: center; justify-content: center;
             color: #fff; font-size: 12px; font-weight: 700; text-transform: uppercase;
             flex-shrink: 0;
         }
+        body.light-theme .user-avatar { background: #e2e8f0; border-color: rgba(15,23,42,0.12); color: #334155; }
         .user-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
         .user-name { font-size: 13px; font-weight: 600; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
         .user-email { font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
@@ -84,7 +115,7 @@
         .header-alert-wrapper { position: relative; }
         /* ALERT BUTTON - TAB STYLE */
         .header-btn-icon { padding: 8px !important; min-width: 40px; justify-content: center; }
-        .alert-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 380px; max-height: 420px; overflow-y: auto; z-index: 150; display: none; box-shadow: 0 16px 48px rgba(0,0,0,0.35); }
+        .alert-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 380px; max-height: 420px; overflow-y: auto; z-index: 150; display: none; }
         .alert-dropdown.active { display: block; }
         .alert-dropdown-header { padding: 14px 16px; font-size: 13px; font-weight: 600; color: #f8fafc; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; }
         .alert-dropdown-clear { font-size: 11px; color: #64748b; cursor: pointer; font-weight: 500; transition: color 0.15s; }
@@ -95,8 +126,8 @@
         .alert-card:last-child { border-bottom: none; }
         .alert-card:hover { background: rgba(255,255,255,0.03); }
         .alert-card-severity { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
-        .alert-card-severity.critical { background: #f87171; box-shadow: 0 0 6px rgba(248,113,113,0.5); }
-        .alert-card-severity.low { background: #fbbf24; box-shadow: 0 0 6px rgba(251,191,36,0.4); }
+        .alert-card-severity.critical { background: #f87171; }
+        .alert-card-severity.low { background: #fbbf24; }
         .alert-card-body { flex: 1; min-width: 0; }
         .alert-card-top-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px; }
         .alert-card-name { font-size: 13px; font-weight: 600; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -113,7 +144,7 @@
         @keyframes alertSlideIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
         .alert-card.removing { animation: alertSlideOut 0.2s ease forwards; }
         @keyframes alertSlideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(12px); } }
-        body.light-theme .alert-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); box-shadow: 0 16px 48px rgba(0,0,0,0.1); }
+        body.light-theme .alert-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); }
         body.light-theme .alert-dropdown-header { background: #f8fafc; color: #0f172a; border-bottom-color: rgba(15,23,42,0.08); }
         body.light-theme .alert-dropdown-clear { color: #64748b; }
         body.light-theme .alert-dropdown-clear:hover { color: #0f172a; }
@@ -226,6 +257,9 @@
             .header-center { display: none; }
             .header-right { gap: 6px; margin-left: auto; }
             .header-btn { padding: 6px 8px; }
+            /* Keep the theme toggle square — the generic padding above would
+               otherwise squash it into an oval. */
+            #themeToggleBtn { padding: 0; width: 36px; min-width: 36px; height: 36px; }
             .alert-dropdown { width: min(280px, calc(100vw - 24px)); }
             .user-dropdown { width: min(180px, calc(100vw - 24px)); }
             /* Show hamburger menu button on mobile */
@@ -233,7 +267,7 @@
             .header-brand { display: flex; padding: 0; }
             .header-brand .brand-name,
             .header-brand .brand-subtitle { display: none; }
-            .header-brand .brand-mark { width: 36px; height: 36px; }
+            .header-brand .brand-mark { width: 40px; height: 32px; }
             /* Hide sidebar by default on mobile, slide-in when open */
             .sidebar {
                 width: 0;
@@ -264,6 +298,7 @@
             .mobile-menu-button { width: 34px; height: 34px; }
             .mobile-menu-header { padding-top: 12px; }
             .header-btn { padding: 6px; }
+            #themeToggleBtn { padding: 0; width: 34px; min-width: 34px; height: 34px; }
             .user-avatar { width: 30px; height: 30px; }
             .content { padding: 14px; }
             .sidebar.mobile-open { width: calc(100vw - 40px); }
@@ -272,6 +307,7 @@
             .top-header { padding: 4px 6px; gap: 4px; }
             .mobile-menu-button { width: 30px; height: 30px; }
             .header-btn { padding: 4px; }
+            #themeToggleBtn { padding: 0; width: 32px; min-width: 32px; height: 32px; }
             .user-avatar { width: 28px; height: 28px; }
             .content { padding: 10px; }
             .sidebar.mobile-open { width: calc(100vw - 20px); }
@@ -321,7 +357,7 @@
     .filter-actions { display: flex; gap: 8px; margin-left: auto; }
 
     .btn-primary {
-        background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; border: none;
+        background: #2563eb; color: #fff; border: none;
         border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
     }
     .btn-primary:hover { filter: brightness(1.08); }
@@ -372,6 +408,128 @@
         body { overflow: visible; }
         .top-header, .sidebar, .filter-bar, .mobile-menu-overlay { display: none !important; }
     }
+
+    /* ====================================================================
+       SHARED TABLE FRAME — applies to every table on every page
+       --------------------------------------------------------------------
+       Sits AFTER the shared primitives and immediately BEFORE the styles
+       stack, so it beats the per-page `table { ... }` rules without needing
+       !important, and a page's own pushed styles can still override.
+
+       The table is treated as ONE outlined form containing a list of
+       borderless row-blocks:
+
+         - one outline around the outermost edge of the table
+         - one rule under the header row (the bottom of the column header)
+         - every data row is a filled, rounded block — no border of any
+           colour, and NO vertical rule between its cells, so a record reads
+           as a single form rather than a row of separate boxes
+       Rows deliberately do not react to hover in a way that suggests a link:
+       they are a static list, not buttons, even though they are shaped like
+       one.
+       ==================================================================== */
+    .table-wrap,
+    .table-wrapper {
+        /* Shared radius. The header band and the row blocks below both key
+           off this so they stay concentric with the wrapper outline —
+           without it the square header band left the wrapper's fill showing
+           through as bright notches at the corners. */
+        --table-radius: 10px;
+        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(255,255,255,0.02);
+        /* No padding on the top/bottom. Combined with the table's 6px
+           border-spacing this used to leave ~10px of bare wrapper fill
+           above the header and below the last row, which read as a much
+           thicker "border" than the 1px outline it sat against. Only the
+           left/right inset is kept so row blocks do not touch the sides. */
+        padding: 0 4px;
+        border-radius: var(--table-radius);
+    }
+    /* Everything inside is explicitly cleared, including the per-page
+       `tbody tr { border-top }` rules. This is the load-bearing part. */
+    .table-wrap th, .table-wrap td,
+    .table-wrapper th, .table-wrapper td { border: none; }
+    .table-wrap tbody tr, .table-wrapper tbody tr,
+    .table-wrap thead tr, .table-wrapper thead tr,
+    .table-wrap tbody td, .table-wrapper tbody td,
+    .table-wrap thead td, .table-wrapper thead td { border: none; }
+    /* The bottom of the column header — the only inner line that exists.
+       The header is its own rounded block with a clearly stronger fill than
+       the row blocks, so it reads as the column band and not as another row.
+       The radius is inset by one pixel so the fill sits inside the wrapper's
+       outline instead of bleeding over its border. */
+    .table-wrap thead th,
+    .table-wrapper thead th {
+        /* No border on the header cells — not even a bottom rule. A rule
+           here draws one line per column, which is what split the band into
+           separate boxes instead of one form. The band is defined purely by
+           its fill, exactly like a row block. */
+        border: none;
+        background: rgba(71,85,105,0.42);
+        color: #e2e8f0;
+    }
+    /* A table row cannot clip its own overflow, so the radius goes on the
+       two corner cells — that is what rounds the band and stops the
+       wrapper's lighter fill showing through as notches. */
+    .table-wrap thead th:first-child, .table-wrapper thead th:first-child {
+        border-top-left-radius: calc(var(--table-radius) - 1px);
+    }
+    .table-wrap thead th:last-child, .table-wrapper thead th:last-child {
+        border-top-right-radius: calc(var(--table-radius) - 1px);
+    }
+    /* The header is a single filled band, sitting directly on the wrapper
+       edge with no rule under it. This replaces the old header underline. */
+    .table-wrap thead, .table-wrapper thead { border: none; }
+    .table-wrap thead tr, .table-wrapper thead tr { border: none; }
+    /* separate + a vertical gap is what turns each row into its own block.
+       collapse discards border-spacing, which is why the per-page
+       `table { border-collapse: collapse }` rules have to be beaten here.
+       The gap is 4px, not 6px: the first and last rows sat 6px off the
+       header and the wrapper edge, and on a light page that gap reads as a
+       white band above the first row and below the last one. */
+    .table-wrap table,
+    .table-wrapper table { border-collapse: separate; border-spacing: 0 4px; }
+    /* Each data row is one filled, rounded block — the button-like shape.
+       No border, no fill change on hover (it is not clickable).
+       Selector is scoped to `.table-wrap tbody > tr` / `.table-wrapper
+       tbody > tr` so it outranks the bare `tbody tr:hover { background }`
+       rules each page sets, which would otherwise tint the block on hover
+       and make a static row look interactive. */
+    .table-wrap tbody > tr, .table-wrapper tbody > tr,
+    .table-wrap tbody > tr:hover, .table-wrapper tbody > tr:hover {
+        background: rgba(255,255,255,0.045);
+        border: none;
+        border-radius: 8px;
+        transition: none;
+    }
+    /* Cells sit inside the block with clear separation between values, but
+       no rule is drawn — the spacing alone separates them. */
+    .table-wrap tbody td, .table-wrapper tbody td { border: none; }
+    /* The header band is one continuous strip, so its own cells stay
+       transparent and let the header fill run edge to edge. */
+    .table-wrap thead td, .table-wrapper thead td {
+        background: transparent;
+    }
+
+    body.light-theme .table-wrap,
+    body.light-theme .table-wrapper {
+        /* Softer than the dark theme's 0.14 — on a white page an outline
+           this heavy reads as a thick frame rather than a hairline. */
+        border-color: rgba(15,23,42,0.10);
+        background: #f8fafc;
+        padding: 0 4px;
+    }
+    body.light-theme .table-wrap thead th,
+    body.light-theme .table-wrapper thead th {
+        border: none;
+        /* Same slate-blue family as dark, at a light-mode strength. */
+        background: rgba(100,116,139,0.16);
+        color: #1e293b;
+    }
+    body.light-theme .table-wrap tbody > tr,
+    body.light-theme .table-wrapper tbody > tr,
+    body.light-theme .table-wrap tbody > tr:hover,
+    body.light-theme .table-wrapper tbody > tr:hover { background: rgba(15,23,42,0.04); }
     </style>
     @stack('styles')
 </head>
@@ -388,10 +546,19 @@
     <header class="top-header">
         <div class="header-left">
             <a href="{{ route('home') }}" class="header-brand">
-                <img src="{{ asset('assets/stock-logo.png') }}" alt="Smart-Stock Logo" class="brand-mark">
+                <svg class="brand-mark" viewBox="0 0 100 80" role="img" aria-label="Smart Stock">
+                    <path class="mk-axis" d="M6 6v66h88"/>
+                    <rect class="mk-up" x="16" y="50" width="9" height="22" rx="1.5"/>
+                    <rect class="mk-up" x="29" y="38" width="9" height="34" rx="1.5"/>
+                    <rect class="mk-down" x="42" y="45" width="9" height="27" rx="1.5"/>
+                    <rect class="mk-up" x="55" y="31" width="9" height="41" rx="1.5"/>
+                    <rect class="mk-up" x="68" y="23" width="9" height="49" rx="1.5"/>
+                    <polyline class="mk-arrow" points="13,62 30,48 46,55 62,34 78,13"/>
+                    <polyline class="mk-arrow" points="67,11 80,11 80,24"/>
+                </svg>
                 <div>
-                    <div class="brand-name">Smart-Stock</div>
-                    <div class="brand-subtitle">Inventory System</div>
+                    <div class="brand-name">Smart</div>
+                    <div class="brand-subtitle">Stock</div>
                 </div>
             </a>
             <button type="button" class="mobile-menu-button" id="mobileMenuButton" onclick="toggleMobileMenu(event)" aria-label="Open navigation menu" aria-controls="mobileNavigation" aria-expanded="false">

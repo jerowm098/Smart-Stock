@@ -311,7 +311,7 @@
         body.light-theme .top-product-rank { background: rgba(37,99,235,0.08); color: #2563eb; }
         body.light-theme .top-product-rank.rank-1 { background: rgba(217,119,6,0.1); color: #d97706; }
         body.light-theme .table-wrapper { background: #ffffff; border-color: rgba(15,23,42,0.08); }
-        body.light-theme table thead th { background: #f8fafc; color: #64748b; }
+        body.light-theme table thead th { background: rgba(15,23,42,0.02); color: #64748b; }
         body.light-theme table tbody td { color: #475569; }
         body.light-theme table tbody tr:hover { background: rgba(15,23,42,0.025); }
         body.light-theme .empty-state { color: #94a3b8; }

@@ -12,11 +12,33 @@
             font-family: 'Inter', sans-serif;
             background: #0f172a;
             color: #e2e8f0;
-            min-height: 100vh;
+            height: 100vh;
             display: flex;
             flex-direction: column;
+            /* The pane below is the only scroller, so the page itself must not
+               scroll — same model as the dashboard layout. */
+            overflow: hidden;
         }
         body.light-theme { background: #f3f4f6; color: #334155; }
+
+        /* ── SCROLL PANE ─────────────────────────────────────────
+           Mirrors .main from layouts/app.blade.php so the homepage and the
+           dashboard scroll identically, and the bar starts below the header. */
+        .page-pane {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            scrollbar-width: thin;
+        }
+        .page-pane::-webkit-scrollbar { width: 12px; }
+        .page-pane::-webkit-scrollbar-track { background: #f0f0f0; }
+        .page-pane::-webkit-scrollbar-thumb { background: #c0c0c0; border: 2px solid #f0f0f0; }
+        .page-pane::-webkit-scrollbar-thumb:hover { background: #a0a0a0; }
+        .page-pane::-webkit-scrollbar-thumb:active { background: #808080; }
+        body.light-theme .page-pane::-webkit-scrollbar-track { background: #e0e0e0; }
+        body.light-theme .page-pane::-webkit-scrollbar-thumb { background: #b0b0b0; border-color: #e0e0e0; }
+        body.light-theme .page-pane::-webkit-scrollbar-thumb:hover { background: #909090; }
+        body.light-theme .page-pane::-webkit-scrollbar-thumb:active { background: #707070; }
 
         /* ── HEADER ─────────────────────────────────────────────── */
         .site-header {
@@ -31,6 +53,10 @@
             background: #253347;
             backdrop-filter: blur(12px);
             border-bottom: 1px solid rgba(255,255,255,0.08);
+            /* Mark colours, defined here so the inline SVG in the header can
+               use the same buy/sell palette as the hero mark. */
+            --candle-up: #22c55e;
+            --candle-down: #ef4444;
         }
         .header-left { display: flex; align-items: center; gap: 0; }
         body.light-theme .site-header {
@@ -45,40 +71,67 @@
         }
         .header-brand:hover .header-brand-name { color: #cbd5e1; }
         body.light-theme .header-brand:hover .header-brand-name { color: #334155; }
-        .header-brand img {
-            width: 36px;
-            height: 36px;
-            border-radius: 10px;
-            object-fit: contain;
-            background: rgba(255,255,255,0.1);
-            padding: 6px;
+        body.light-theme .site-header {
+            --candle-up: #16a34a;
+            --candle-down: #dc2626;
         }
-        body:not(.light-theme) .header-brand img { filter: brightness(0) invert(1); }
-        body.light-theme .header-brand img { background: rgba(0,0,0,0.06); }
-        .header-brand-name  { font-size: 18px; font-weight: 700; color: #f8fafc; line-height: 1.2; }
-        .header-brand-sub   { font-size: 11px; color: #94a3b8; line-height: 1.2; }
+        .header-brand-mark {
+            width: 50px;
+            height: 40px;
+            flex: 0 0 auto;
+            display: block;
+        }
+        .header-brand-mark .mk-up { fill: var(--candle-up); }
+        .header-brand-mark .mk-down { fill: var(--candle-down); }
+        .header-brand-mark .mk-axis { fill: none; stroke: #94a3b8; stroke-width: 4; stroke-linecap: square; }
+        .header-brand-mark .mk-arrow { fill: none; stroke: var(--candle-up); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+        body.light-theme .header-brand-mark .mk-axis { stroke: #64748b; }
+        .header-brand-name  { font-size: 17px; font-weight: 700; color: #f8fafc; line-height: 1.05; letter-spacing: 0.01em; }
+        .header-brand-sub   { font-size: 17px; font-weight: 300; color: #94a3b8; line-height: 1.05; letter-spacing: 0.06em; }
         body.light-theme .header-brand-name { color: #0f172a; }
         body.light-theme .header-brand-sub  { color: #64748b; }
 
         .header-right { display: flex; align-items: center; gap: 12px; }
 
-        /* ── NAV BAR ─────────────────────────────────────────────── */
-        .header-center { display: flex; align-items: center; gap: 4px; margin-left: 12px; }
+        /* ── NAV BAR ─────────────────────────────────────────────
+           Absolutely positioned so the group sits on the header's true
+           centre line. With `justify-content: space-between` the nav only
+           lands in the middle when the logo and the right-hand controls
+           happen to be the same width, which they never are. */
+        .header-center {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
         .header-center-btn {
             display: inline-flex; align-items: center; padding: 0 16px; height: 36px; border-radius: 8px;
             border: none; color: #94a3b8; font-size: 14px; font-weight: 500;
-            text-decoration: none; transition: color 0.15s, font-weight 0.15s; background: none; cursor: pointer;
+            text-decoration: none; transition: color 0.15s, background 0.15s, font-weight 0.15s; background: none; cursor: pointer;
             font-family: 'Inter', sans-serif;
         }
-        .header-center-btn:hover { color: #1e293b; }
-        .header-center-btn.active { color: #0f172a; font-weight: 700; }
-        body.light-theme .header-center-btn { color: #94a3b8; }
-        body.light-theme .header-center-btn:hover { color: #1e293b; }
-        body.light-theme .header-center-btn.active { color: #0f172a; font-weight: 700; }
+        /* Dark theme (default): the active tab is near-white so it reads on
+           the dark header, and inactive tabs sit back in muted gray. The
+           light theme below keeps the usual dark-on-light treatment. */
+        .header-center-btn:hover { color: #e2e8f0; }
+        .header-center-btn.active { color: #ffffff; font-weight: 700; background: rgba(255,255,255,0.10); }
+        body.light-theme .header-center-btn { color: #64748b; }
+        body.light-theme .header-center-btn:hover { color: #0f172a; }
+        body.light-theme .header-center-btn.active { color: #0f172a; font-weight: 700; background: rgba(15,23,42,0.06); }
 
         /* Theme toggle - matches dashboard header-btn style */
         .header-btn { cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 14px; font-weight: 500; transition: background 0.15s; user-select: none; background: none; min-height: 40px; }
-        #themeToggleBtn { padding: 8px; }
+        /* Square the theme toggle. Fixed width and height plus centered
+           content stop the SVG's 17x17 box from stretching the button wide. */
+        #themeToggleBtn {
+            padding: 0;
+            width: 40px;
+            min-width: 40px;
+            height: 40px;
+            justify-content: center;
+        }
         .header-btn:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
         body.light-theme .header-btn { color: #64748b; border-color: rgba(15,23,42,0.1); }
         body.light-theme .header-btn:hover { background: rgba(15,23,42,0.05); color: #0f172a; }
@@ -90,7 +143,7 @@
         /* Alerts wrapper */
         .header-alert-wrapper { position: relative; }
         .header-btn-icon { padding: 8px !important; min-width: 40px; justify-content: center; }
-        .alert-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 380px; max-height: 420px; overflow-y: auto; z-index: 150; display: none; box-shadow: 0 16px 48px rgba(0,0,0,0.35); }
+        .alert-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 380px; max-height: 420px; overflow-y: auto; z-index: 150; display: none; }
         .alert-dropdown.active { display: block; }
         .alert-dropdown-header { padding: 14px 16px; font-size: 13px; font-weight: 600; color: #f8fafc; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; }
         .alert-dropdown-clear { font-size: 11px; color: #64748b; cursor: pointer; font-weight: 500; transition: color 0.15s; }
@@ -101,8 +154,8 @@
         .alert-card:last-child { border-bottom: none; }
         .alert-card:hover { background: rgba(255,255,255,0.03); }
         .alert-card-severity { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
-        .alert-card-severity.critical { background: #f87171; box-shadow: 0 0 6px rgba(248,113,113,0.5); }
-        .alert-card-severity.low { background: #fbbf24; box-shadow: 0 0 6px rgba(251,191,36,0.4); }
+        .alert-card-severity.critical { background: #f87171; }
+        .alert-card-severity.low { background: #fbbf24; }
         .alert-card-body { flex: 1; min-width: 0; }
         .alert-card-top-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px; }
         .alert-card-name { font-size: 13px; font-weight: 600; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -119,7 +172,7 @@
         @keyframes alertSlideIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
         .alert-card.removing { animation: alertSlideOut 0.2s ease forwards; }
         @keyframes alertSlideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(12px); } }
-        body.light-theme .alert-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); box-shadow: 0 16px 48px rgba(0,0,0,0.1); }
+        body.light-theme .alert-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); }
         body.light-theme .alert-dropdown-header { background: #f8fafc; color: #0f172a; border-bottom-color: rgba(15,23,42,0.08); }
         body.light-theme .alert-dropdown-clear { color: #64748b; }
         body.light-theme .alert-dropdown-clear:hover { color: #0f172a; }
@@ -133,23 +186,39 @@
         body.light-theme .alert-dismiss-btn { color: #94a3b8; }
         body.light-theme .alert-dismiss-btn:hover { color: #ef4444; background: rgba(239,68,68,0.08); }
 
-        /* Login button (guest) */
+        /* Login button (guest) — sized to the signed-in .header-user button
+           (8px padding + 32px avatar + 8px, plus its 0.8px border top and
+           bottom = 49.6px) so the header row keeps the same height whether
+           the visitor is signed in or out. The transparent border reproduces
+           the .header-user border without changing the blue fill. */
         .btn-login {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 8px 18px;
+            justify-content: center;
+            gap: 9px;
+            min-height: 49.6px;
+            height: 49.6px;
+            padding: 0 18px;
             border-radius: 8px;
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            background: #2563eb;
             color: #fff;
             font-size: 14px;
             font-weight: 600;
             text-decoration: none;
-            border: none;
+            border: 0.8px solid transparent;
             cursor: pointer;
-            transition: opacity 0.15s;
+            transition: background 0.15s;
         }
-        .btn-login:hover { opacity: 0.9; }
+        .btn-login:hover { background: #1d4ed8; }
+        /* The person glyph is circled to mirror the signed-in avatar, so the
+           two states read as the same control rather than a different one. */
+        .btn-login-avatar {
+            width: 32px; height: 32px; flex: 0 0 32px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(255,255,255,0.16);
+            border: 1px solid rgba(255,255,255,0.24);
+        }
+        .btn-login-avatar svg { display: block; }
 
         /* User button (authenticated) - matches dashboard header-user style */
         .header-user { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); cursor: pointer; position: relative; min-height: 40px; }
@@ -158,19 +227,22 @@
         body.light-theme .header-user:hover { background: rgba(15,23,42,0.03); }
         .user-avatar {
             width: 32px; height: 32px; flex: 0 0 32px; border-radius: 50%;
-            background: linear-gradient(135deg, #60a5fa, #2563eb);
+            /* Flat slate fill — the old blue gradient read as a floating badge. */
+            background: #334155;
+            border: 1px solid rgba(255,255,255,0.12);
             display: flex; align-items: center; justify-content: center;
             color: #fff; font-size: 12px; font-weight: 700; text-transform: uppercase;
         }
+        body.light-theme .user-avatar { background: #e2e8f0; border-color: rgba(15,23,42,0.12); color: #334155; }
         .user-name { font-size: 13px; font-weight: 600; color: #f8fafc; }
         .user-email { font-size: 11px; color: #64748b; }
         body.light-theme .user-name { color: #0f172a; }
         body.light-theme .user-email { color: #64748b; }
 
         /* User dropdown */
-        .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 180px; z-index: 150; display: none; overflow: hidden; box-shadow: none; }
+        .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 180px; z-index: 150; display: none; overflow: hidden; }
         .user-dropdown.open { display: block; }
-        body.light-theme .user-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); box-shadow: none; }
+        body.light-theme .user-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); }
         .dropdown-item {
             display: flex; align-items: center; gap: 10px;
             padding: 10px 14px;
@@ -208,10 +280,9 @@
             z-index: 200;
             display: none;
             overflow: hidden;
-            box-shadow: none;
         }
         .user-dropdown.open { display: block; }
-        body.light-theme .user-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); box-shadow: none; }
+        body.light-theme .user-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); }
         .dropdown-item {
             display: flex; align-items: center; gap: 10px;
             padding: 10px 14px;
@@ -237,7 +308,7 @@
         body.light-theme .dropdown-item.logout:hover { background: rgba(239,68,68,0.07); }
         body.light-theme .dropdown-divider { background: rgba(15,23,42,0.08); }
 
-        /* ── HERO — centered, no image, graph backdrop ───────────── */
+        /* ── HERO — centered, no image, chart backdrop ──────────── */
         .hero {
             display: flex;
             flex-direction: column;
@@ -245,14 +316,53 @@
             justify-content: center;
             text-align: center;
             gap: 0;
-            padding: 120px 24px 100px;
+            /* Tighter top padding: the wordmark sits closer to the header.
+               The slack goes below the title instead, so only the paragraph
+               and everything below it move down. */
+            padding: 120px 24px 150px;
             max-width: 900px;
             margin: 0 auto;
             position: relative;
             isolation: isolate;
             overflow: visible;
         }
-        /* full-bleed canvas */
+        /* Full-bleed canvas — solid colour in dark mode, paper in light mode. */
+        .hero {
+            /* The About/Reviews bands below now carry #1e293b, so the hero
+               drops to the body colour and the two read as distinct zones. */
+            --hero-surface: #0f172a;
+            --hero-text: #f8fafc;
+            --hero-text-strong: #fff;
+            --hero-muted: #94a3b8;
+            --hero-btn-ghost-bg: rgba(255,255,255,0.04);
+            --hero-btn-ghost-border: rgba(255,255,255,0.14);
+            --hero-btn-ghost-text: #e2e8f0;
+            --hero-btn-ghost-bg-hover: rgba(255,255,255,0.08);
+            --hero-btn-ghost-border-hover: rgba(255,255,255,0.24);
+            --hero-divider: rgba(148,163,184,0.28);
+            /* Hairline grid colour for .hero-bg. Kept very low contrast so it
+               reads as texture and never competes with the text on top. */
+            --hero-grid-line: rgba(148,163,184,0.10);
+            --candle-up: #22c55e;
+            --candle-down: #ef4444;
+        }
+        body.light-theme .hero {
+            /* Deliberately a step darker than the body (#f3f4f6) so the hero
+               reads as its own band instead of blending into the page. */
+            --hero-surface: #e5e7eb;
+            --hero-text: #0f172a;
+            --hero-text-strong: #0f172a;
+            --hero-muted: #64748b;
+            --hero-btn-ghost-bg: rgba(255,255,255,0.9);
+            --hero-btn-ghost-border: rgba(15,23,42,0.14);
+            --hero-btn-ghost-text: #334155;
+            --hero-btn-ghost-bg-hover: #fff;
+            --hero-btn-ghost-border-hover: rgba(15,23,42,0.22);
+            --hero-divider: rgba(15,23,42,0.12);
+            --hero-grid-line: rgba(15,23,42,0.06);
+            --candle-up: #16a34a;
+            --candle-down: #dc2626;
+        }
         .hero-bg {
             position: absolute;
             top: -64px;
@@ -263,190 +373,130 @@
             z-index: 0;
             pointer-events: none;
             overflow: hidden;
-            background:
-                radial-gradient(900px 420px at 12% 8%, rgba(59,130,246,0.14), transparent 60%),
-                radial-gradient(800px 420px at 88% 18%, rgba(168,85,247,0.12), transparent 60%),
-                radial-gradient(700px 500px at 55% 100%, rgba(34,211,238,0.08), transparent 60%);
+            /* Flat colour only — no chart or pattern behind the text. */
+            background: var(--hero-surface);
         }
-        body.light-theme .hero-bg {
-            background:
-                radial-gradient(900px 420px at 12% 8%, rgba(37,99,235,0.10), transparent 60%),
-                radial-gradient(800px 420px at 88% 18%, rgba(168,85,247,0.10), transparent 60%),
-                radial-gradient(700px 500px at 55% 100%, rgba(6,182,212,0.08), transparent 60%);
-        }
-        /* aurora blobs — pure CSS3 blur + blend */
-        .hero-aurora { position: absolute; border-radius: 50%; filter: blur(70px); mix-blend-mode: screen; opacity: .85; animation: auroraDrift 12s ease-in-out infinite alternate; }
-        .hero-aurora.a1 { width: 520px; height: 520px; top: -160px; right: -80px;
-            background: radial-gradient(circle at 30% 30%, #3b82f6 0%, #6366f1 35%, transparent 70%); opacity: .38; }
-        .hero-aurora.a2 { width: 460px; height: 460px; bottom: -180px; left: -120px;
-            background: radial-gradient(circle at 60% 40%, #06b6d4 0%, #3b82f6 40%, transparent 70%); opacity: .28; animation-delay: -4s; }
-        .hero-aurora.a3 { width: 320px; height: 320px; top: 18%; left: 44%;
-            background: radial-gradient(circle at 50% 50%, #a855f7 0%, transparent 68%); opacity: .22; animation-delay: -8s; }
-        body.light-theme .hero-aurora { mix-blend-mode: multiply; opacity: .22; filter: blur(80px); }
-        @keyframes auroraDrift {
-            0% { transform: translate(0,0) scale(1) rotate(0deg); }
-            50% { transform: translate(24px,-28px) scale(1.08) rotate(8deg); }
-            100% { transform: translate(-18px,18px) scale(0.96) rotate(-6deg); }
-        }
-        /* perspective grid with mask fade */
-        .hero-grid {
-            position: absolute; inset: 0;
+        /* Simple 2D grid, drawn with two repeating linear-gradients so it stays
+           flat and hairline-thin — no image, no 3D, no colour blending.
+           Scoped to this element alone: the About and Reviews bands below
+           inherit the body colour and are deliberately left untouched, so
+           this treatment never leaks onto the rest of the page. The two
+           gradients stack into one hairline grid that fades out below the
+           fold, which keeps the wordmark and paragraph sitting on clean
+           colour where they need to be read. */
+        .hero-bg::before {
+            content: '';
+            position: absolute;
+            inset: 0;
             background-image:
-                linear-gradient(rgba(148,163,184,0.14) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(148,163,184,0.14) 1px, transparent 1px);
-            background-size: 56px 56px;
-            mask-image: radial-gradient(720px 420px at 50% 38%, black 30%, transparent 72%);
-            -webkit-mask-image: radial-gradient(720px 420px at 50% 38%, black 30%, transparent 72%);
-            opacity: .7;
+                repeating-linear-gradient(to right, var(--hero-grid-line) 0 1px, transparent 1px 56px),
+                repeating-linear-gradient(to bottom, var(--hero-grid-line) 0 1px, transparent 1px 56px);
+            /* Fade the grid toward the bottom so the two bands meet softly
+               instead of the grid being cut off by a hard edge. */
+            -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%);
+            mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%);
         }
-        body.light-theme .hero-grid {
-            background-image:
-                linear-gradient(rgba(15,23,42,0.07) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(15,23,42,0.07) 1px, transparent 1px);
-        }
-        .hero-dots {
-            position: absolute; inset: 0;
-            background-image: radial-gradient(circle, rgba(96,165,250,0.35) 1.3px, transparent 1.3px);
-            background-size: 22px 22px;
-            mask-image: radial-gradient(520px 320px at 78% 45%, black 0%, transparent 70%);
-            -webkit-mask-image: radial-gradient(520px 320px at 78% 45%, black 0%, transparent 70%);
-            opacity: .55;
-        }
-        body.light-theme .hero-dots { background-image: radial-gradient(circle, rgba(37,99,235,0.22) 1.3px, transparent 1.3px); }
-        /* film grain — SVG noise data-uri */
-        .hero-noise {
-            position: absolute; inset: 0; opacity: .05; mix-blend-mode: overlay;
-            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-            background-size: 180px 180px;
-        }
-        /* rotating conic beam + hairline */
-        .hero-beam {
-            position: absolute; top: -120px; left: 50%; width: 720px; height: 720px;
-            transform: translateX(-50%); border-radius: 50%;
-            background: conic-gradient(from 0deg, transparent 0deg, rgba(59,130,246,0.14) 28deg, transparent 56deg, transparent 180deg, rgba(168,85,247,0.10) 208deg, transparent 236deg);
-            filter: blur(2px); animation: beamSpin 22s linear infinite; opacity: .9;
-        }
-        @keyframes beamSpin { to { transform: translateX(-50%) rotate(360deg); } }
-        .hero-hairline {
-            position: absolute; top: 42%; left: 0; right: 0; height: 1px;
-            background: linear-gradient(90deg, transparent 4%, rgba(96,165,250,0.45) 28%, rgba(34,211,238,0.5) 50%, rgba(168,85,247,0.45) 72%, transparent 96%);
-            box-shadow: 0 0 24px rgba(59,130,246,0.35);
-        }
-        body.light-theme .hero-hairline { background: linear-gradient(90deg, transparent 4%, rgba(37,99,235,0.28) 30%, rgba(6,182,212,0.28) 50%, rgba(168,85,247,0.28) 70%, transparent 96%); box-shadow: none; }
-        /* giant ring */
-        .hero-ring {
-            position: absolute; width: 560px; height: 560px; right: -140px; top: -140px;
-            border-radius: 50%; border: 1px solid rgba(148,163,184,0.18);
-            box-shadow: inset 0 0 80px rgba(59,130,246,0.08);
-        }
-        .hero-ring::before { content:''; position: absolute; inset: 28px; border-radius: 50%; border: 1px dashed rgba(148,163,184,0.14); animation: beamSpin 40s linear infinite; }
-        .hero-ring::after { content:''; position: absolute; top: 18px; left: 50%; width: 10px; height: 10px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 16px #22c55e; }
-        body.light-theme .hero-ring { border-color: rgba(15,23,42,0.10); box-shadow: inset 0 0 80px rgba(37,99,235,0.06); }
-        /* floating particles */
-        .hero-particle { position: absolute; border-radius: 50%; animation: particleFloat 7s ease-in-out infinite; }
-        .hero-particle.p1 { width: 8px; height: 8px; top: 22%; right: 32%; background: #22c55e; box-shadow: 0 0 14px #22c55e; }
-        .hero-particle.p2 { width: 6px; height: 6px; top: 64%; right: 8%; background: #60a5fa; box-shadow: 0 0 12px #60a5fa; animation-delay: -2s; }
-        .hero-particle.p3 { width: 5px; height: 5px; top: 18%; left: 42%; background: #a855f7; box-shadow: 0 0 12px #a855f7; animation-delay: -4s; }
-        .hero-particle.p4 { width: 4px; height: 4px; bottom: 18%; left: 36%; background: #22d3ee; box-shadow: 0 0 10px #22d3ee; animation-delay: -1s; }
-        @keyframes particleFloat { 0%,100% { transform: translateY(0) scale(1); opacity: .9; } 50% { transform: translateY(-16px) scale(1.2); opacity: 1; } }
 
         .hero-left { flex: none; width: 100%; max-width: 780px; position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; text-align: center; }
-        /* subtle increasing line-graph backdrop — pure CSS3 + inline SVG */
-        .hero-graph {
-            position: absolute;
-            left: 50%;
-            bottom: -10px;
-            transform: translateX(-50%);
-            width: min(960px, 110vw);
-            height: 340px;
-            z-index: 1;
-            pointer-events: none;
-            opacity: .9;
-            mask-image: linear-gradient(to top, black 55%, transparent 98%);
-            -webkit-mask-image: linear-gradient(to top, black 55%, transparent 98%);
+        /* Mark above the wordmark — the real project logo (axes, bars, rising
+           trend arrow) redrawn inline rather than linked as a raster. The PNG
+           is a flat near-black graphic (avg RGB ~41,38,39), so dropping it in
+           directly would leave an invisible smudge on the dark hero; drawing
+           it as SVG keeps the coloured buy/sell treatment. */
+        .hero-mark {
+            width: 112px;
+            height: 90px;
+            margin: 0 auto 28px;
+            display: block;
         }
-        .hero-graph svg { width: 100%; height: 100%; display: block; overflow: visible; }
-        .hero-graph .g-grid { stroke: rgba(148,163,184,0.16); stroke-width: 1; stroke-dasharray: 3 6; }
-        body.light-theme .hero-graph .g-grid { stroke: rgba(15,23,42,0.10); }
-        .hero-graph .g-area { fill: url(#heroAreaFill); opacity: .5; }
-        .hero-graph .g-line {
-            fill: none; stroke: url(#heroLineGrad); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round;
-            stroke-dasharray: 1200; stroke-dashoffset: 1200;
-            animation: heroDraw 2.6s .3s ease forwards;
-            filter: drop-shadow(0 0 10px rgba(59,130,246,0.55));
+        .hero-mark .mk-up { fill: var(--candle-up); }
+        .hero-mark .mk-down { fill: var(--candle-down); }
+        .hero-mark .mk-axis { fill: none; stroke: var(--hero-muted); stroke-width: 4; stroke-linecap: square; }
+        .hero-mark .mk-arrow { fill: none; stroke: var(--candle-up); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
+        /* Wordmark — the loudest element on the page, so the product name
+           is the first thing a visitor reads. */
+        .hero-brand {
+            /* Capped so "SMART STOCK" always fits inside the 780px column
+               instead of overflowing it on wide screens. */
+            font-size: clamp(38px, 6.4vw, 76px);
+            /* Segoe UI Historic ships with Windows only, so Georgia leads the
+               fallback chain for macOS/Linux — it has a similar old-style
+               serif character rather than falling back to a sans face. */
+            font-family: 'Segoe UI Historic', 'Segoe UI', Georgia, 'Times New Roman', serif;
+            font-weight: 700; line-height: 1; letter-spacing: 0.01em;
+            /* Segoe UI Historic only ships 400 and 700, so a heavier weight
+               would be synthesised and look uneven. A small text-stroke
+               thickens the real 700 glyphs evenly instead. */
+            -webkit-text-stroke: 0.02em currentColor;
+            paint-order: stroke fill;
+            color: var(--hero-text); margin: 0 auto 16px; text-align: center;
+            text-transform: uppercase; white-space: nowrap;
         }
-        @keyframes heroDraw { to { stroke-dashoffset: 0; } }
-        .hero-graph .g-dot { fill: #22c55e; stroke: #fff; stroke-width: 2; filter: drop-shadow(0 0 8px rgba(34,197,94,0.8)); animation: particleFloat 3s ease-in-out infinite; }
-        .hero-graph .g-label {
-            font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 800; fill: #4ade80;
-            background: transparent;
-        }
+        .hero-brand-gap { display: inline-block; width: 0.26em; }
+        /* Lead paragraph under the wordmark. The 42ch measure is deliberate:
+           it wraps the sentence into two balanced lines at desktop widths
+           rather than running it long across the hero. */
         .hero-title {
-            font-size: clamp(40px, 5vw, 64px);
-            font-weight: 800; line-height: 1.04; letter-spacing: -0.035em;
-            text-wrap: balance; max-width: 18ch;
-            color: #f8fafc; margin: 0 auto 18px; text-align: center;
+            font-size: clamp(17px, 1.8vw, 21px);
+            font-weight: 500; line-height: 1.5; letter-spacing: -0.01em;
+            text-wrap: balance; max-width: 42ch;
+            color: var(--hero-muted); margin: 0 auto 30px; text-align: center;
         }
-        .hero-title .grad {
-            background: linear-gradient(92deg, #60a5fa 0%, #22d3ee 38%, #a78bfa 72%, #f472b6 100%);
-            -webkit-background-clip: text; background-clip: text; color: transparent;
-            filter: drop-shadow(0 0 22px rgba(96,165,250,0.35));
-        }
-        .hero-title .stroke { position: relative; white-space: nowrap; }
-        .hero-title .stroke::after {
-            content:''; position: absolute; left: 0; right: 0; bottom: 2px; height: 10px; z-index: -1;
-            background: linear-gradient(90deg, rgba(59,130,246,0.35), rgba(34,211,238,0.28));
-            border-radius: 6px; transform: skewX(-12deg) rotate(-1deg);
-        }
-        body.light-theme .hero-title { color: #0f172a; }
-        body.light-theme .hero-title .grad { filter: none; }
-        .hero-desc {
-            font-size: 17px; color: #94a3b8; line-height: 1.75;
-            margin: 0 auto 32px; max-width: 58ch; text-wrap: pretty; text-align: center;
-        }
-        body.light-theme .hero-desc { color: #64748b; }
         .hero-actions { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
         .btn-primary {
-            position: relative; overflow: hidden;
             display: inline-flex; align-items: center; gap: 9px;
             padding: 14px 28px; border-radius: 12px;
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 55%, #1d4ed8 100%);
+            background: #2563eb;
             color: #fff; font-size: 14.5px; font-weight: 700; text-decoration: none;
-            box-shadow: 0 12px 32px rgba(37,99,235,0.42), inset 0 1px 0 rgba(255,255,255,0.25);
             border: 1px solid rgba(255,255,255,0.14);
-            transition: transform .18s ease, box-shadow .18s ease;
+            transition: background .18s ease;
         }
-        .btn-primary::after {
-            content:''; position: absolute; top: 0; left: -70%; width: 55%; height: 100%;
-            background: linear-gradient(105deg, transparent, rgba(255,255,255,0.45), transparent);
-            transform: skewX(-20deg); transition: left .6s ease;
+        .btn-primary:hover { background: #1d4ed8; }
+        /* The "→" glyph is only ~5px of ink tall against an 11px cap height,
+           so it read as a stub next to the label. An inline SVG lets the
+           arrow's height track the cap height instead of the font size, and
+           it cannot be nudged by font fallback the way a text glyph can.
+           The head deliberately spans y=2..22 of the 24-unit box (all but the
+           stroke inset) so it fills the full height rather than sitting in
+           the middle third of it, which is what made it look short. */
+        .btn-primary .btn-arrow {
+            height: 0.82em;
+            width: auto;
+            display: block;
+            flex: none;
         }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 44px rgba(37,99,235,0.55), inset 0 1px 0 rgba(255,255,255,0.25); }
-        .btn-primary:hover::after { left: 130%; }
+        .btn-primary .btn-arrow path,
+        .btn-primary .btn-arrow polyline {
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2.4;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
         .btn-secondary {
             display: inline-flex; align-items: center; gap: 8px;
             padding: 14px 26px; border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.14);
-            color: #e2e8f0; font-size: 14.5px; font-weight: 600; text-decoration: none;
-            background: rgba(255,255,255,0.04); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--hero-btn-ghost-border);
+            color: var(--hero-btn-ghost-text); font-size: 14.5px; font-weight: 600; text-decoration: none;
+            background: var(--hero-btn-ghost-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
             transition: all .18s ease;
         }
-        .btn-secondary:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.24); transform: translateY(-2px); }
-        body.light-theme .btn-secondary { border-color: rgba(15,23,42,0.14); color: #334155; background: rgba(255,255,255,0.9); }
-        body.light-theme .btn-secondary:hover { background: #fff; border-color: rgba(15,23,42,0.22); }
+        .btn-secondary:hover { background: var(--hero-btn-ghost-bg-hover); border-color: var(--hero-btn-ghost-border-hover); transform: translateY(-2px); }
+        /* Plain stats row — no panel, no border, no blur. The numbers sit
+           directly on the hero canvas. */
         .hero-counter-row {
             display: flex; gap: 0; margin: 38px auto 0;
-            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
-            border-radius: 16px; padding: 16px 8px; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
             max-width: 520px; width: 100%; justify-content: center;
         }
-        body.light-theme .hero-counter-row { background: rgba(255,255,255,0.9); border-color: rgba(15,23,42,0.08); box-shadow: 0 12px 32px rgba(15,23,42,0.06); }
         .hero-counter-item { flex: 1; display: flex; flex-direction: column; gap: 2px; padding: 0 22px; position: relative; }
-        .hero-counter-item + .hero-counter-item::before { content:''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 1px; background: linear-gradient(to bottom, transparent, rgba(148,163,184,0.28), transparent); }
-        .hero-counter-value { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; color: #f8fafc; font-variant-numeric: tabular-nums; }
-        body.light-theme .hero-counter-value { color: #0f172a; }
-        .hero-counter-label { font-size: 11.5px; color: #64748b; font-weight: 600; letter-spacing: .3px; text-transform: uppercase; }
-
+        .hero-counter-item + .hero-counter-item::before { content:''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 1px; background: linear-gradient(to bottom, transparent, var(--hero-divider), transparent); }
+        .hero-counter-value { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; color: var(--hero-text); font-variant-numeric: tabular-nums; }
+        /* The "+" is drawn from the data attribute rather than baked into the
+           markup, so the JS that rewrites textContent during the count-up can
+           never strip it. Only the hero stats carry the attribute — the 4.5
+           rating in the reviews section must stay suffix-free. */
+        .hero-counter-value[data-suffix]::after { content: attr(data-suffix); }
+        .hero-counter-label { font-size: 11.5px; color: var(--hero-muted); font-weight: 600; letter-spacing: .3px; text-transform: uppercase; }
         /* hero image removed — centered layout only */
 
         /* ── ABOUT ────────────────────────────────────────────────── */
@@ -454,24 +504,27 @@
             padding: 80px 40px;
             max-width: 1100px;
             margin: 0 auto;
+            position: relative;
+            isolation: isolate;
+        }
+        /* Dark theme: this section takes over the hero's band colour so the
+           page reads as one continuous surface rather than alternating slabs.
+           Painted on a pseudo-element so the colour is full-bleed even though
+           the section itself is width-capped for its text column. */
+        body:not(.light-theme) .about-section::before {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100vw;
+            z-index: -1;
+            background: #1e293b;
         }
         .about-header {
             text-align: center;
             margin-bottom: 48px;
         }
-        .section-tag {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-            margin-bottom: 12px;
-            background: rgba(255,255,255,0.06);
-            color: #94a3b8;
-        }
-        body.light-theme .section-tag { background: rgba(0,0,0,0.04); color: #64748b; }
         .section-title {
             font-size: 32px;
             font-weight: 700;
@@ -530,6 +583,19 @@
             padding: 80px 40px;
             max-width: 1100px;
             margin: 0 auto;
+            position: relative;
+            isolation: isolate;
+        }
+        /* Matches the hero and About bands above. */
+        body:not(.light-theme) .reviews-section::before {
+            content: '';
+            position: absolute;
+            top: 0; bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100vw;
+            z-index: -1;
+            background: #1e293b;
         }
         .reviews-grid {
             display: grid;
@@ -572,8 +638,7 @@
             justify-content: center;
             font-size: 13px;
             font-weight: 700;
-            color: #60a5fa;
-        }
+            color: #60a5fa;        }
         body.light-theme .review-avatar { background: rgba(37,99,235,0.1); color: #2563eb; }
         .review-name { font-size: 13px; font-weight: 600; color: #f8fafc; }
         body.light-theme .review-name { color: #0f172a; }
@@ -605,14 +670,21 @@
             text-align: center;
             padding: 20px 40px;
             font-size: 12px;
-            color: #475569;
-            border-top: 1px solid rgba(255,255,255,0.06);
+            color: #94a3b8;
+            border-top: 1px solid rgba(255,255,255,0.08);
         }
-        body.light-theme .site-footer { border-top-color: rgba(15,23,42,0.08); color: #94a3b8; }
+        /* Dark theme: the same surface as the sticky header, so the top and
+           bottom of the page share one colour. */
+        body:not(.light-theme) .site-footer { background: #253347; }
+        /* Light theme: the same translucent white as the sticky header. */
+        body.light-theme .site-footer {
+            background: rgba(255,255,255,0.9);
+            border-top-color: rgba(15,23,42,0.08);
+            color: #94a3b8;
+        }
 
         /* ── RESPONSIVE ──────────────────────────────────────────── */
         body { overflow-x: hidden; }
-
         /* Mobile navigation drawer */
         .mobile-menu-button {
             display: none;
@@ -775,9 +847,14 @@
             .header-brand { display: flex; padding: 0; }
             .header-brand .header-brand-name,
             .header-brand .header-brand-sub { display: none; }
-            .header-brand img { width: 36px; height: 36px; }
+            .header-brand-mark { width: 40px; height: 32px; }
             .header-right { gap: 6px; margin-left: auto; }
             .header-btn { padding: 6px 8px; }
+            /* Keep the theme toggle square at this width — the generic
+               padding above would otherwise squash it into an oval. */
+            #themeToggleBtn { padding: 0; width: 36px; min-width: 36px; height: 36px; }
+            .btn-login { height: 49.6px; min-height: 49.6px; padding: 0 14px; }
+            .btn-login-avatar { width: 32px; height: 32px; flex-basis: 32px; }
             .header-user { padding: 8px; }
             .user-info { display: none; }
             .user-avatar { width: 32px; height: 32px; }
@@ -786,18 +863,15 @@
         }
 
         @media (max-width: 1024px) {
-            .hero { max-width: 100%; padding: 90px 28px 80px; }
+            .hero { max-width: 100%; padding: 100px 28px 120px; }
             .hero-left { max-width: 720px; }
-            .hero-graph { width: min(860px, 112vw); height: 300px; }
         }
         @media (max-width: 768px) {
-            .hero { padding: 72px 20px 64px; }
+            .hero { padding: 84px 20px 96px; }
             .hero-left { max-width: 640px; }
-            .hero-title { max-width: 16ch; }
-            .hero-desc { max-width: 52ch; }
+            .hero-mark { width: 92px; height: 74px; margin-bottom: 22px; }
+            .hero-brand { margin-bottom: 16px; }
             .hero-counter-row { width: 100%; }
-            .hero-graph { height: 260px; opacity: .75; }
-            .hero-ring { right: -220px; }
             .about-grid, .reviews-grid { grid-template-columns: 1fr; }
             .about-section, .reviews-section { padding: 48px 20px; }
         }
@@ -807,13 +881,14 @@
             .mobile-menu-button { width: 34px; height: 34px; }
             .header-btn { padding: 6px; }
             .user-avatar { width: 30px; height: 30px; }
-            .hero { padding: 56px 16px 48px; }
-            .hero-title { font-size: 32px; }
-            .hero-desc { font-size: 14px; }
-            .hero-counter-row { flex-direction: row; padding: 14px 4px; }
+            .btn-login { height: 47.6px; min-height: 47.6px; padding: 0 12px; }
+            .btn-login-avatar { width: 30px; height: 30px; flex-basis: 30px; }
+            .hero { padding: 68px 16px 80px; }
+            .hero-brand { font-size: clamp(30px, 8.4vw, 44px); white-space: normal; margin-bottom: 30px; }
+            .hero-title { font-size: 15px; }
+            .hero-counter-row { flex-direction: row; }
             .hero-counter-item { padding: 0 12px; }
             .hero-counter-value { font-size: 22px; }
-            .hero-graph { height: 220px; opacity: .65; }
             .section-title { font-size: 24px; }
             .reviews-rating-value { font-size: 36px; }
             .mobile-sidebar.mobile-open { width: calc(100vw - 40px); min-width: calc(100vw - 40px); }
@@ -824,6 +899,8 @@
             .mobile-menu-button { width: 30px; height: 30px; }
             .header-btn { padding: 4px; }
             .user-avatar { width: 28px; height: 28px; }
+            .btn-login { height: 45.6px; min-height: 45.6px; padding: 0 10px; }
+            .btn-login-avatar { width: 28px; height: 28px; flex-basis: 28px; }
             .mobile-sidebar.mobile-open { width: calc(100vw - 20px); min-width: calc(100vw - 20px); }
             .mobile-menu-header { padding: 10px 8px; }
             .mobile-sidebar-nav { padding: 8px; }
@@ -841,9 +918,9 @@
         .auth-modal {
             background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px;
             width: 100%; max-width: 420px; padding: 28px; text-align: center;
-            box-shadow: 0 24px 64px rgba(0,0,0,0.5); animation: authModalPop 0.25s cubic-bezier(0.34,1.56,0.64,1);
+            animation: authModalPop 0.25s cubic-bezier(0.34,1.56,0.64,1);
         }
-        body.light-theme .auth-modal { background: #ffffff; border-color: rgba(15,23,42,0.1); box-shadow: 0 24px 64px rgba(15,23,42,0.2); }
+        body.light-theme .auth-modal { background: #ffffff; border-color: rgba(15,23,42,0.1); }
         @keyframes authModalPop { from { opacity: 0; transform: scale(0.92) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         .auth-modal-icon {
             width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 16px;
@@ -876,10 +953,19 @@
     <header class="site-header">
         <div class="header-left">
             <a href="{{ route('home') }}" class="header-brand">
-                <img src="{{ asset('assets/stock-logo.png') }}" alt="Smart-Stock logo">
+                <svg class="header-brand-mark" viewBox="0 0 100 80" role="img" aria-label="Smart Stock">
+                    <path class="mk-axis" d="M6 6v66h88"/>
+                    <rect class="mk-up" x="16" y="50" width="9" height="22" rx="1.5"/>
+                    <rect class="mk-up" x="29" y="38" width="9" height="34" rx="1.5"/>
+                    <rect class="mk-down" x="42" y="45" width="9" height="27" rx="1.5"/>
+                    <rect class="mk-up" x="55" y="31" width="9" height="41" rx="1.5"/>
+                    <rect class="mk-up" x="68" y="23" width="9" height="49" rx="1.5"/>
+                    <polyline class="mk-arrow" points="13,62 30,48 46,55 62,34 78,13"/>
+                    <polyline class="mk-arrow" points="67,11 80,11 80,24"/>
+                </svg>
                 <div>
-                    <div class="header-brand-name">Smart-Stock</div>
-                    <div class="header-brand-sub">Inventory System</div>
+                    <div class="header-brand-name">Smart</div>
+                    <div class="header-brand-sub">Stock</div>
                 </div>
             </a>
 
@@ -910,9 +996,13 @@
             </button>
 
             @guest
-                <!-- Guest: show Login button -->
-                <a href="{{ route('login') }}" class="btn-login">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                {{-- Guest: show Login button. A neutral person glyph rather than
+                     the old sign-in arrow, so the control reads as an account
+                     entry point and matches the avatar used once signed in. --}}
+                <a href="{{ route('login') }}" class="btn-login" onclick="event.preventDefault(); openLoginModal();">
+                    <span class="btn-login-avatar" aria-hidden="true">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </span>
                     Login
                 </a>
             @else
@@ -982,7 +1072,7 @@
                     </span>
                     <span>Dashboard</span>
                 </a>
-                <a href="{{ route('login') }}" class="mobile-nav-item">
+                <a href="{{ route('login') }}" class="mobile-nav-item" onclick="event.preventDefault(); openLoginModal(); closeMobileMenu();">
                     <span class="mobile-nav-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
                     </span>
@@ -1000,78 +1090,61 @@
     </aside>
     <div class="mobile-menu-overlay" id="mobileMenuOverlay" onclick="closeMobileMenu()"></div>
 
-    <!-- HERO SECTION — centered, no image, graph backdrop -->
+    <!-- Scroll pane. Sits below the sticky header so the page scrolls inside a
+         fixed region, matching the dashboard's .main pane and its scrollbar. -->
+    <div class="page-pane">
+
+    <!-- HERO SECTION — flat colour band, mark, wordmark and copy -->
     <section class="hero">
-        <div class="hero-bg" aria-hidden="true">
-            <div class="hero-aurora a1"></div>
-            <div class="hero-aurora a2"></div>
-            <div class="hero-aurora a3"></div>
-            <div class="hero-grid"></div>
-            <div class="hero-dots"></div>
-            <div class="hero-beam"></div>
-            <div class="hero-hairline"></div>
-            <div class="hero-ring"></div>
-            <span class="hero-particle p1"></span>
-            <span class="hero-particle p2"></span>
-            <span class="hero-particle p3"></span>
-            <span class="hero-particle p4"></span>
-            <div class="hero-noise"></div>
-            <div class="hero-graph" aria-hidden="true">
-                <svg viewBox="0 0 960 340" preserveAspectRatio="none">
-                    <defs>
-                        <linearGradient id="heroLineGrad" x1="0" y1="0" x2="1" y2="0">
-                            <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.35"/>
-                            <stop offset="45%" stop-color="#38bdf8" stop-opacity="0.9"/>
-                            <stop offset="75%" stop-color="#22d3ee" stop-opacity="1"/>
-                            <stop offset="100%" stop-color="#4ade80" stop-opacity="1"/>
-                        </linearGradient>
-                        <linearGradient id="heroAreaFill" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.28"/>
-                            <stop offset="60%" stop-color="#38bdf8" stop-opacity="0.08"/>
-                            <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
-                        </linearGradient>
-                    </defs>
-                    <g>
-                        <line class="g-grid" x1="0" y1="70" x2="960" y2="70"/>
-                        <line class="g-grid" x1="0" y1="140" x2="960" y2="140"/>
-                        <line class="g-grid" x1="0" y1="210" x2="960" y2="210"/>
-                        <line class="g-grid" x1="0" y1="280" x2="960" y2="280"/>
-                    </g>
-                    <path class="g-area" d="M0,300 C80,290 140,260 220,245 C300,230 340,240 420,200 C500,160 540,170 620,130 C700,90 780,100 860,55 C890,38 920,30 960,22 L960,340 L0,340 Z"/>
-                    <path class="g-line" d="M0,300 C80,290 140,260 220,245 C300,230 340,240 420,200 C500,160 540,170 620,130 C700,90 780,100 860,55 C890,38 920,30 960,22"/>
-                    <circle class="g-dot" cx="860" cy="55" r="7"/>
-                    <circle class="g-dot" cx="620" cy="130" r="4" style="animation-delay:-1s;fill:#38bdf8"/>
-                    <circle class="g-dot" cx="420" cy="200" r="4" style="animation-delay:-2s;fill:#38bdf8"/>
-                </svg>
-            </div>
-        </div>
+        <div class="hero-bg" aria-hidden="true"></div>
 
         <div class="hero-left">
-            <h1 class="hero-title">Manage Your Hardware Products with <span class="grad stroke">Smart Stock</span> Inventory</h1>
-            <p class="hero-desc">
-                Smart-Stock helps hardware stores track products, monitor stock levels in real time,
-                and get instant alerts — all from one easy-to-use dashboard.
+            {{-- Mark above the wordmark. Drawn inline so the bars can keep real
+                 buy/sell colour instead of the flat filter the PNG needs. --}}
+            <svg class="hero-mark" viewBox="0 0 100 80" role="img" aria-label="Smart Stock logo mark">
+                <path class="mk-axis" d="M6 6v66h88" />
+                <rect class="mk-up" x="16" y="50" width="9" height="22" rx="1.5"/>
+                <rect class="mk-up" x="29" y="38" width="9" height="34" rx="1.5"/>
+                <rect class="mk-down" x="42" y="45" width="9" height="27" rx="1.5"/>
+                <rect class="mk-up" x="55" y="31" width="9" height="41" rx="1.5"/>
+                <rect class="mk-up" x="68" y="23" width="9" height="49" rx="1.5"/>
+                <polyline class="mk-arrow" points="13,62 30,48 46,55 62,34 78,13"/>
+                <polyline class="mk-arrow" points="67,11 80,11 80,24"/>
+            </svg>
+            <h1 class="hero-brand">Smart<span class="hero-brand-gap"></span>Stock</h1>
+            <p class="hero-title">
+                Manage your hardware products with our secure inventory service.
             </p>
             <div class="hero-actions">
                 @guest
                     {{-- BRD (Account Management): accounts are created by an Admin,
                          so there is no public registration entry point. --}}
-                    <a href="{{ route('login') }}" class="btn-primary">Get Started <span aria-hidden="true">→</span></a>
+                    <a href="{{ route('login') }}" class="btn-primary" onclick="event.preventDefault(); openLoginModal();">Get Started
+                        <svg class="btn-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M2 12h13" />
+                            <path d="M14 2l9 10-9 10" />
+                        </svg>
+                    </a>
                 @else
-                    <a href="{{ route('dashboard') }}" class="btn-primary">Open Dashboard <span aria-hidden="true">→</span></a>
+                    <a href="{{ route('dashboard') }}" class="btn-primary">Open Dashboard
+                        <svg class="btn-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M2 12h13" />
+                            <path d="M14 2l9 10-9 10" />
+                        </svg>
+                    </a>
                 @endguest
             </div>
             <div class="hero-counter-row">
                 <div class="hero-counter-item">
-                    <span class="hero-counter-value" data-count="{{ $heroStats['products'] ?? 0 }}">0</span>
+                    <span class="hero-counter-value" data-count="{{ $heroStats['products'] ?? 0 }}" data-suffix="+">0</span>
                     <span class="hero-counter-label">Products Tracked</span>
                 </div>
                 <div class="hero-counter-item">
-                    <span class="hero-counter-value" data-count="{{ $heroStats['suppliers'] ?? 0 }}">0</span>
+                    <span class="hero-counter-value" data-count="{{ $heroStats['suppliers'] ?? 0 }}" data-suffix="+">0</span>
                     <span class="hero-counter-label">Suppliers</span>
                 </div>
                 <div class="hero-counter-item">
-                    <span class="hero-counter-value" data-count="{{ $heroStats['sales'] ?? 0 }}">0</span>
+                    <span class="hero-counter-value" data-count="{{ $heroStats['sales'] ?? 0 }}" data-suffix="+">0</span>
                     <span class="hero-counter-label">Sales Recorded</span>
                 </div>
             </div>
@@ -1081,7 +1154,6 @@
     <!-- ABOUT SECTION -->
     <section class="about-section">
         <div class="about-header">
-            <span class="section-tag">Why Smart-Stock</span>
             <h2 class="section-title">Built for Trust</h2>
             <p class="section-subtitle">Trusted by hardware store owners for reliable, real-time inventory management that keeps your business running smoothly.</p>
         </div>
@@ -1113,7 +1185,6 @@
     <!-- REVIEWS SECTION -->
     <section class="reviews-section">
         <div class="about-header">
-            <span class="section-tag">Testimonials</span>
             <h2 class="section-title">What Our Users Say</h2>
             <p class="section-subtitle">Hear from store owners who trust Smart-Stock for their daily inventory needs.</p>
         </div>
@@ -1169,6 +1240,8 @@
         &copy; {{ date('Y') }} Smart-Stock. All rights reserved.
     </footer>
 
+    </div><!-- /.page-pane -->
+
     <!-- LOGIN REQUIRED MODAL -->
     <div class="auth-modal-overlay" id="authModalOverlay" role="dialog" aria-modal="true" aria-labelledby="authModalTitle" onclick="if (event.target === this) closeAuthModal();">
         <div class="auth-modal">
@@ -1178,13 +1251,21 @@
             <h3 class="auth-modal-title" id="authModalTitle">Login Required</h3>
             <p class="auth-modal-text">You must be logged in to access the <span id="authModalTarget">Dashboard</span>. Please log in to continue.</p>
             <div class="auth-modal-actions">
-                <a href="{{ route('login') }}" class="auth-modal-btn primary">
+                <a href="{{ route('login') }}" class="auth-modal-btn primary" onclick="event.preventDefault(); closeAuthModal(); openLoginModal();">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
                     Go to Login
                 </a>
                 <button type="button" class="auth-modal-btn ghost" onclick="closeAuthModal()">Cancel</button>
             </div>
         </div>
+    </div>
+
+    {{-- The homepage's sign-in popup is the REAL login form, not a copy:
+         auth/login-card.blade.php is the same partial the standalone /login
+         page renders, so the two can never drift apart. --}}
+    <div class="auth-modal-overlay" id="loginModalOverlay" role="dialog" aria-modal="true" aria-labelledby="loginModalHeading"
+         onclick="if (event.target === this) closeLoginModal();">
+        @include('auth.login-card', ['asModal' => true])
     </div>
 
     <script>
@@ -1212,6 +1293,39 @@
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') closeAuthModal();
         });
+
+        /* ── Login modal ────────────────────────────────────────────
+           Posts to the same route('login.post') as the standalone /login
+           page, so credential handling, validation and the role-based
+           redirect all stay in AuthController — nothing is duplicated here.
+
+           Deliberately does NOT toggle body overflow: hiding the scrollbar
+           changes the viewport width and shifts the page, which reads as a
+           jump. The page keeps its scrollbar and position behind the modal. */
+        function openLoginModal() {
+            const overlay = document.getElementById('loginModalOverlay');
+            if (!overlay) return;
+            overlay.classList.add('active');
+            // Focus the first field so the keyboard user can type straight away.
+            // The id comes from the shared login card, not a modal-only copy.
+            const field = document.getElementById('username');
+            if (field) setTimeout(function () { field.focus(); }, 50);
+        }
+        function closeLoginModal() {
+            const overlay = document.getElementById('loginModalOverlay');
+            if (!overlay) return;
+            overlay.classList.remove('active');
+        }
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeLoginModal();
+        });
+
+        // A failed sign-in redirects back here with a validation error, which
+        // lands on a freshly rendered page with the modal closed. Reopen it so
+        // the user sees the message and can correct the fields in place.
+        @if ($errors->any())
+            openLoginModal();
+        @endif
 
         // Theme init
         (function () {

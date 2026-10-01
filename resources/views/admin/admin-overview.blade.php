@@ -6,21 +6,8 @@
 <div class="ov">
 
     <header class="page-header hero">
-        <div class="hero-decor" aria-hidden="true">
-            <span class="hero-orb orb-1"></span>
-            <span class="hero-orb orb-2"></span>
-            <span class="hero-orb orb-3"></span>
-            <span class="hero-confetti cf-1"></span>
-            <span class="hero-confetti cf-2"></span>
-            <span class="hero-confetti cf-3"></span>
-            <span class="hero-confetti cf-4"></span>
-            <span class="hero-confetti cf-5"></span>
-            <span class="hero-confetti cf-6"></span>
-            <span class="hero-ring ring-1"></span>
-            <span class="hero-ring ring-2"></span>
-        </div>
         <div class="hero-content">
-            <span class="hero-eyebrow"><span class="hero-wave">👋</span> Welcome back</span>
+            <span class="hero-eyebrow">Welcome back</span>
             <h1 class="page-title">Overview</h1>
             <p class="page-subtitle">Hello {{ ucfirst(Auth::user()->role) }} {{ ucwords(Auth::user()->name) }}, here is and overview of your inventory dashboard.</p>
         </div>
@@ -132,8 +119,10 @@
                         <th>Urgency</th>
                         <th>Product</th>
                         <th>Stock / Threshold</th>
-                        <th>Sold (window)</th>
-                        <th>Avg / day</th>
+                        {{-- The three demand figures are merged into one column:
+                             at this width they were squeezing "Why" down to
+                             ~160px, which forced 117px-tall rows. --}}
+                        <th>Sold / Avg per day</th>
                         <th>Days left</th>
                         <th>Suggested order</th>
                         <th>Why</th>
@@ -234,26 +223,24 @@
             --header-h: 30px;             /* one height for all header controls */
             --cell-x:       var(--sp-7);  /* table cell horizontal padding*/
             --control-gap:  var(--sp-4);  /* gap between header controls   */
-            /* Height system — loaded height derives from the SAME row math.
-               Loading height is intentionally compact: spinner-only strip,
-               then the panel expands to full height once data arrives. */
+            /* Height system — every panel keeps the SAME height whether it is
+               loading or loaded, so a spinner simply appears inside a stable
+               box instead of the panel growing when data lands. */
             --row-h:      44px;   /* one height for every data row          */
+            --row-pad-y:  10px;   /* cell padding that produces --row-h      */
             --th-h:       38px;   /* one height for every header row        */
             --list-rows:  5;      /* rows every panel shows (matches API)   */
             --header-row: 42px;   /* section header (30px control + 12 gap)  */
-            --loading-body-h: 64px; /* compact spinner-only body height    */
 
-            /* Order Suggestions is the only list that is NOT capped at 5 by
-               the API, so it reserves room for more and grows past that
-               instead of hiding rows behind a scrollbar. */
-            --suggest-rows: 8;
-            --suggest-h:   calc(var(--th-h) + var(--row-h) * var(--suggest-rows));
-
+            /* Every body is a MINIMUM, never a maximum: a table is exactly as
+               tall as its rows, so it grows with the data instead of hiding
+               rows behind an inner scrollbar. */
             --list-h:     calc(var(--row-h) * var(--list-rows));               /* 220 */
             --table-h:    calc(var(--th-h) + var(--row-h) * var(--list-rows));  /* 258 */
+            --suggest-h:  calc(var(--th-h) + var(--row-h) * 5);                 /* 258 */
             /* Panel = padding + header + body. Chart row uses --list-h as its
                body, the table panels use --table-h — both are 5 rows tall, so
-               every section on the page ends up the same overall height. */
+               every section on the page lines up. */
             --panel-h:    calc(var(--panel-pad) * 2 + var(--header-row) + var(--table-h));
 
             /* Type scale */
@@ -285,31 +272,9 @@
             align-items: flex-end;
             justify-content: flex-start;
             padding: var(--sp-10) var(--sp-10) var(--sp-9);
-            background:
-                radial-gradient(600px 220px at 85% -20%, rgba(96,165,250,0.28), transparent 60%),
-                radial-gradient(480px 200px at 10% 120%, rgba(74,222,128,0.14), transparent 60%),
-                linear-gradient(115deg, #0b1526 0%, #13294f 45%, #1a3a7a 78%, #2563eb 130%);
-            box-shadow: 0 12px 32px rgba(2,6,23,0.35);
+            background: #13294f;
         }
         .ov .hero-decor { position: absolute; inset: 0; pointer-events: none; }
-        .ov .hero-orb { position: absolute; border-radius: 50%; filter: blur(2px); opacity: 0.55; }
-        .ov .orb-1 { width: 220px; height: 220px; right: -50px; top: -80px;
-            background: radial-gradient(circle at 30% 30%, rgba(147,197,253,0.7), rgba(37,99,235,0.15) 70%); }
-        .ov .orb-2 { width: 130px; height: 130px; right: 190px; bottom: -55px;
-            background: radial-gradient(circle at 30% 30%, rgba(74,222,128,0.5), transparent 70%); opacity: 0.35; }
-        .ov .orb-3 { width: 90px; height: 90px; right: 46%; top: -30px;
-            background: radial-gradient(circle at 30% 30%, rgba(251,191,36,0.55), transparent 70%); opacity: 0.3; }
-        .ov .hero-ring { position: absolute; border-radius: 50%; border: 1.5px solid rgba(147,197,253,0.25); }
-        .ov .ring-1 { width: 300px; height: 300px; right: -90px; top: -120px; }
-        .ov .ring-2 { width: 200px; height: 200px; right: 120px; bottom: -110px; border-color: rgba(74,222,128,0.18); }
-        .ov .hero-confetti { position: absolute; border-radius: 3px; opacity: 0.8; animation: heroFloat 5s ease-in-out infinite; }
-        .ov .cf-1 { width: 9px; height: 9px; left: 42%; top: 22px; background: #fbbf24; transform: rotate(18deg); }
-        .ov .cf-2 { width: 7px; height: 7px; left: 55%; top: 52px; background: #4ade80; border-radius: 50%; animation-delay: 0.8s; }
-        .ov .cf-3 { width: 8px; height: 8px; left: 68%; top: 26px; background: #f472b6; transform: rotate(-14deg); animation-delay: 1.6s; }
-        .ov .cf-4 { width: 6px; height: 6px; left: 78%; top: 62px; background: #93c5fd; border-radius: 50%; animation-delay: 2.2s; }
-        .ov .cf-5 { width: 8px; height: 8px; left: 34%; bottom: 30px; background: #60a5fa; transform: rotate(30deg); animation-delay: 1.1s; }
-        .ov .cf-6 { width: 6px; height: 6px; left: 88%; bottom: 36px; background: #fde68a; border-radius: 50%; animation-delay: 2.8s; }
-        @keyframes heroFloat { 0%,100% { translate: 0 0; opacity: 0.55; } 50% { translate: 0 -9px; opacity: 1; } }
         .ov .hero-content { position: relative; z-index: 1; max-width: 640px; }
         .ov .hero-eyebrow {
             display: inline-flex; align-items: center; gap: var(--sp-2);
@@ -317,15 +282,12 @@
             color: #bfdbfe; background: rgba(147,197,253,0.14); border: 1px solid rgba(147,197,253,0.3);
             padding: var(--sp-1) var(--sp-4); border-radius: 20px; margin-bottom: var(--sp-3);
         }
-        .ov .hero-wave { display: inline-block; animation: heroWave 2.2s ease-in-out infinite; transform-origin: 70% 70%; }
-        @keyframes heroWave { 0%,100% { transform: rotate(0); } 25% { transform: rotate(18deg); } 50% { transform: rotate(-8deg); } 75% { transform: rotate(14deg); } }
         .ov .page-header.hero .page-title {
             font-size: 30px;
             font-weight: 800;
             line-height: var(--lh-tight);
             letter-spacing: -0.02em;
             color: #ffffff;
-            text-shadow: 0 2px 14px rgba(2,6,23,0.45);
             margin: 0 0 var(--sp-2);
         }
         .ov .page-header.hero .page-subtitle {
@@ -414,8 +376,8 @@
             margin-bottom: var(--section-gap);
             align-items: start;
         }
-        /* Compact-then-expand: loading = short spinner strip, loaded = full
-           --panel-h. Height animates so the form visibly grows when data lands. */
+        /* Fixed at --panel-h in both states — loading and loaded are the same
+           height, so the spinner sits inside a box that never resizes. */
         .ov .chart-panel,
         .ov .top-products-panel {
             background: rgba(255,255,255,0.02);
@@ -426,23 +388,12 @@
             flex-direction: column;
             height: var(--panel-h);
             overflow: hidden;
-            transition: height 0.4s ease;
-        }
-        .ov .chart-panel.is-loading,
-        .ov .top-products-panel.is-loading {
-            height: calc(var(--panel-pad) * 2 + var(--header-row) + var(--loading-body-h));
         }
         .ov .chart-container {
             position: relative;
             width: 100%;
             flex: 1;
             min-height: 0; /* lets the canvas shrink instead of overflowing */
-            transition: min-height 0.4s ease, height 0.4s ease;
-        }
-        .ov .chart-panel.is-loading .chart-container {
-            flex: 0 0 auto;
-            height: var(--loading-body-h);
-            min-height: var(--loading-body-h);
         }
         .ov .chart-panel.is-loading canvas { display: none; }
         .ov .chart-container canvas { width: 100% !important; height: 100% !important; }
@@ -457,19 +408,16 @@
             font-size: var(--fs-md);
         }
         .ov .chart-loading { position: absolute; inset: 0; }
-        .ov .chart-panel.is-loading .chart-loading { position: static; height: var(--loading-body-h); }
 
         /* === TOP PRODUCTS LIST === */
-        /* Loaded = --list-h (exactly 5 rows). Loading = compact spinner strip,
-           then the panel expands to full height when rows arrive. */
+        /* Always reserves the full 5-row height; the spinner sits centred in
+           it so the panel never resizes when the rows arrive. */
         .ov .top-products-list {
             display: flex;
             flex-direction: column;
             flex: 1;
             min-height: var(--list-h);
-            transition: min-height 0.4s ease;
         }
-        .ov .top-products-panel.is-loading .top-products-list { min-height: var(--loading-body-h); flex: 0 0 auto; }
         .ov .top-product-item {
             display: flex;
             align-items: center;
@@ -640,18 +588,17 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            transition: min-height 0.4s ease;
         }
-        /* Suggest panel: compact while spinner shows, expands when rows land. */
-        .ov .content-panel.is-loading { min-height: 0; }
-        .ov .content-panel .table-wrapper { background: transparent; border: none; border-radius: 0; }
+        /* The shared table frame in layouts/app.blade.php supplies the outer
+           border and column rules; only the fill is dropped here so the
+           wrapper blends into its content panel. */
+        .ov .content-panel .table-wrapper { background: transparent; }
 
         /* === STACKED ACTIVITY ROWS (Transaction History, then Stock-Ins) ===
            Stacked full-width instead of a 50/50 grid: six columns in a half
            panel were being clipped, and stacking gives each table the whole
            page width so every column is readable with no scrollbar.
-           Compact-then-expand: loading = short spinner strip, loaded = full
-           --panel-h with a smooth grow animation. */
+           Height is a floor, not a cap, so the panel grows with its rows. */
         .ov .split-row {
             display: flex;
             flex-direction: column;
@@ -662,62 +609,38 @@
            otherwise the two panels drift twice as far apart as every other
            section on the page. */
         .ov .split-row .content-panel {
-            height: var(--panel-h);
+            min-height: var(--panel-h);
             margin-bottom: 0;
-            overflow: hidden;
-            transition: height 0.4s ease, min-height 0.4s ease;
+            overflow: visible;
         }
-        .ov .split-row .content-panel.is-loading {
-            height: calc(var(--panel-pad) * 2 + var(--header-row) + var(--th-h) + var(--loading-body-h));
-            min-height: 0;
-        }
-        /* These two tables are hard-capped at 5 rows by the API, so they are
-           never taller than the reservation — the inner vertical scrollbar
-           this used to force could only ever appear as empty dead space. */
         .ov .split-row .table-wrapper {
             flex: 1;
             min-height: var(--table-h);
-            overflow-y: visible;
-            transition: min-height 0.4s ease;
-        }
-        .ov .split-row .content-panel.is-loading .table-wrapper {
-            flex: 0 0 auto;
-            min-height: var(--loading-body-h);
         }
         .ov .top-products-list { min-height: var(--list-h); }
-        /* Full-width tables have room to spare, so long names/suppliers
-           ellipsise only as a safety net instead of stretching the column. */
-        .ov .split-row td { white-space: nowrap; }
-        .ov .split-row td:nth-child(2),
-        .ov .split-row td:nth-child(3) {
-            max-width: 260px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
+        /* These tables are full-width, so the only thing that ever pushed
+           them wide was `white-space: nowrap` on a long product name. Text
+           now wraps inside its column instead. */
+        .ov .split-row td { overflow-wrap: break-word; }
 
-        /* === TABLE — identical cell rhythm for every table on the page === */
+        /* === TABLE — identical cell rhythm for every table on the page ===
+           No inner scrollbars anywhere: each table is exactly as tall as its
+           rows, and the pane scrolls instead. Columns are sized with shares
+           rather than a fixed min-width so they fit the pane and let text
+           wrap instead of forcing a horizontal scrollbar. */
         .ov .table-wrapper {
-            background: rgba(255,255,255,0.02);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 12px;
-            overflow-x: auto;
+            /* Radius comes from the shared frame's --table-radius so the
+               header band's corners line up with this wrapper's outline. */
+            border-radius: var(--table-radius, 12px);
+            overflow: visible;
         }
-        /* Loaded = full reserved height. Loading (.is-loading) = compact
-           spinner-only strip, then the panel expands when data lands. */
+        /* Floor only — the table grows past it when there are more rows. */
         .ov .table-scroll {
             position: relative;
             min-height: var(--table-h);
-            max-height: var(--table-h);
-            overflow-y: auto;
-            scrollbar-width: thin;
-            transition: min-height 0.4s ease, max-height 0.4s ease;
+            overflow: visible;
         }
-        .ov .table-scroll.is-loading {
-            min-height: calc(var(--th-h) + var(--loading-body-h));
-            max-height: calc(var(--th-h) + var(--loading-body-h));
-            overflow: hidden;
-        }
-        /* Spinner row: static centered strip while loading, removed on settle. */
+        /* Spinner strip: centered in the reserved body, removed on settle. */
         .ov .table-loading {
             display: flex;
             align-items: center;
@@ -725,35 +648,19 @@
             gap: var(--sp-3);
             color: #64748b;
             font-size: var(--fs-md);
-            height: var(--loading-body-h);
-            min-height: var(--loading-body-h);
+            min-height: calc(var(--table-h) - var(--th-h));
         }
         .ov .table-scroll.is-loading table tbody:empty { display: none; }
-        /* Full width now, so no clipping is needed — but long text still
-           ellipsises rather than stretching a column out of shape. */
-        .ov .split-row td:nth-child(2),
-        .ov .split-row td:nth-child(3) { max-width: 260px; }
-        /* Order Suggestions: loaded = --suggest-h (8 rows) but never
-           scroll-capped — if there are 7 or 12 suggestions they are all shown
-           and the panel grows. Loading = compact spinner strip, then expands.
-           No inner scrollbar, ever. */
-        .ov #suggestTable.table-scroll {
-            min-height: var(--suggest-h);
-            max-height: none;
-            overflow-y: visible;
-        }
-        .ov #suggestTable.table-scroll.is-loading {
-            min-height: calc(var(--th-h) + var(--loading-body-h));
-            max-height: calc(var(--th-h) + var(--loading-body-h));
-            overflow: hidden;
-        }
-        .ov table { width: 100%; border-collapse: collapse; }
-        /* Full-width tables need a floor to avoid crushing columns.
-           The stacked activity tables have the whole page, so no floor. */
-        .ov #suggestTable table { min-width: 680px; }
-        .ov .split-row table { min-width: 0; }
+        /* Order Suggestions keeps the same shared floor as every other table
+           so all three read as one system; it grows if rows run long. */
+        .ov #suggestTable.table-scroll { min-height: var(--suggest-h); }
+        /* border-collapse is inherited from the shared table frame in
+           layouts/app.blade.php (separate, so row borders survive). */
+        .ov table { width: 100%; table-layout: fixed; }
         .ov thead th {
-            background: rgba(255,255,255,0.03);
+            /* background, colour and corner radius come from the shared
+               table frame in layouts/app.blade.php so this page matches
+               every other table. Only rhythm lives here. */
             padding: var(--sp-3) var(--cell-x);
             text-align: left;
             font-size: var(--fs-label);
@@ -761,34 +668,55 @@
             line-height: var(--lh-tight);
             letter-spacing: var(--track-caps);
             text-transform: uppercase;
-            color: #64748b;
-            white-space: nowrap;
+            /* Headers wrap at word boundaries. `nowrap` here would make the
+               header row, not the data, the thing that forces a horizontal
+               scrollbar on a narrow pane. */
+            white-space: normal;
+            overflow-wrap: normal;
         }
-        /* Fixed row height + middle alignment is what makes the three tables
-           read as one system. Variable row heights were the source of the
-           ragged, inconsistent rhythm across sections. */
+        /* Proportional columns. Without these, fixed layout divides the pane
+           evenly and squeezes the date/supplier columns; the split below
+           gives the text-heavy columns the room they actually need. */
+        /* Transaction History: Date, Product, Qty, Unit Price, Line Total */
+        .ov #recentSalesTable th:nth-child(1) { width: 17%; }
+        .ov #recentSalesTable th:nth-child(2) { width: 31%; }
+        .ov #recentSalesTable th:nth-child(3) { width: 8%; }
+        .ov #recentSalesTable th:nth-child(4) { width: 20%; }
+        .ov #recentSalesTable th:nth-child(5) { width: 24%; }
+        /* Stock-Ins: Date, Product, Supplier, Qty, Unit, Staff */
+        .ov #stockInTable th:nth-child(1) { width: 17%; }
+        .ov #stockInTable th:nth-child(2) { width: 23%; }
+        .ov #stockInTable th:nth-child(3) { width: 23%; }
+        .ov #stockInTable th:nth-child(4) { width: 8%; }
+        .ov #stockInTable th:nth-child(5) { width: 11%; }
+        .ov #stockInTable th:nth-child(6) { width: 18%; }
+        /* Rows carry no height and no border of their own — the rhythm comes
+           from the cell padding below, and each row is drawn as a filled
+           container by the shared table frame in layouts/app.blade.php. */
         .ov tbody tr {
-            height: var(--row-h);
-            border-top: 1px solid rgba(255,255,255,0.04);
+            height: auto;
             transition: background 0.15s;
         }
         .ov tbody tr:hover { background: rgba(255,255,255,0.02); }
+        /* Row height comes from padding, not `min-height` on <tr>: table
+           layout ignores a min-height there, which collapsed every row to
+           its bare text and clipped the sub-lines. Padding also grows the
+           row automatically when a cell wraps to more lines. */
         .ov tbody td {
-            padding: var(--sp-1) var(--cell-x);
+            padding: var(--row-pad-y) var(--cell-x);
             font-size: var(--fs-md);
             line-height: var(--lh-body);
             color: #cbd5e1;
             vertical-align: middle;
         }
-        /* The one-line-taller suggestion cells (name over sku) stay inside the
-           same fixed row height instead of stretching it. */
+        /* Cells that stack a name over a sub-line read tighter when the two
+           lines are pulled together. */
         .ov tbody td:has(> br) { line-height: 1.35; }
         .ov tbody td strong { font-weight: 600; }
 
-        /* === LOADING vs LOADED — compact-then-expand ===
-           Loading (.is-loading) = short spinner-only strip (~64px body).
-           Loaded = full reserved height (--table-h / --list-h / --suggest-h).
-           The height transition above animates the grow. Loaded rows fade in. */
+        /* === LOADING vs LOADED ===
+           Panels keep their loaded height throughout; only the contents
+           change (spinner → rows). Loaded rows fade in on arrival. */
         .ov .table-scroll:not(.is-loading) tbody tr,
         .ov .top-products-panel:not(.is-loading) .top-product-item {
             animation: ovFadeUp 0.35s ease both;
@@ -832,7 +760,25 @@
         .ov .urgency-low     { background: rgba(251,191,36,0.15); color: #fbbf24; }
         .ov .urgency-watch   { background: rgba(96,165,250,0.12); color: #60a5fa; }
         .ov .suggest-qty { font-size: var(--fs-base); font-weight: 700; color: #4ade80; }
-        .ov .suggest-why { font-size: var(--fs-sm); line-height: 1.5; color: #94a3b8; max-width: 260px; }
+        /* The merged "Sold / Avg per day" cell: primary figure with the
+           velocity as a dimmer suffix so one column carries both numbers. */
+        .ov .suggest-avg { color: #64748b; font-size: var(--fs-sm); }
+        body.light-theme .ov .suggest-avg { color: #94a3b8; }
+        /* Widened from 260px: the explanation below is a full sentence, and a
+           narrow column wrapped it into a 5-line block that stretched every
+           row to ~117px. A share (not a fixed px floor) is used so the column
+           absorbs whatever space the six numeric columns don't need, and
+           shrinks with the pane instead of forcing the table to scroll. */
+        .ov .suggest-why { font-size: var(--fs-sm); line-height: 1.5; color: #94a3b8; }
+        /* Fixed layout so the split below is authoritative. Under the default
+           auto layout these are only hints and the long headers win, which is
+           what squeezed "Why" to ~160px and stretched rows to ~117px tall. */
+        .ov #suggestTable th { white-space: normal; overflow-wrap: normal; }
+        .ov #suggestTable td { overflow-wrap: break-word; }
+        .ov #suggestTable th:last-child,
+        .ov #suggestTable td.suggest-why { width: 31%; }
+        .ov #suggestTable th:nth-child(2) { width: 18%; }
+        .ov #suggestTable th:not(:last-child):not(:nth-child(2)) { width: 8.6%; }
         .ov .suggest-sku {
             font-size: var(--fs-micro);
             line-height: var(--lh-tight);
@@ -849,7 +795,7 @@
         body.light-theme .ov .suggest-qty { color: #16a34a; }
         body.light-theme .ov .page-title { color: #0f172a; }
         body.light-theme .ov .page-subtitle { color: #64748b; }
-        body.light-theme .ov .page-header.hero { border-color: rgba(37,99,235,0.18); box-shadow: 0 12px 28px rgba(37,99,235,0.18); }
+        body.light-theme .ov .page-header.hero { border-color: rgba(37,99,235,0.18); }
         body.light-theme .ov .page-header.hero .page-title { color: #ffffff; }
         body.light-theme .ov .page-header.hero .page-subtitle { color: rgba(226,232,240,0.88); }
         body.light-theme .ov .hero-eyebrow { color: #dbeafe; background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.35); }
@@ -877,9 +823,9 @@
         body.light-theme .ov .top-product-rev { color: #16a34a; }
         body.light-theme .ov .top-product-rank { background: rgba(37,99,235,0.08); color: #2563eb; }
         body.light-theme .ov .top-product-rank.rank-1 { background: rgba(217,119,6,0.1); color: #d97706; }
-        body.light-theme .ov .table-wrapper { background: #ffffff; border-color: rgba(15,23,42,0.08); }
+        body.light-theme .ov .table-wrapper { background: #ffffff; }
         body.light-theme .ov .table-loading { color: #94a3b8; }
-        body.light-theme .ov thead th { background: #f8fafc; color: #64748b; }
+        body.light-theme .ov thead th { color: #1e293b; }
         body.light-theme .ov tbody td { color: #475569; }
         body.light-theme .ov tbody tr:hover { background: rgba(15,23,42,0.025); }
         body.light-theme .ov .empty-state { color: #94a3b8; }
@@ -914,8 +860,60 @@
             .ov .stat-icon svg { width: 16px; height: 16px; }
             .ov .section-header { gap: var(--sp-3); }
             .ov .table-wrapper { border-radius: 10px; }
-            .ov #suggestTable table { min-width: 640px; }
-            .ov .suggest-why { max-width: 200px; }
+            /* Cancels the shared layout's mobile `table { min-width: 600px }`.
+               Scoped to .ov so the other pages keep their scroll-to-view
+               tables. */
+            .ov table { min-width: 0; }
+        }
+        /* === NARROW SCREENS: table → card grid ===
+           Seven columns cannot share 350px legibly no matter how the
+           percentages are tuned, so below 640px each row becomes a small
+           grid: the label sits above its value. The <thead> is hidden and the
+           per-cell label comes from the data-label attribute the renderers
+           emit. This is what removes the last scrollbar on a phone. */
+        @media (max-width: 640px) {
+            .ov thead { display: none; }
+            .ov table, .ov tbody, .ov tr, .ov td { display: block; width: 100%; }
+            .ov tbody tr {
+                padding: var(--sp-4) 0;
+            }
+            /* Two columns per row keeps each value wide enough to read. */
+            .ov tbody td {
+                display: grid;
+                grid-template-columns: minmax(0, 40%) minmax(0, 60%);
+                gap: var(--sp-3);
+                align-items: baseline;
+                padding: var(--sp-2) var(--cell-x);
+            }
+            .ov tbody td::before {
+                content: attr(data-label);
+                font-size: var(--fs-micro);
+                font-weight: 600;
+                letter-spacing: var(--track-caps);
+                text-transform: uppercase;
+                color: #64748b;
+            }
+            /* The identity cell reads better as one full-width block. */
+            .ov tbody td:nth-child(2) {
+                grid-template-columns: 1fr;
+                gap: var(--sp-1);
+            }
+            .ov tbody td:nth-child(2)::before { display: none; }
+            /* The reason keeps its label but takes the full row width — it is
+               a sentence, and squeezing it into the value column left a
+               one-word-per-line ribbon. */
+            .ov tbody td.suggest-why {
+                grid-template-columns: 1fr;
+                gap: var(--sp-2);
+                margin-top: var(--sp-2);
+                padding-top: var(--sp-3);
+                border-top: 1px dashed rgba(255,255,255,0.08);
+            }
+            /* Reclaim the space the hidden header used to reserve. */
+            .ov .table-scroll,
+            .ov #suggestTable.table-scroll { min-height: 0; }
+            .ov .table-loading { min-height: 120px; }
+            .ov .empty-state { display: block; }
         }
     </style>
 @endpush
@@ -944,8 +942,8 @@
         }
 
         // ── Revenue Chart ───────────────────────────────────────
-        // Compact-then-expand: panel starts short, expands to full height
-        // when data lands. Chart renders AFTER expand so it measures full box.
+        // The panel is already at full height, so the chart can render as
+        // soon as the data arrives — nothing has to resize first.
         async function loadRevenueChart() {
             const panel = document.getElementById('revenuePanel');
             const loading = document.getElementById('chartLoading');
@@ -1029,7 +1027,7 @@
         }
 
         // ── Top Selling Products ────────────────────────────────
-        // Compact-then-expand: panel starts short, grows to full height on rows.
+        // The panel is already at full height; rows simply replace the spinner.
         async function loadTopProducts() {
             const panel = document.getElementById('topPanel');
             const el = document.getElementById('topProductsList');
@@ -1082,11 +1080,11 @@
                 }
                 body.innerHTML = items.map(s => `
                     <tr>
-                        <td>${escapeHtml(s.date)}</td>
-                        <td><strong>${escapeHtml(s.product_name)}</strong></td>
-                        <td>${escapeHtml(s.quantity)}</td>
-                        <td>₱${Number(s.unit_price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td>₱${Number(s.line_total).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td data-label="Date">${escapeHtml(s.date)}</td>
+                        <td data-label="Product"><strong>${escapeHtml(s.product_name)}</strong></td>
+                        <td data-label="Qty">${escapeHtml(s.quantity)}</td>
+                        <td data-label="Unit Price">₱${Number(s.unit_price).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                        <td data-label="Line Total">₱${Number(s.line_total).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                     </tr>`).join('');
             } catch (e) {
                 settle(body);
@@ -1109,12 +1107,12 @@
                 }
                 body.innerHTML = items.map(s => `
                     <tr>
-                        <td>${escapeHtml(s.date)}</td>
-                        <td><strong>${escapeHtml(s.product_name)}</strong></td>
-                        <td>${escapeHtml(s.supplier_name)}</td>
-                        <td>${s.quantity}</td>
-                        <td>${escapeHtml(s.unit)}</td>
-                        <td>${escapeHtml(s.staff_name)}</td>
+                        <td data-label="Date">${escapeHtml(s.date)}</td>
+                        <td data-label="Product"><strong>${escapeHtml(s.product_name)}</strong></td>
+                        <td data-label="Supplier">${escapeHtml(s.supplier_name)}</td>
+                        <td data-label="Qty">${s.quantity}</td>
+                        <td data-label="Unit">${escapeHtml(s.unit)}</td>
+                        <td data-label="Staff">${escapeHtml(s.staff_name)}</td>
                     </tr>`).join('');
             } catch (e) {
                 settle(body);
@@ -1148,23 +1146,22 @@
                 const items = d.suggestions || [];
                 settle(body);
                 if (items.length === 0) {
-                    body.innerHTML = '<tr><td colspan="8" class="empty-state">All stocks healthy — no restock needed right now.</td></tr>';
+                    body.innerHTML = '<tr><td colspan="7" class="empty-state">All stocks healthy — no restock needed right now.</td></tr>';
                     return;
                 }
                 body.innerHTML = items.map(s => `
                     <tr>
-                        <td><span class="urgency-pill urgency-${escapeHtml(s.urgency)}">${escapeHtml(s.urgency)}</span></td>
-                        <td><strong>${escapeHtml(s.name)}</strong><br><span class="suggest-sku">${escapeHtml(s.sku)}</span></td>
-                        <td>${s.current_stock} / ${s.reorder_threshold}</td>
-                        <td>${s.sold_in_window} pcs</td>
-                        <td>${s.avg_daily}/day</td>
-                        <td>${s.days_until_out === null ? '—' : s.days_until_out + ' days'}</td>
-                        <td class="suggest-qty">+${s.suggested_qty} pcs</td>
-                        <td class="suggest-why">${escapeHtml(s.reason)}</td>
+                        <td data-label="Urgency"><span class="urgency-pill urgency-${escapeHtml(s.urgency)}">${escapeHtml(s.urgency)}</span></td>
+                        <td data-label="Product"><strong>${escapeHtml(s.name)}</strong><br><span class="suggest-sku">${escapeHtml(s.sku)}</span></td>
+                        <td data-label="Stock / Threshold">${s.current_stock} / ${s.reorder_threshold}</td>
+                        <td data-label="Sold / Avg per day">${s.sold_in_window} sold <span class="suggest-avg">· ${s.avg_daily}/day</span></td>
+                        <td data-label="Days left">${s.days_until_out === null ? '—' : s.days_until_out + ' days'}</td>
+                        <td data-label="Suggested order" class="suggest-qty">+${s.suggested_qty} pcs</td>
+                        <td data-label="Why" class="suggest-why">${escapeHtml(briefReason(s.reason))}</td>
                     </tr>`).join('');
             } catch (e) {
                 settle(body);
-                body.innerHTML = '<tr><td colspan="8" class="empty-state">Unable to load suggestions</td></tr>';
+                body.innerHTML = '<tr><td colspan="7" class="empty-state">Unable to load suggestions</td></tr>';
                 console.error('Suggestions load error:', e);
             }
         }
@@ -1174,11 +1171,24 @@
             window.location.href = '/api/dashboard/transactions/export';
         }
 
+        /* Overview-only trim of the "Why" text. The stored reason is a full
+           sentence pair joined by an em dash; this column is a summary, so
+           everything from the dash onward is dropped. Done at render time on
+           purpose: the reason in the database and on the full Order
+           Suggestions page stays complete. */
+        function briefReason(text) {
+            if (!text) return '';
+            const parts = String(text).split(/\s+[—–-]\s+/);
+            // No dash: the reason is already a single short sentence, so it is
+            // left exactly as stored (trailing period included).
+            if (parts.length === 1) return String(text).trim();
+            return parts[0].replace(/[.\s]+$/, '').trim();
+        }
+
         // ── Helpers ─────────────────────────────────────────────
-        /* Compact-then-expand: drop is-loading from table AND panel so CSS
-           grows from 64px spinner strip to full height. Called on BOTH
-           success and failure so a broken endpoint never leaves a panel
-           stuck short. */
+        /* Drop the loading state from the table and its panel. Called on BOTH
+           success and failure so a broken endpoint never leaves a spinner
+           stuck on screen. */
         function settle(body) {
             if (!body) return;
             body.classList.remove('is-loading');
