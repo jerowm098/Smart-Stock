@@ -38,7 +38,12 @@ Route::get('/home', [HomeController::class, 'index'])->name('home');
 // Authenticated routes
 Route::middleware('auth')->group(function () {
     // Overview / dashboard
-    Route::get('/dashboard', [InventoryController::class, 'index'])->name('dashboard');
+    // BRD (Account Management): "Staff Role = POS Access Only." The overview
+    // page is an Admin surface, so Staff are redirected to the POS screen
+    // instead of landing on a dashboard whose APIs would 403.
+    Route::get('/dashboard', [InventoryController::class, 'index'])
+        ->name('dashboard')
+        ->middleware(EnsureUserIsAdmin::class);
 
     // POS checkout page (cashier-only)
     Route::get('/pos', [PosCheckoutController::class, 'index'])

@@ -1,12 +1,13 @@
 {{--
     The sign-in card — the single source of truth for the login form.
 
-    Used by BOTH surfaces so they can never drift apart:
-      - Standalone /login page:  @include('auth.login-card')
-      - Homepage modal:          @include('auth.login-card', ['asModal' => true])
+    Included once, by the homepage only:
+      - Homepage modal:  @include('home-login-modal', ['asModal' => true])
 
-    Both post to route('login.post'), so credential handling, validation and the
-    role-based redirect all stay in AuthController.
+    There is no standalone /login page — that route redirects to /home — so the
+    modal is the only sign-in surface in the app. Posting to
+    route('login.post') keeps credential handling, validation and the role-based
+    redirect in AuthController.
 
     Only login-scoped classes live here — no body/* rules — so dropping this
     into the homepage cannot restyle the page behind the modal.
@@ -128,22 +129,18 @@
     body.light-theme .brand .brand-mark .mk-axis { stroke: #64748b; }
     body.light-theme .brand .brand-mark .mk-arrow { stroke: #16a34a; }
     .brand .brand-text { text-align: left; }
-    .brand .brand-name {
-        color: #f8fafc;
-        font-size: 22px;
-        font-weight: 700;
-        line-height: 1.05;
-        letter-spacing: 0.01em;
-    }
-    body.light-theme .brand .brand-name { color: #0f172a; }
-    .brand .brand-subtitle {
-        color: #94a3b8;
-        font-size: 22px;
-        font-weight: 300;
-        line-height: 1.05;
-        letter-spacing: 0.06em;
-    }
-    body.light-theme .brand .brand-subtitle { color: #64748b; }
+    /* Both lines share one rule so they can never drift apart again. Only the
+           text content differs — the second line reads "Stock". */
+        .brand .brand-name,
+        .brand .brand-subtitle {
+            color: #f8fafc;
+            font-size: 22px;
+            font-weight: 700;
+            line-height: 1.05;
+            letter-spacing: 0.01em;
+        }
+        body.light-theme .brand .brand-name,
+        body.light-theme .brand .brand-subtitle { color: #0f172a; }
     .login-header {
         text-align: center;
         margin-bottom: 32px;
@@ -309,7 +306,7 @@
             <polyline class="mk-arrow" points="67,11 80,11 80,24"/>
         </svg>
         <div class="brand-text">
-            <div class="brand-name">Smart</div>
+            <div class="brand-name">SMART</div>
             <div class="brand-subtitle">Stock</div>
         </div>
     </a>

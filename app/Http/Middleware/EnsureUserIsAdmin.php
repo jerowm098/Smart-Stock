@@ -32,9 +32,12 @@ class EnsureUserIsAdmin
                 return response()->json(['message' => 'Administrator access required.'], 403);
             }
 
-            return redirect()
-                ->route('dashboard')
-                ->with('error', 'Administrator access required for that page.');
+            // BRD (Account Management): Staff are redirected "strictly to the
+                        // simplified POS sales interface", and the /dashboard page is now
+                        // Admin-only, so redirecting Staff there would loop.
+                        return redirect()
+                            ->route('pos')
+                            ->with('error', 'Administrator access required for that page.');
         }
 
         return $next($request);

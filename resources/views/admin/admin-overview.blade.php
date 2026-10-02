@@ -8,7 +8,7 @@
     <header class="page-header hero">
         <div class="hero-content">
             <h1 class="page-title">Overview</h1>
-            <p class="page-subtitle">Hello {{ ucfirst(Auth::user()->role) }} {{ ucwords(Auth::user()->name) }}, here is and overview of your inventory dashboard.</p>
+            <p class="page-subtitle">Hello {{ ucfirst(Auth::user()->role) }} {{ ucwords(Auth::user()->name) }}, here is an overview of your inventory dashboard.</p>
         </div>
     </header>
 

@@ -116,30 +116,47 @@
     <div class="modal-overlay" id="addModal">
         <div class="modal">
             <h2>Add New Product</h2>
-            <form onsubmit="handleAddProduct(event)" autocomplete="off">
+            <form onsubmit="handleAddProduct(event)" autocomplete="off" novalidate>
+                <div class="form-grid">
                 <div class="form-group">
-                    <label>Product Name *</label>
-                    <input type="text" name="name" id="pNameM" placeholder="e.g. Wireless Mouse" required autocomplete="off">
+                    <label class="field-label"><span>Product Name <span class="req">*</span></span></label>
+                    <input type="text" name="name" id="pNameM" placeholder="e.g. Adjustable Wrench" maxlength="255" autocomplete="off">
+                    <span class="field-error" data-error-for="pNameM"></span>
                 </div>
                 <div class="form-group">
-                    <label>SKU *</label>
-                    <input type="text" name="sku" id="pSkuM" placeholder="e.g. WM-001" required autocomplete="off">
+                    <label class="field-label"><span>SKU <span class="req">*</span></span></label>
+                    <input type="text" name="sku" id="pSkuM" placeholder="e.g. AW-001" maxlength="50" autocomplete="off">
+                    <span class="field-error" data-error-for="pSkuM"></span>
+                </div>
+                <div class="form-group form-group-full">
+                    <label class="field-label"><span>Category</span></label>
+                    <select name="category_select" id="pCategorySelectM" onchange="toggleCustomCategory('add', this.value)">
+                        <option value="">Select a category</option>
+                    </select>
+                    <div class="custom-category hidden" id="pCategoryCustom">
+                        <label class="custom-category-label" for="pCategoryM">Specify:</label>
+                        <input type="text" name="category" id="pCategoryM" placeholder="e.g. Hand Tools" maxlength="255" autocomplete="off">
+                    </div>
+                    <span class="field-error" data-error-for="pCategoryM"></span>
                 </div>
                 <div class="form-group">
-                    <label>Category</label>
-                    <input type="text" name="category" id="pCategoryM" placeholder="e.g. Electronics" autocomplete="off">
+                    <label class="field-label"><span>Price (₱) <span class="req">*</span></span></label>
+                    <input type="number" name="price" id="pPriceM" placeholder="0.00" step="0.01" min="0" inputmode="decimal" autocomplete="off">
+                    <span class="form-hint">Selling price per piece, in pesos. Cannot be negative.</span>
+                    <span class="field-error" data-error-for="pPriceM"></span>
                 </div>
                 <div class="form-group">
-                    <label>Price (₱) *</label>
-                    <input type="number" name="price" id="pPriceM" placeholder="0.00" step="0.01" min="0" required autocomplete="off">
+                    <label class="field-label"><span>Current Stock <span class="req">*</span></span><span class="unit-tag">in pieces</span></label>
+                    <input type="number" name="current_stock" id="pStockM" placeholder="0" min="0" step="1" inputmode="numeric" autocomplete="off">
+                    <span class="form-hint">How many pieces you have right now (pcs). Use 0 if out of stock.</span>
+                    <span class="field-error" data-error-for="pStockM"></span>
                 </div>
-                <div class="form-group">
-                    <label>Current Stock *</label>
-                    <input type="number" name="current_stock" id="pStockM" placeholder="0" min="0" required autocomplete="off">
+                <div class="form-group form-group-full">
+                    <label class="field-label"><span>Reorder Threshold <span class="req">*</span></span><span class="unit-tag">in pieces</span></label>
+                    <input type="number" name="reorder_threshold" id="pThresholdM" placeholder="0" min="0" step="1" inputmode="numeric" autocomplete="off">
+                    <span class="form-hint">Alert when stock drops to this number. Suggested: 20% of Current Stock.</span>
+                    <span class="field-error" data-error-for="pThresholdM"></span>
                 </div>
-                <div class="form-group">
-                    <label>Reorder Threshold *</label>
-                    <input type="number" name="reorder_threshold" id="pThresholdM" placeholder="0" min="0" required autocomplete="off">
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-cancel" onclick="closeModal()">Cancel</button>
@@ -153,31 +170,48 @@
     <div class="modal-overlay" id="editModal">
         <div class="modal">
             <h2>Edit Product</h2>
-            <form onsubmit="handleEditProduct(event)" autocomplete="off">
+            <form onsubmit="handleEditProduct(event)" autocomplete="off" novalidate>
                 <input type="hidden" id="eId" name="id">
+                <div class="form-grid">
                 <div class="form-group">
-                    <label>Product Name *</label>
-                    <input type="text" name="name" id="eName" placeholder="e.g. Wireless Mouse" required autocomplete="off">
+                    <label class="field-label"><span>Product Name <span class="req">*</span></span></label>
+                    <input type="text" name="name" id="eName" placeholder="e.g. Adjustable Wrench" maxlength="255" autocomplete="off">
+                    <span class="field-error" data-error-for="eName"></span>
                 </div>
                 <div class="form-group">
-                    <label>SKU *</label>
-                    <input type="text" name="sku" id="eSku" placeholder="e.g. WM-001" required autocomplete="off">
+                    <label class="field-label"><span>SKU <span class="req">*</span></span></label>
+                    <input type="text" name="sku" id="eSku" placeholder="e.g. AW-001" maxlength="50" autocomplete="off">
+                    <span class="field-error" data-error-for="eSku"></span>
+                </div>
+                <div class="form-group form-group-full">
+                    <label class="field-label"><span>Category</span></label>
+                    <select name="category_select" id="pCategorySelectE" onchange="toggleCustomCategory('edit', this.value)">
+                        <option value="">Select a category</option>
+                    </select>
+                    <div class="custom-category hidden" id="eCategoryCustom">
+                        <label class="custom-category-label" for="eCategory">Specify:</label>
+                        <input type="text" name="category" id="eCategory" placeholder="e.g. Hand Tools" maxlength="255" autocomplete="off">
+                    </div>
+                    <span class="field-error" data-error-for="eCategory"></span>
                 </div>
                 <div class="form-group">
-                    <label>Category</label>
-                    <input type="text" name="category" id="eCategory" placeholder="e.g. Electronics" autocomplete="off">
+                    <label class="field-label"><span>Price (₱) <span class="req">*</span></span></label>
+                    <input type="number" name="price" id="ePrice" placeholder="0.00" step="0.01" min="0" inputmode="decimal" autocomplete="off">
+                    <span class="form-hint">Selling price per piece, in pesos. Cannot be negative.</span>
+                    <span class="field-error" data-error-for="ePrice"></span>
                 </div>
                 <div class="form-group">
-                    <label>Price (₱) *</label>
-                    <input type="number" name="price" id="ePrice" placeholder="0.00" step="0.01" min="0" required autocomplete="off">
+                    <label class="field-label"><span>Current Stock <span class="req">*</span></span><span class="unit-tag">in pieces</span></label>
+                    <input type="number" name="current_stock" id="eStock" placeholder="0" min="0" step="1" inputmode="numeric" autocomplete="off">
+                    <span class="form-hint">How many pieces you have right now (pcs). Use 0 if out of stock.</span>
+                    <span class="field-error" data-error-for="eStock"></span>
                 </div>
-                <div class="form-group">
-                    <label>Current Stock *</label>
-                    <input type="number" name="current_stock" id="eStock" placeholder="0" min="0" required autocomplete="off">
+                <div class="form-group form-group-full">
+                    <label class="field-label"><span>Reorder Threshold <span class="req">*</span></span><span class="unit-tag">in pieces</span></label>
+                    <input type="number" name="reorder_threshold" id="eThreshold" placeholder="0" min="0" step="1" inputmode="numeric" autocomplete="off">
+                    <span class="form-hint">Alert when stock drops to this number. Suggested: 20% of Current Stock.</span>
+                    <span class="field-error" data-error-for="eThreshold"></span>
                 </div>
-                <div class="form-group">
-                    <label>Reorder Threshold *</label>
-                    <input type="number" name="reorder_threshold" id="eThreshold" placeholder="0" min="0" required autocomplete="off">
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn btn-cancel" onclick="closeEditModal()">Cancel</button>
@@ -620,6 +654,9 @@
         /* Hide text until data loads */
         #tableView.loading tbody td:not(.empty-state) { color: transparent; }
         #tableView.loading tbody td.empty-state { color: #64748b; }
+        /* While only the "Loading" row is present, drop the table's min-width so the
+           placeholder fits the viewport and no horizontal scrollbar appears. */
+        #tableView.loading table { min-width: 0; }
         .stock-cell { font-weight: 600; } .stock-ok { color: #4ade80; } .stock-low { color: #fbbf24; } .stock-critical { color: #f87171; }
         .status-text { font-size: 13px; font-weight: 500; }
         .action-link { background: none; border: 1px solid transparent; padding: 4px 10px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; color: #60a5fa; text-decoration: none; transition: all 0.15s; margin-right: 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; }
@@ -634,9 +671,12 @@
         body.light-theme .action-link.danger:hover { border-color: rgba(220,38,38,0.3); background: rgba(220,38,38,0.06); color: #b91c1c; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
         /* MODAL */
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; }
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; padding: 84px 20px 24px; }
         .modal-overlay.active { display: flex; }
-        .modal { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 28px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; }
+        .modal { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 28px; width: 100%; max-width: 680px; max-height: 100%; overflow-y: auto; }
+        /* Two-column field grid so long forms don't grow past the viewport. */
+        .modal .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+        .modal .form-grid .form-group-full { grid-column: 1 / -1; }
         .modal h2 { color: #f8fafc; font-size: 18px; font-weight: 700; margin-bottom: 20px; }
         .modal .form-group { margin-bottom: 14px; }
         .modal .form-group label { display: block; color: #cbd5e1; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
@@ -653,6 +693,42 @@
         .modal textarea::placeholder { color: #64748b; }
         .modal .form-static { color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; }
         .form-hint { color: #475569; font-size: 11px; margin-top: 4px; display: block; }
+        /* Field-level validation feedback (add/edit product modals) */
+        .modal .form-group .field-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: #cbd5e1; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
+        .modal .form-group .field-label .req { color: #f87171; font-weight: 600; }
+        .modal .form-group .field-label .unit-tag { color: #64748b; font-size: 11px; font-weight: 500; text-transform: lowercase; }
+        .modal .form-group .field-error { display: none; color: #f87171; font-size: 11px; margin-top: 4px; }
+        .modal .form-group .field-error:empty { display: none; }
+        .modal .form-group select {
+            height: 36px;
+            /* Chevron indicator — kept even though the browser default arrow is hidden. */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 12px;
+            padding-right: 34px;
+            cursor: pointer;
+        }
+        /* Open dropdown list must follow the active theme, not the OS default. */
+        .modal .form-group select option { background: #1e293b; color: #e2e8f0; }
+        body.light-theme .modal .form-group select option { background: #ffffff; color: #0f172a; }
+        body.light-theme .modal .form-group select option:hover { background: #f1f5f9; }
+        .modal .form-group select option:checked { background: rgba(37,99,235,0.18); color: #f8fafc; font-weight: 600; }
+        body.light-theme .modal .form-group select option:checked { background: #eff6ff; color: #1d4ed8; }
+        /* "Other (create new)" category — rendered as a light line field so it
+           reads as a continuation of the select above it, not a second box. */
+        .modal .form-group .custom-category { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+        .modal .form-group .custom-category-label { color: #94a3b8; font-size: 12px; white-space: nowrap; }
+        .modal .form-group .custom-category input {
+            flex: 1; min-width: 0; width: 100%; padding: 5px 0; background: transparent;
+            border: 0; border-bottom: 1px solid rgba(255,255,255,0.22);
+            border-radius: 0; color: #f8fafc; font-size: 13px;
+        }
+        .modal .form-group .custom-category input:focus { border-bottom-color: #3b82f6; border-bottom-style: solid; }
+        .modal .form-group .custom-category input::placeholder { color: #64748b; }
+        .modal .form-group.has-error input,
+        .modal .form-group.has-error select { border-color: #ef4444 !important; }
+        .modal .form-group.has-error .field-error { display: block; }
         /* LIGHT THEME */
         body.light-theme .page-title { color: #0f172a; }
         body.light-theme .page-subtitle { color: #64748b; }
@@ -689,8 +765,26 @@
         body.light-theme .modal h2 { color: #0f172a; }
         body.light-theme .modal .form-group label { color: #475569; }
         body.light-theme .modal .form-group input { background: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a; }
-        body.light-theme .modal .form-group select { background: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a; }
+        body.light-theme .modal .form-group select {
+            background-color: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a;
+            /* Re-apply chevron: the shorthand above resets background-image. */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 12px;
+        }
         body.light-theme .modal .form-static { color: #0f172a; background: #f8fafc; border-color: rgba(15,23,42,0.14); }
+        body.light-theme .modal .form-group .field-label { color: #475569; }
+        body.light-theme .modal .form-group .field-label .req { color: #dc2626; }
+        body.light-theme .modal .form-group .field-label .unit-tag { color: #64748b; }
+        body.light-theme .modal .form-group .field-error { color: #dc2626; }
+        body.light-theme .modal .form-group.has-error input,
+        body.light-theme .modal .form-group.has-error select { border-color: #dc2626 !important; }
+        body.light-theme .modal .form-group .custom-category-label { color: #64748b; }
+        body.light-theme .modal .form-group .custom-category input { background: transparent; color: #0f172a; border-bottom-color: rgba(15,23,42,0.2); }
+        body.light-theme .modal .form-group .custom-category input:focus { border-bottom-color: #2563eb; }
+        body.light-theme .modal .form-group .custom-category input::placeholder { color: #94a3b8; }
+        body.light-theme .modal .form-group.has-error .custom-category input { border-bottom-color: #dc2626 !important; }
         body.light-theme .modal-actions .btn-cancel { background: #e2e8f0; color: #334155; }
 
         /* STOCK ADJUSTMENT MODAL - LIGHT THEME */
@@ -725,6 +819,11 @@
         body.light-theme #adjustModal .modal .form-hint { color: #64748b; }
         body.light-theme #adjustModal .modal .btn-cancel { background: #e2e8f0; color: #334155; }
         /* MOBILE */
+        @media (max-width: 760px) {
+            /* Collapse to a single column before two columns get cramped. */
+            .modal .form-grid { grid-template-columns: 1fr; }
+            .modal .form-grid .form-group-full { grid-column: auto; }
+        }
         @media (max-width: 640px) {
             .page-title { font-size: 20px; }
             .page-subtitle { font-size: 13px; margin-bottom: 0; }
@@ -748,9 +847,11 @@
             .product-card-price { font-size: 14px; }
             .table-wrapper { border-radius: 10px; }
             table { min-width: 800px; }
+            #tableView.loading table { min-width: 0; }
             thead th, tbody td { padding: 12px 14px; font-size: 12px; }
             .empty-state { padding: 32px 16px; font-size: 13px; }
-            .modal { width: calc(100vw - 24px); padding: 20px; max-height: 95vh; }
+            .modal-overlay { padding: 76px 12px 12px; }
+            .modal { width: calc(100vw - 24px); padding: 20px; max-height: 100%; }
             .modal h2 { font-size: 16px; }
             .modal .form-group input { padding: 10px 12px; font-size: 14px; }
             .modal-actions { flex-direction: column; gap: 8px; }
@@ -761,6 +862,10 @@
 
 @push('scripts')
     <script>
+        // Categories resolved on the server so the modal dropdowns are complete
+        // on first paint — no client fetch required to show them.
+        window.SERVER_CATEGORIES = @json($categories ?? []);
+
         // BRD: Staff restricted to sales interface only — only Admin can manage products.
         // Cashier gets read-only catalogue here; POS page is the sales interface.
         const canAdjustStock = {{ Auth::user()->isAdmin() ? 'true' : 'false' }};
@@ -834,6 +939,7 @@
                 if (!res.ok) throw new Error('Unable to load products');
                 allProducts = await res.json();
                 populateCategoryFilter();
+                populateCategorySelects();
                 filterProducts();
                 // Show text when data loads
                 document.getElementById('tableView').classList.remove('loading');
@@ -989,6 +1095,10 @@
         }
 
         function openModal() {
+            populateCategorySelects();
+            document.getElementById('pCategoryCustom').classList.add('hidden');
+            document.getElementById('pCategoryM').value = '';
+            document.getElementById('pCategorySelectM').value = '';
             document.getElementById('addModal').classList.add('active');
             document.getElementById('pNameM').focus();
         }
@@ -996,6 +1106,187 @@
         function closeModal() {
             document.getElementById('addModal').classList.remove('active');
             document.getElementById('addModal').querySelector('form').reset();
+            clearFormErrors(document.getElementById('addModal'));
+        }
+
+        // --- Field-level validation (add/edit product modals) ---
+
+        function clearFormErrors(modal) {
+            modal.querySelectorAll('.form-group.has-error').forEach(group => group.classList.remove('has-error'));
+            modal.querySelectorAll('.field-error').forEach(node => { node.textContent = ''; });
+        }
+
+        function setFieldError(inputId, message) {
+            const input = document.getElementById(inputId);
+            if (!input) return false;
+            const group = input.closest('.form-group');
+            if (!group) return false;
+
+            const errorNode = group.querySelector('.field-error');
+            if (message) {
+                group.classList.add('has-error');
+                if (errorNode) errorNode.textContent = message;
+            } else {
+                group.classList.remove('has-error');
+                if (errorNode) errorNode.textContent = '';
+            }
+            return Boolean(message);
+        }
+
+        /**
+         * Validates the add/edit product fields and paints inline errors.
+         * `fields` maps a logical field to its input id in the open modal.
+         * Returns true when the form may be submitted.
+         */
+        function validateProductForm(modalId, fields, mode) {
+            const modal = document.getElementById(modalId);
+            clearFormErrors(modal);
+
+            const name = document.getElementById(fields.name).value.trim();
+            const sku = document.getElementById(fields.sku).value.trim();
+            const price = parseFloat(document.getElementById(fields.price).value);
+            const stock = parseInt(document.getElementById(fields.stock).value, 10);
+            const threshold = parseInt(document.getElementById(fields.threshold).value, 10);
+
+            let firstInvalid = null;
+            const fail = (id, message) => {
+                setFieldError(id, message);
+                if (!firstInvalid) firstInvalid = id;
+            };
+
+            if (!name) {
+                fail(fields.name, 'Product name is required.');
+            } else if (name.length > 255) {
+                fail(fields.name, 'Product name must be 255 characters or fewer.');
+            }
+
+            const editingId = document.getElementById('eId')?.value;
+            if (!sku) {
+                fail(fields.sku, 'SKU is required.');
+            } else if (sku.length > 50) {
+                fail(fields.sku, 'SKU must be 50 characters or fewer.');
+            } else if (allProducts.some(p => (p.sku || '').toLowerCase() === sku.toLowerCase() && String(p.id) !== String(editingId))) {
+                fail(fields.sku, 'That SKU is already used by another product.');
+            }
+
+            if (isNaN(price)) {
+                fail(fields.price, 'Price is required.');
+            } else if (price < 0) {
+                fail(fields.price, 'Price cannot be negative.');
+            }
+
+            if (isNaN(stock)) {
+                fail(fields.stock, 'Current stock is required.');
+            } else if (stock < 0) {
+                fail(fields.stock, 'Current stock cannot be negative.');
+            } else if (!Number.isInteger(stock)) {
+                fail(fields.stock, 'Current stock must be a whole number of pieces.');
+            }
+
+            if (isNaN(threshold)) {
+                fail(fields.threshold, 'Reorder threshold is required.');
+            } else if (threshold < 0) {
+                fail(fields.threshold, 'Reorder threshold cannot be negative.');
+            } else if (!Number.isInteger(threshold)) {
+                fail(fields.threshold, 'Reorder threshold must be a whole number of pieces.');
+            }
+
+            // Category is optional overall, but if "Other" was picked the name must be typed in.
+            const categorySelect = document.getElementById(mode === 'add' ? 'pCategorySelectM' : 'pCategorySelectE');
+            if (categorySelect && categorySelect.value === OTHER_CATEGORY) {
+                const categoryInput = document.getElementById(fields.category);
+                if (!categoryInput.value.trim()) {
+                    fail(fields.category, 'Enter the new category name.');
+                }
+            }
+
+            if (firstInvalid) {
+                const node = document.getElementById(firstInvalid);
+                if (node) {
+                    node.focus();
+                    node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                }
+                return false;
+            }
+
+            return true;
+        }
+
+        const ADD_FORM_FIELDS = { name: 'pNameM', sku: 'pSkuM', category: 'pCategoryM', price: 'pPriceM', stock: 'pStockM', threshold: 'pThresholdM' };
+        const EDIT_FORM_FIELDS = { name: 'eName', sku: 'eSku', category: 'eCategory', price: 'ePrice', stock: 'eStock', threshold: 'eThreshold' };
+
+        const OTHER_CATEGORY = '__other__';
+
+        /** Feeds every existing category into the add/edit category selects. */
+        function populateCategorySelects() {
+            // Start from the server-rendered list (always present on first
+            // paint) and merge anything the client fetch has since found, so
+            // the dropdown is never in a half-populated state.
+            const merged = new Set([
+                ...(Array.isArray(window.SERVER_CATEGORIES) ? window.SERVER_CATEGORIES : []),
+                ...allProducts.map(product => (product.category || '').trim())
+            ]);
+            const categories = [...merged]
+                .filter(category => category)
+                .sort((a, b) => a.localeCompare(b));
+
+            const markup = categories
+                .map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
+                .join('');
+
+            [['pCategorySelectM', 'pCategoryM', 'pCategoryCustom'], ['pCategorySelectE', 'eCategory', 'eCategoryCustom']].forEach(([selectId, inputId, wrapId]) => {
+                const select = document.getElementById(selectId);
+                const input = document.getElementById(inputId);
+                const wrap = document.getElementById(wrapId);
+                if (!select || !input || !wrap) return;
+
+                // Preserve what the user already had selected.
+                const existing = input.value.trim();
+                select.innerHTML = '<option value="">Select a category</option>' + markup +
+                    '<option value="' + OTHER_CATEGORY + '">Other (create new)</option>';
+
+                if (existing) {
+                    const match = categories.find(c => c.toLowerCase() === existing.toLowerCase());
+                    if (match) {
+                        select.value = match;
+                    } else {
+                        // Category isn't in the list (e.g. typed by another user) — keep it as a new one.
+                        select.value = OTHER_CATEGORY;
+                        input.value = existing;
+                    }
+                }
+                wrap.classList.toggle('hidden', select.value !== OTHER_CATEGORY);
+            });
+        }
+
+        /**
+         * Reveals the free-text input when "Other" is chosen and collapses it
+         * again (keeping the text) when switching back to a known category.
+         */
+        function toggleCustomCategory(mode, value) {
+            const inputId = mode === 'add' ? 'pCategoryM' : 'eCategory';
+            const wrapId = mode === 'add' ? 'pCategoryCustom' : 'eCategoryCustom';
+            const input = document.getElementById(inputId);
+            const wrap = document.getElementById(wrapId);
+            if (!input || !wrap) return;
+
+            if (value === OTHER_CATEGORY) {
+                wrap.classList.remove('hidden');
+                input.focus();
+            } else {
+                wrap.classList.add('hidden');
+                input.value = value;
+                setFieldError(inputId, '');
+            }
+        }
+
+        /** Resolves the submitted category from the select + optional custom text. */
+        function resolveCategory(mode) {
+            const selectId = mode === 'add' ? 'pCategorySelectM' : 'pCategorySelectE';
+            const inputId = mode === 'add' ? 'pCategoryM' : 'eCategory';
+            const selected = document.getElementById(selectId).value;
+            if (selected !== OTHER_CATEGORY) return selected;
+            return document.getElementById(inputId).value.trim();
         }
 
         document.getElementById('addModal').addEventListener('click', (e) => {
@@ -1004,11 +1295,20 @@
 
         async function handleAddProduct(e) {
             e.preventDefault();
+            if (!validateProductForm('addModal', ADD_FORM_FIELDS, 'add')) return;
+
             const fd = new FormData(e.target);
             const data = Object.fromEntries(fd);
             data.price = parseFloat(data.price);
             data.current_stock = parseInt(data.current_stock);
             data.reorder_threshold = parseInt(data.reorder_threshold);
+            const category = resolveCategory('add');
+            delete data.category_select;
+            if (category) {
+                data.category = category;
+            } else {
+                delete data.category;
+            }
 
             try {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -1026,11 +1326,37 @@
                     loadProducts();
                 } else {
                     const errData = await res.json().catch(() => null);
+                    applyServerErrors('addModal', ADD_FORM_FIELDS, errData);
                     showToast(errData?.message || 'Error adding product', 'error');
                 }
             } catch (e) {
                 showToast('Connection error', 'error');
             }
+        }
+
+        /**
+         * Maps Laravel 422 validation errors onto the matching inline field errors.
+         * Falls back to a generic toast when the error has no field context.
+         */
+        function applyServerErrors(modalId, fields, errData) {
+            const errors = errData?.errors;
+            if (!errors) return false;
+
+            const byField = { name: fields.name, sku: fields.sku, category: fields.category, price: fields.price, current_stock: fields.stock, reorder_threshold: fields.threshold };
+            let painted = false;
+            Object.entries(errors).forEach(([key, messages]) => {
+                const inputId = byField[key];
+                if (inputId && messages?.length) {
+                    setFieldError(inputId, messages[0]);
+                    painted = true;
+                }
+            });
+
+            if (painted) {
+                const first = document.querySelector(`#${modalId} .form-group.has-error input`);
+                if (first) first.focus();
+            }
+            return painted;
         }
 
         /**
@@ -1122,6 +1448,8 @@
             document.getElementById('eStock').value = product.current_stock || '';
             document.getElementById('eThreshold').value = product.reorder_threshold || '';
 
+            populateCategorySelects();
+            clearFormErrors(document.getElementById('editModal'));
             document.getElementById('editModal').classList.add('active');
             document.getElementById('eName').focus();
         }
@@ -1129,6 +1457,7 @@
         function closeEditModal() {
             document.getElementById('editModal').classList.remove('active');
             document.getElementById('editModal').querySelector('form').reset();
+            clearFormErrors(document.getElementById('editModal'));
         }
 
         document.getElementById('editModal').addEventListener('click', (e) => {
@@ -1137,31 +1466,22 @@
 
         // --- SS-83: Frontend field validations ---
 
-        function validateEditForm() {
-            const name = document.getElementById('eName').value.trim();
-            const sku = document.getElementById('eSku').value.trim();
-            const price = parseFloat(document.getElementById('ePrice').value);
-            const stock = parseInt(document.getElementById('eStock').value, 10);
-            const threshold = parseInt(document.getElementById('eThreshold').value, 10);
-
-            if (!name) { showToast('Product name is required', 'error'); return false; }
-            if (!sku) { showToast('SKU is required', 'error'); return false; }
-            if (isNaN(price) || price < 0) { showToast('Price must be a non-negative number', 'error'); return false; }
-            if (isNaN(stock) || stock < 0) { showToast('Current stock must be a non-negative integer', 'error'); return false; }
-            if (isNaN(threshold) || threshold < 0) { showToast('Reorder threshold must be a non-negative integer', 'error'); return false; }
-
-            return true;
-        }
-
         async function handleEditProduct(e) {
             e.preventDefault();
-            if (!validateEditForm()) return;
+            if (!validateProductForm('editModal', EDIT_FORM_FIELDS, 'edit')) return;
 
             const fd = new FormData(e.target);
             const data = Object.fromEntries(fd);
             data.price = parseFloat(data.price);
             data.current_stock = parseInt(data.current_stock);
             data.reorder_threshold = parseInt(data.reorder_threshold);
+            const category = resolveCategory('edit');
+            delete data.category_select;
+            if (category) {
+                data.category = category;
+            } else {
+                delete data.category;
+            }
 
             try {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
@@ -1180,6 +1500,7 @@
                     loadProducts();
                 } else {
                     const errData = await res.json().catch(() => null);
+                    applyServerErrors('editModal', EDIT_FORM_FIELDS, errData);
                     showToast(errData?.message || 'Error updating product', 'error');
                 }
             } catch (e) {

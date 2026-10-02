@@ -15,21 +15,15 @@ use Illuminate\Validation\ValidationException;
 class InventoryController extends Controller
 {
     /**
-     * Show the overview page.
+     * Show the overview page (Admin only).
      *
-     * Both roles read from the SAME shared inventory database; they only get
-     * a different presentation. Admin gets the full analytics dashboard while
-     * the cashier gets the simplified, distraction-free overview.
+     * BRD (Account Management): "Staff Role = POS Access Only." Cashiers are
+     * redirected to /pos by the EnsureUserIsAdmin middleware on the route, so
+     * this action only ever serves the admin analytics dashboard.
      */
     public function index()
     {
-        $user = Auth::user();
-
-        if ($user?->isAdmin()) {
-            return view('admin.admin-overview');
-        }
-
-        return view('cashier.cashier-overview');
+        return view('admin.admin-overview');
     }
 
     /**
@@ -37,7 +31,19 @@ class InventoryController extends Controller
      */
     public function products()
     {
-        return view('admin.admin-products');
+        // Categories are resolved server-side so the Add/Edit product modals
+        // render a fully populated dropdown on first paint, instead of waiting
+        // on the client-side /api/inventory/products fetch to finish.
+        $categories = Product::query()
+            ->select('category')
+            ->whereNotNull('category')
+            ->where('category', '!=', '')
+            ->distinct()
+            ->orderBy('category')
+            ->pluck('category')
+            ->values();
+
+        return view('admin.admin-products', compact('categories'));
     }
 
     /**

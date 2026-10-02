@@ -242,6 +242,7 @@
         /* LOADING STATE */
         #userTableView.loading tbody td:not(.empty-state) { color: transparent; }
         #userTableView.loading tbody td.empty-state { color: #64748b; }
+        #userTableView.loading .data-table { min-width: 0; }
         /* The placeholder must be re-scoped under .data-table tbody td
            (0,3,2). A bare `.empty-state` (0,1,0) loses to it and the loading
            row collapses to a single data-row height instead of the tall

@@ -69,8 +69,10 @@
             gap: 10px;
             text-decoration: none;
         }
-        .header-brand:hover .header-brand-name { color: #cbd5e1; }
-        body.light-theme .header-brand:hover .header-brand-name { color: #334155; }
+        .header-brand:hover .header-brand-name,
+                .header-brand:hover .header-brand-sub { color: #cbd5e1; }
+                body.light-theme .header-brand:hover .header-brand-name,
+                body.light-theme .header-brand:hover .header-brand-sub { color: #334155; }
         body.light-theme .site-header {
             --candle-up: #16a34a;
             --candle-down: #dc2626;
@@ -86,10 +88,12 @@
         .header-brand-mark .mk-axis { fill: none; stroke: #94a3b8; stroke-width: 4; stroke-linecap: square; }
         .header-brand-mark .mk-arrow { fill: none; stroke: var(--candle-up); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; }
         body.light-theme .header-brand-mark .mk-axis { stroke: #64748b; }
-        .header-brand-name  { font-size: 17px; font-weight: 700; color: #f8fafc; line-height: 1.05; letter-spacing: 0.01em; }
-        .header-brand-sub   { font-size: 17px; font-weight: 300; color: #94a3b8; line-height: 1.05; letter-spacing: 0.06em; }
-        body.light-theme .header-brand-name { color: #0f172a; }
-        body.light-theme .header-brand-sub  { color: #64748b; }
+        /* Both lines share one rule so they can never drift apart again. Only the
+                   text content differs — the second line reads "Stock". */
+                .header-brand-name,
+                .header-brand-sub  { font-size: 17px; font-weight: 700; color: #f8fafc; line-height: 1.05; letter-spacing: 0.01em; }
+                body.light-theme .header-brand-name,
+                body.light-theme .header-brand-sub  { color: #0f172a; }
 
         .header-right { display: flex; align-items: center; gap: 12px; }
 
@@ -143,16 +147,49 @@
         /* Alerts wrapper */
         .header-alert-wrapper { position: relative; }
         .header-btn-icon { padding: 8px !important; min-width: 40px; justify-content: center; }
-        .alert-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 380px; max-height: 420px; overflow-y: auto; z-index: 150; display: none; }
-        .alert-dropdown.active { display: block; }
-        .alert-dropdown-header { padding: 14px 16px; font-size: 13px; font-weight: 600; color: #f8fafc; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; }
+        .alert-dropdown {
+            position: absolute; top: calc(100% + 10px); right: 0;
+            background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px; width: 388px; max-height: 440px; z-index: 150;
+            display: none; flex-direction: column; padding: 10px;
+            box-shadow: 0 18px 40px rgba(2,6,23,0.45);
+        }
+        .alert-dropdown.active { display: flex; }
+        .alert-dropdown-header {
+            flex: 0 0 auto; padding: 6px 8px 12px; margin-bottom: 2px;
+            font-size: 13px; font-weight: 600; color: #f8fafc;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            display: flex; justify-content: space-between; align-items: center;
+        }
         .alert-dropdown-clear { font-size: 11px; color: #64748b; cursor: pointer; font-weight: 500; transition: color 0.15s; }
         .alert-dropdown-clear:hover { color: #f8fafc; }
-        .alert-empty { padding: 32px 16px; text-align: center; color: #475569; font-size: 13px; }
-        /* Alert card items */
-        .alert-card { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; gap: 10px; transition: background 0.15s; position: relative; }
-        .alert-card:last-child { border-bottom: none; }
-        .alert-card:hover { background: rgba(255,255,255,0.03); }
+        /* Only the list scrolls, so the header and "Clear all" stay reachable. */
+        #headerAlertList {
+            flex: 1 1 auto; min-height: 0; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 8px;
+            padding: 2px; margin: 0 -2px;
+        }
+        #headerAlertList::-webkit-scrollbar { width: 6px; }
+        #headerAlertList::-webkit-scrollbar-track { background: transparent; }
+        #headerAlertList::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.25); border-radius: 3px; }
+        #headerAlertList::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.4); }
+        .alert-empty {
+            padding: 30px 16px; text-align: center; color: #475569; font-size: 13px;
+            border: 1px dashed rgba(255,255,255,0.1); border-radius: 10px; margin: 2px;
+        }
+        /* Each alert is its own bordered card. Severity drives the border tint,
+           so a card reads as a state rather than just carrying a coloured dot. */
+        .alert-card {
+            flex: 0 0 auto; padding: 12px 13px; display: flex; gap: 10px;
+            position: relative; border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px; background: rgba(255,255,255,0.02);
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .alert-card.critical { border-color: rgba(248,113,113,0.28); background: rgba(248,113,113,0.05); }
+        .alert-card.low { border-color: rgba(251,191,36,0.26); background: rgba(251,191,36,0.045); }
+        .alert-card:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); }
+        .alert-card.critical:hover { border-color: rgba(248,113,113,0.5); background: rgba(248,113,113,0.10); }
+        .alert-card.low:hover { border-color: rgba(251,191,36,0.48); background: rgba(251,191,36,0.09); }
         .alert-card-severity { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
         .alert-card-severity.critical { background: #f87171; }
         .alert-card-severity.low { background: #fbbf24; }
@@ -177,8 +214,15 @@
         body.light-theme .alert-dropdown-clear { color: #64748b; }
         body.light-theme .alert-dropdown-clear:hover { color: #0f172a; }
         body.light-theme .alert-empty { color: #94a3b8; }
-        body.light-theme .alert-card { border-bottom-color: rgba(15,23,42,0.06); }
-        body.light-theme .alert-card:hover { background: rgba(15,23,42,0.025); }
+        body.light-theme #headerAlertList::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.18); }
+        body.light-theme #headerAlertList::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.3); }
+        body.light-theme .alert-empty { border-color: rgba(15,23,42,0.12); }
+        body.light-theme .alert-card { background: rgba(15,23,42,0.015); border-color: rgba(15,23,42,0.08); }
+        body.light-theme .alert-card:hover { background: rgba(15,23,42,0.04); border-color: rgba(15,23,42,0.16); }
+        body.light-theme .alert-card.critical { border-color: rgba(220,38,38,0.22); background: rgba(239,68,68,0.035); }
+        body.light-theme .alert-card.low { border-color: rgba(202,138,4,0.24); background: rgba(251,191,36,0.05); }
+        body.light-theme .alert-card.critical:hover { border-color: rgba(220,38,38,0.42); background: rgba(239,68,68,0.07); }
+        body.light-theme .alert-card.low:hover { border-color: rgba(202,138,4,0.44); background: rgba(251,191,36,0.1); }
         body.light-theme .alert-card-name { color: #0f172a; }
         body.light-theme .alert-card-sku { color: #94a3b8; }
         body.light-theme .alert-card-stock { color: #64748b; }
@@ -239,58 +283,58 @@
         body.light-theme .user-name { color: #0f172a; }
         body.light-theme .user-email { color: #64748b; }
 
-        /* User dropdown */
-        .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 180px; z-index: 150; display: none; overflow: hidden; }
-        .user-dropdown.open { display: block; }
-        body.light-theme .user-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); }
-        .dropdown-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 14px;
-            color: #cbd5e1;
-            font-size: 13px;
-            font-weight: 500;
-            text-decoration: none;
-            transition: background 0.15s;
-            border: none;
-            background: none;
-            width: 100%;
-            text-align: left;
-            font-family: inherit;
-            cursor: pointer;
-        }
-        .dropdown-item:hover { background: rgba(255,255,255,0.05); color: #f8fafc; }
-        body.light-theme .dropdown-item { color: #475569; }
-        body.light-theme .dropdown-item:hover { background: rgba(15,23,42,0.05); color: #0f172a; }
-        .dropdown-item.logout { color: #fca5a5; }
-        .dropdown-item.logout:hover { background: rgba(239,68,68,0.1); color: #f87171; }
-        body.light-theme .dropdown-item.logout { color: #dc2626; }
-        body.light-theme .dropdown-item.logout:hover { background: rgba(239,68,68,0.07); }
-        .dropdown-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0; }
-        body.light-theme .dropdown-divider { background: rgba(15,23,42,0.08); }
-
-        /* User dropdown */
+        /* User dropdown ? each action is its own bordered "form" card inside a
+           padded menu, with an identity header on top. Mirrors app.blade.php. */
         .user-dropdown {
-            position: absolute;
-            top: calc(100% + 8px);
-            right: 0;
-            background: #1e293b;
-            border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 12px;
-            width: 180px;
-            z-index: 200;
-            display: none;
-            overflow: hidden;
+            position: absolute; top: calc(100% + 10px); right: 0;
+            background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px; width: 258px; z-index: 200;
+            display: none; padding: 10px;
+            box-shadow: 0 18px 40px rgba(2,6,23,0.45);
         }
-        .user-dropdown.open { display: block; }
-        body.light-theme .user-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); }
+        .user-dropdown.open { display: flex; flex-direction: column; gap: 8px; }
+        body.light-theme .user-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); box-shadow: 0 18px 40px rgba(15,23,42,0.14); }
+        .user-dropdown-head {
+            display: flex; align-items: center; gap: 11px;
+            padding: 4px 6px 12px; margin-bottom: 2px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .user-dropdown-head-avatar {
+            width: 36px; height: 36px; flex: 0 0 auto;
+            border-radius: 50%; display: grid; place-items: center;
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+            color: #f8fafc; font-size: 14px; font-weight: 700;
+        }
+        .user-dropdown-head-text { min-width: 0; }
+        .user-dropdown-head-name {
+            font-size: 13px; font-weight: 700; color: #f8fafc; line-height: 1.3;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        /* No text-transform: the email is user-supplied data, so it must render
+                   exactly as entered rather than being force-uppercased. */
+                .user-dropdown-head-role {
+                    font-size: 11px; font-weight: 500; letter-spacing: 0;
+                    color: #94a3b8; line-height: 1.3; margin-top: 2px;
+                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                }
+        body.light-theme .user-dropdown-head { border-bottom-color: rgba(15,23,42,0.08); }
+        body.light-theme .user-dropdown-head-avatar { background: #e2e8f0; border-color: rgba(15,23,42,0.12); color: #334155; }
+        body.light-theme .user-dropdown-head-name { color: #0f172a; }
+        body.light-theme .user-dropdown-head-role { color: #64748b; }
+        .user-dropdown-form {
+            margin: 0; border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.02);
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .user-dropdown-form:hover { border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.05); }
         .dropdown-item {
-            display: flex; align-items: center; gap: 10px;
-            padding: 10px 14px;
+            display: flex; align-items: center; gap: 11px;
+            padding: 11px 13px;
             color: #cbd5e1;
             font-size: 13px;
             font-weight: 500;
             text-decoration: none;
-            transition: background 0.15s;
+            transition: background 0.15s, color 0.15s;
             border: none;
             background: none;
             width: 100%;
@@ -298,15 +342,20 @@
             font-family: inherit;
             cursor: pointer;
         }
+        .dropdown-item svg { flex: 0 0 auto; opacity: 0.85; }
         .dropdown-item:hover { background: rgba(255,255,255,0.06); color: #f8fafc; }
         .dropdown-item.logout { color: #fca5a5; }
-        .dropdown-item.logout:hover { background: rgba(239,68,68,0.1); color: #f87171; }
-        .dropdown-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 4px 0; }
+        .user-dropdown-form:has(.logout) { border-color: rgba(239,68,68,0.22); background: rgba(239,68,68,0.05); }
+        .user-dropdown-form:has(.logout):hover { border-color: rgba(239,68,68,0.45); background: rgba(239,68,68,0.10); }
+        .dropdown-item.logout:hover { background: rgba(239,68,68,0.14); color: #f87171; }
+        body.light-theme .user-dropdown-form { background: rgba(15,23,42,0.015); border-color: rgba(15,23,42,0.08); }
+        body.light-theme .user-dropdown-form:hover { background: rgba(15,23,42,0.04); border-color: rgba(15,23,42,0.16); }
         body.light-theme .dropdown-item { color: #475569; }
         body.light-theme .dropdown-item:hover { background: rgba(15,23,42,0.05); color: #0f172a; }
         body.light-theme .dropdown-item.logout { color: #dc2626; }
-        body.light-theme .dropdown-item.logout:hover { background: rgba(239,68,68,0.07); }
-        body.light-theme .dropdown-divider { background: rgba(15,23,42,0.08); }
+        body.light-theme .user-dropdown-form:has(.logout) { border-color: rgba(220,38,38,0.2); background: rgba(239,68,68,0.035); }
+        body.light-theme .user-dropdown-form:has(.logout):hover { border-color: rgba(220,38,38,0.4); background: rgba(239,68,68,0.07); }
+        body.light-theme .dropdown-item.logout:hover { background: rgba(239,68,68,0.08); color: #ef4444; }
 
         /* ── HERO — centered, no image, chart backdrop ──────────── */
         .hero {
@@ -340,28 +389,79 @@
             --hero-btn-ghost-bg-hover: rgba(255,255,255,0.08);
             --hero-btn-ghost-border-hover: rgba(255,255,255,0.24);
             --hero-divider: rgba(148,163,184,0.28);
-            /* Hairline grid colour for .hero-bg. Kept very low contrast so it
-               reads as texture and never competes with the text on top. */
-            --hero-grid-line: rgba(148,163,184,0.10);
-            --candle-up: #22c55e;
-            --candle-down: #ef4444;
+                        /* ── Aurora depth tokens ───────────────────────────────
+                                                   Six independently tuned hues composited as light
+                                                   sources over the base ramp. Values are deliberately
+                                                   desaturated and low-alpha: stacking many layers at
+                                                   high alpha turns to mud on #0f172a. */
+                                                --hero-glow-top: #1b2942;
+                                                --hero-glow-bottom: #050b16;
+                                                --hero-blob-a: rgba(56,189,248,0.34);  /* sky   */
+                                                --hero-blob-b: rgba(99,102,241,0.30);  /* indigo*/
+                                                --hero-blob-c: rgba(168,85,247,0.26);   /* violet*/
+                                                --hero-blob-d: rgba(16,185,129,0.20);   /* teal  */
+                                                --hero-blob-e: rgba(34,197,94,0.16);    /* brand */
+                                                --hero-blob-f: rgba(236,72,153,0.14);   /* rose  */
+                                                /* Iridescent sweep: a conic prism blurred to a whisper. */
+                                                --hero-iris-a: rgba(56,189,248,0.30);
+                                                --hero-iris-b: rgba(168,85,247,0.26);
+                                                --hero-iris-c: rgba(236,72,153,0.18);
+                                                --hero-iris-blend: soft-light;
+                                                --hero-iris-opacity: 0.85;
+                                                /* Raking key light + edge shade. */
+                                                --hero-streak: rgba(255,255,255,0.55);
+                                                --hero-streak-blend: soft-light;
+                                                --hero-streak-opacity: 0.50;
+                                                --hero-vignette: rgba(1,4,12,0.72);
+                                                --hero-top-shade: rgba(1,4,12,0.55);
+                        --candle-up: #22c55e;
+                        --candle-down: #ef4444;
         }
         body.light-theme .hero {
-            /* Deliberately a step darker than the body (#f3f4f6) so the hero
-               reads as its own band instead of blending into the page. */
-            --hero-surface: #e5e7eb;
-            --hero-text: #0f172a;
-            --hero-text-strong: #0f172a;
-            --hero-muted: #64748b;
-            --hero-btn-ghost-bg: rgba(255,255,255,0.9);
-            --hero-btn-ghost-border: rgba(15,23,42,0.14);
-            --hero-btn-ghost-text: #334155;
-            --hero-btn-ghost-bg-hover: #fff;
-            --hero-btn-ghost-border-hover: rgba(15,23,42,0.22);
-            --hero-divider: rgba(15,23,42,0.12);
-            --hero-grid-line: rgba(15,23,42,0.06);
-            --candle-up: #16a34a;
-            --candle-down: #dc2626;
+                    /* The header above is rgba(255,255,255,0.9), so the hero must NOT
+                       reach white at its top edge or the two bands merge into one.
+                       Every stop below is held at least a full step darker/tinted
+                       away from #ffffff, which keeps a visible seam under the header. */
+                    --hero-surface: #cdd8ea;
+                    --hero-text: #0f172a;
+                    --hero-text-strong: #0f172a;
+                    --hero-muted: #64748b;
+                    --hero-btn-ghost-bg: rgba(255,255,255,0.9);
+                    --hero-btn-ghost-border: rgba(15,23,42,0.14);
+                    --hero-btn-ghost-text: #334155;
+                    --hero-btn-ghost-bg-hover: #fff;
+                    --hero-btn-ghost-border-hover: rgba(15,23,42,0.22);
+                    --hero-divider: rgba(15,23,42,0.12);
+                                /* Light theme: a tinted blue-lavender volume. No stop is
+                                                           white, so the band always reads as distinct from
+                                                           the white header sitting directly above it. */
+                                                        --hero-glow-top: #dfe7f4;
+                                                        --hero-glow-bottom: #b4c3da;
+                                                        --hero-blob-a: rgba(56,189,248,0.34);
+                                                        --hero-blob-b: rgba(99,102,241,0.26);
+                                                        --hero-blob-c: rgba(168,85,247,0.24);
+                                                        --hero-blob-d: rgba(20,184,166,0.22);
+                                                        --hero-blob-e: rgba(34,197,94,0.18);
+                                                        --hero-blob-f: rgba(244,114,182,0.16);
+                                                        --hero-iris-a: rgba(99,102,241,0.26);
+                                                        --hero-iris-b: rgba(56,189,248,0.26);
+                                                        --hero-iris-c: rgba(236,72,153,0.16);
+                                                        --hero-iris-blend: overlay;
+                                                        --hero-iris-opacity: 0.60;
+                                                        /* Streak is a sheen, not a fill — kept translucent so
+                                                           it can never lift the band back to white. */
+                                                        --hero-streak: rgba(255,255,255,0.42);
+                                                        --hero-streak-blend: overlay;
+                                                        --hero-streak-opacity: 0.55;
+                                                        /* Heavier shade than before: this is what actually
+                                                           separates the hero from the header at the seam. */
+                                                        --hero-vignette: rgba(71,85,105,0.42);
+                                                        /* Solid enough to read as a cast shadow under the
+                                                           white header — this is the seam that keeps the
+                                                           hero a separate band. */
+                                                        --hero-top-shade: rgba(51,65,85,0.55);
+                                --candle-up: #16a34a;
+                        --candle-down: #dc2626;
         }
         .hero-bg {
             position: absolute;
@@ -373,29 +473,111 @@
             z-index: 0;
             pointer-events: none;
             overflow: hidden;
-            /* Flat colour only — no chart or pattern behind the text. */
-            background: var(--hero-surface);
-        }
-        /* Simple 2D grid, drawn with two repeating linear-gradients so it stays
-           flat and hairline-thin — no image, no 3D, no colour blending.
-           Scoped to this element alone: the About and Reviews bands below
-           inherit the body colour and are deliberately left untouched, so
-           this treatment never leaks onto the rest of the page. The two
-           gradients stack into one hairline grid that fades out below the
-           fold, which keeps the wordmark and paragraph sitting on clean
-           colour where they need to be read. */
-        .hero-bg::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image:
-                repeating-linear-gradient(to right, var(--hero-grid-line) 0 1px, transparent 1px 56px),
-                repeating-linear-gradient(to bottom, var(--hero-grid-line) 0 1px, transparent 1px 56px);
-            /* Fade the grid toward the bottom so the two bands meet softly
-               instead of the grid being cut off by a hard edge. */
-            -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%);
-            mask-image: linear-gradient(to bottom, #000 0%, #000 45%, transparent 100%);
-        }
+                    /* Layer 1 — the substrate. An asymmetric 4-stop vertical ramp
+                       (light enters from the upper left, falls to near-black at the
+                       base) gives the band a floor-to-sky axis before any colour is
+                       added. */
+                    background:
+                        linear-gradient(178deg,
+                            var(--hero-glow-top) 0%,
+                            var(--hero-surface) 38%,
+                            color-mix(in srgb, var(--hero-surface) 70%, #000) 68%,
+                            var(--hero-glow-bottom) 100%);
+                }
+                /* Layer 2 — the aurora field. Six radial blobs at asymmetric positions
+                   and radii (never mirrored, never evenly spaced) so the result has no
+                   repeating rhythm. Each fades to transparent well before the next
+                   begins, which keeps them reading as discrete light sources rather
+                   than one smear. */
+                .hero-bg::before {
+                    content: '';
+                    position: absolute;
+                    inset: -12%;
+                    background-image:
+                        radial-gradient(46% 40% at 14% 10%,  var(--hero-blob-a) 0%, transparent 70%),
+                        radial-gradient(40% 44% at 78% 18%,  var(--hero-blob-b) 0%, transparent 68%),
+                        radial-gradient(52% 40% at 62% 42%,  var(--hero-blob-c) 0%, transparent 72%),
+                        radial-gradient(44% 46% at 26% 56%,  var(--hero-blob-d) 0%, transparent 70%),
+                        radial-gradient(56% 44% at 52% 84%,  var(--hero-blob-e) 0%, transparent 72%),
+                        radial-gradient(38% 36% at 90% 66%,  var(--hero-blob-f) 0%, transparent 66%);
+                    /* Elliptical feather: strong through the middle, gone at every edge,
+                       so the aurora never produces a visible rectangle boundary. */
+                    -webkit-mask-image: radial-gradient(108% 92% at 46% 34%, #000 22%, transparent 96%);
+                    mask-image: radial-gradient(108% 92% at 46% 34%, #000 22%, transparent 96%);
+                    opacity: 0.95;
+                }
+                /* Layer 3 — prism sweep. A conic gradient (the CSS equivalent of light
+                   refracting through a prism) composited in soft-light. It spans the
+                   full hue wheel at very low alpha, so it reads as a subtle iridescent
+                   film over the aurora instead of banding. */
+                .hero-bg::after {
+                    content: '';
+                    position: absolute;
+                    inset: -6%;
+                    background:
+                        conic-gradient(from 168deg at 46% 26%,
+                            transparent 0deg,
+                            var(--hero-iris-a) 46deg,
+                            var(--hero-iris-b) 108deg,
+                            var(--hero-iris-c) 168deg,
+                            transparent 236deg,
+                            transparent 360deg);
+                    -webkit-mask-image: radial-gradient(96% 82% at 48% 32%, #000 12%, transparent 90%);
+                    mask-image: radial-gradient(96% 82% at 48% 32%, #000 12%, transparent 90%);
+                    mix-blend-mode: var(--hero-iris-blend);
+                    opacity: var(--hero-iris-opacity);
+                }
+                /* Layer 4 — raking key light. Two narrow, tilted bands of light
+                                   sweeping across the upper third, the way a spotlight rakes a
+                                   curved panel. Drawn as a pair of linear-gradients clipped to a
+                                   diagonal so they only cross the lit zone. */
+                                .hero::before {
+                                    content: '';
+                                    position: absolute;
+                                    top: -64px;
+                                    bottom: -20px;
+                                    left: 50%;
+                                    transform: translateX(-50%);
+                                    width: 100vw;
+                                    z-index: 1;
+                                    pointer-events: none;
+                                    background:
+                                        linear-gradient(104deg,
+                                            transparent 26%,
+                                            var(--hero-streak) 40%,
+                                            transparent 52%),
+                                        linear-gradient(104deg,
+                                            transparent 58%,
+                                            var(--hero-streak) 66%,
+                                            transparent 74%);
+                                    mix-blend-mode: var(--hero-streak-blend);
+                                    opacity: var(--hero-streak-opacity);
+                                    -webkit-mask-image: radial-gradient(88% 70% at 46% 18%, #000 8%, transparent 76%);
+                                    mask-image: radial-gradient(88% 70% at 46% 18%, #000 8%, transparent 76%);
+                                }
+                                /* Layer 5 — contact shading. Combines an edge vignette (rounds the
+                                   volume off) with a bottom contact shadow (seats the band against
+                                   the About section below). Without the second term the band ends
+                                   abruptly and the depth collapses. */
+                                .hero::after {
+                                    content: '';
+                                    position: absolute;
+                                    top: -64px;
+                                    bottom: -20px;
+                                    left: 50%;
+                                    transform: translateX(-50%);
+                                    width: 100vw;
+                                    z-index: 1;
+                                    pointer-events: none;
+                                    background:
+                                        linear-gradient(to bottom, transparent 72%, var(--hero-vignette) 100%),
+                                                                            radial-gradient(96% 82% at 50% 40%, transparent 52%, var(--hero-vignette) 100%),
+                                                                            /* Top-edge shade. The header sits directly on top of this
+                                                                               band, so a shadow cast downward from the seam guarantees
+                                                                               the two never read as one continuous surface — most
+                                                                               visible in light theme, where the header is white. */
+                                                                            linear-gradient(to bottom, var(--hero-top-shade) 0%, transparent 16%);
+                                                                    }
 
         .hero-left { flex: none; width: 100%; max-width: 780px; position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; text-align: center; }
         /* Mark above the wordmark — the real project logo (axes, bars, rising
@@ -859,7 +1041,7 @@
             .user-info { display: none; }
             .user-avatar { width: 32px; height: 32px; }
             .alert-dropdown { width: min(340px, calc(100vw - 24px)); }
-            .user-dropdown { width: min(180px, calc(100vw - 24px)); }
+            .user-dropdown { width: min(258px, calc(100vw - 24px)); }
         }
 
         @media (max-width: 1024px) {
@@ -964,7 +1146,7 @@
                     <polyline class="mk-arrow" points="67,11 80,11 80,24"/>
                 </svg>
                 <div>
-                    <div class="header-brand-name">Smart</div>
+                    <div class="header-brand-name">SMART</div>
                     <div class="header-brand-sub">Stock</div>
                 </div>
             </a>
@@ -1027,25 +1209,41 @@
 
                 <!-- User button -->
                 <div class="header-user" id="headerUserBtn" onclick="toggleUserDropdown(event)">
-                    <div class="user-avatar">{{ substr(Auth::user()->name, 0, 1) }}</div>
+                    <div class="user-avatar">{{ mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) }}</div>
                     <div class="user-info">
-                        <div class="user-name">{{ Auth::user()->name }}</div>
+                                            <div class="user-name">{{ Auth::user()->isAdmin() ? 'Admin' : 'Cashier' }} {{ Auth::user()->name ? ucfirst(trim(explode(' ', Auth::user()->name)[0])) : '' }}</div>
                         <div class="user-email">{{ Auth::user()->email }}</div>
                     </div>
                     <div class="user-dropdown" id="userDropdown">
-                        <a href="{{ route('dashboard') }}" class="dropdown-item">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                            Dashboard
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <form method="POST" action="{{ route('logout') }}" style="margin:0;">
-                            @csrf
-                            <button type="submit" class="dropdown-item logout" onclick="clearRememberEmail()">
-                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
-                                Logout
-                            </button>
-                        </form>
-                    </div>
+                                            <div class="user-dropdown-head">
+                                                <div class="user-dropdown-head-avatar">{{ Auth::user()->name ? mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) : 'U' }}</div>
+                                                <div class="user-dropdown-head-text">
+                                                    <div class="user-dropdown-head-name">{{ Auth::user()->isAdmin() ? 'Admin' : 'Cashier' }} {{ Auth::user()->name ? ucfirst(trim(explode(' ', Auth::user()->name)[0])) : '' }}</div>
+                                                    <div class="user-dropdown-head-role">{{ Auth::user()->email }}</div>
+                                                </div>
+                                            </div>
+                                            @if(Auth::user()->isAdmin())
+                                            <form class="user-dropdown-form" method="GET" action="{{ route('users') }}">
+                                                <button type="submit" class="dropdown-item">
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                                                    User Accounts
+                                                </button>
+                                            </form>
+                                            @endif
+                                            <form class="user-dropdown-form" method="GET" action="{{ route('dashboard') }}">
+                                                <button type="submit" class="dropdown-item">
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                                                    Dashboard
+                                                </button>
+                                            </form>
+                                            <form class="user-dropdown-form" method="POST" action="{{ route('logout') }}" style="margin:0;">
+                                                @csrf
+                                                <button type="submit" class="dropdown-item logout" onclick="clearRememberEmail()">
+                                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                                                    Logout
+                                                </button>
+                                            </form>
+                                        </div>
                 </div>
             @endguest
         </div>
@@ -1260,12 +1458,12 @@
         </div>
     </div>
 
-    {{-- The homepage's sign-in popup is the REAL login form, not a copy:
-         auth/login-card.blade.php is the same partial the standalone /login
-         page renders, so the two can never drift apart. --}}
+    {{-- The homepage's sign-in popup is the REAL login form, not a copy.
+             home-login-modal.blade.php is the only login surface in the app; the
+             /login route redirects here. --}}
     <div class="auth-modal-overlay" id="loginModalOverlay" role="dialog" aria-modal="true" aria-labelledby="loginModalHeading"
          onclick="if (event.target === this) closeLoginModal();">
-        @include('auth.login-card', ['asModal' => true])
+            @include('home-login-modal', ['asModal' => true])
     </div>
 
     <script>
@@ -1446,7 +1644,7 @@
                     const stockLeft = a.current_stock;
                     const threshold = a.reorder_threshold;
                     const lastDate = getLastActivityDate(a);
-                    return `<div class="alert-card" id="alert-card-${a.id}">
+                    return `<div class="alert-card ${severity}" id="alert-card-${a.id}">
                         <div class="alert-card-severity ${severity}"></div>
                         <div class="alert-card-body">
                             <div class="alert-card-top-row">

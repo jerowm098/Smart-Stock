@@ -80,8 +80,10 @@
         body.light-theme .header-brand .brand-mark .mk-down { fill: #dc2626; }
         body.light-theme .header-brand .brand-mark .mk-axis { stroke: #64748b; }
         body.light-theme .header-brand .brand-mark .mk-arrow { stroke: #16a34a; }
-        .header-brand .brand-name { color: #f8fafc; font-size: 17px; font-weight: 700; line-height: 1.05; letter-spacing: 0.01em; }
-        .header-brand .brand-subtitle { color: #94a3b8; font-size: 17px; font-weight: 300; line-height: 1.05; letter-spacing: 0.06em; }
+        /* Both lines share one rule so they can never drift apart again. Only the
+                   text content differs — the second line reads "Stock". */
+                .header-brand .brand-name,
+                .header-brand .brand-subtitle { color: #f8fafc; font-size: 17px; font-weight: 700; line-height: 1.05; letter-spacing: 0.01em; }
         .header-right { display: flex; align-items: center; gap: 12px; }
         .header-btn { cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 14px; font-weight: 500; transition: background 0.15s; user-select: none; background: none; min-height: 40px; }
         /* Square the theme toggle. Fixed width and height plus centered
@@ -115,16 +117,49 @@
         .header-alert-wrapper { position: relative; }
         /* ALERT BUTTON - TAB STYLE */
         .header-btn-icon { padding: 8px !important; min-width: 40px; justify-content: center; }
-        .alert-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 380px; max-height: 420px; overflow-y: auto; z-index: 150; display: none; }
-        .alert-dropdown.active { display: block; }
-        .alert-dropdown-header { padding: 14px 16px; font-size: 13px; font-weight: 600; color: #f8fafc; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; }
+        .alert-dropdown {
+            position: absolute; top: calc(100% + 10px); right: 0;
+            background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px; width: 388px; max-height: 440px; z-index: 150;
+            display: none; flex-direction: column; padding: 10px;
+            box-shadow: 0 18px 40px rgba(2,6,23,0.45);
+        }
+        .alert-dropdown.active { display: flex; }
+        .alert-dropdown-header {
+            flex: 0 0 auto; padding: 6px 8px 12px; margin-bottom: 2px;
+            font-size: 13px; font-weight: 600; color: #f8fafc;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+            display: flex; justify-content: space-between; align-items: center;
+        }
         .alert-dropdown-clear { font-size: 11px; color: #64748b; cursor: pointer; font-weight: 500; transition: color 0.15s; }
         .alert-dropdown-clear:hover { color: #f8fafc; }
-        .alert-empty { padding: 32px 16px; text-align: center; color: #475569; font-size: 13px; }
-        /* Alert card items */
-        .alert-card { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; gap: 10px; transition: background 0.15s; position: relative; }
-        .alert-card:last-child { border-bottom: none; }
-        .alert-card:hover { background: rgba(255,255,255,0.03); }
+        /* Only the list scrolls, so the header and "Clear all" stay reachable. */
+        #headerAlertList {
+            flex: 1 1 auto; min-height: 0; overflow-y: auto;
+            display: flex; flex-direction: column; gap: 8px;
+            padding: 2px; margin: 0 -2px;
+        }
+        #headerAlertList::-webkit-scrollbar { width: 6px; }
+        #headerAlertList::-webkit-scrollbar-track { background: transparent; }
+        #headerAlertList::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.25); border-radius: 3px; }
+        #headerAlertList::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.4); }
+        .alert-empty {
+            padding: 30px 16px; text-align: center; color: #475569; font-size: 13px;
+            border: 1px dashed rgba(255,255,255,0.1); border-radius: 10px; margin: 2px;
+        }
+        /* Each alert is its own bordered card. Severity drives the border tint,
+           so a card reads as a state rather than just carrying a coloured dot. */
+        .alert-card {
+            flex: 0 0 auto; padding: 12px 13px; display: flex; gap: 10px;
+            position: relative; border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px; background: rgba(255,255,255,0.02);
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .alert-card.critical { border-color: rgba(248,113,113,0.28); background: rgba(248,113,113,0.05); }
+        .alert-card.low { border-color: rgba(251,191,36,0.26); background: rgba(251,191,36,0.045); }
+        .alert-card:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); }
+        .alert-card.critical:hover { border-color: rgba(248,113,113,0.5); background: rgba(248,113,113,0.10); }
+        .alert-card.low:hover { border-color: rgba(251,191,36,0.48); background: rgba(251,191,36,0.09); }
         .alert-card-severity { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
         .alert-card-severity.critical { background: #f87171; }
         .alert-card-severity.low { background: #fbbf24; }
@@ -149,8 +184,15 @@
         body.light-theme .alert-dropdown-clear { color: #64748b; }
         body.light-theme .alert-dropdown-clear:hover { color: #0f172a; }
         body.light-theme .alert-empty { color: #94a3b8; }
-        body.light-theme .alert-card { border-bottom-color: rgba(15,23,42,0.06); }
-        body.light-theme .alert-card:hover { background: rgba(15,23,42,0.025); }
+        body.light-theme #headerAlertList::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.18); }
+        body.light-theme #headerAlertList::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.3); }
+        body.light-theme .alert-empty { border-color: rgba(15,23,42,0.12); }
+        body.light-theme .alert-card { background: rgba(15,23,42,0.015); border-color: rgba(15,23,42,0.08); }
+        body.light-theme .alert-card:hover { background: rgba(15,23,42,0.04); border-color: rgba(15,23,42,0.16); }
+        body.light-theme .alert-card.critical { border-color: rgba(220,38,38,0.22); background: rgba(239,68,68,0.035); }
+        body.light-theme .alert-card.low { border-color: rgba(202,138,4,0.24); background: rgba(251,191,36,0.05); }
+        body.light-theme .alert-card.critical:hover { border-color: rgba(220,38,38,0.42); background: rgba(239,68,68,0.07); }
+        body.light-theme .alert-card.low:hover { border-color: rgba(202,138,4,0.44); background: rgba(251,191,36,0.1); }
         body.light-theme .alert-card-name { color: #0f172a; }
         body.light-theme .alert-card-sku { color: #94a3b8; }
         body.light-theme .alert-card-stock { color: #64748b; }
@@ -158,26 +200,85 @@
         body.light-theme .alert-dismiss-btn { color: #94a3b8; }
         body.light-theme .alert-dismiss-btn:hover { color: #ef4444; background: rgba(239,68,68,0.08); }
 
-        /* USER DROPDOWN */
-        .user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; width: 180px; z-index: 150; display: none; overflow: hidden; }
-        .user-dropdown.active { display: block; }
-        .user-dropdown-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; color: #cbd5e1; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.15s; text-decoration: none; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
+        /* USER DROPDOWN — each action is its own bordered "form" card sitting inside
+           a padded menu, with an identity header on top. Wider than the old
+           180px so the role + full name in the header has room to breathe. */
+        .user-dropdown {
+            position: absolute; top: calc(100% + 10px); right: 0;
+            background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 14px; width: 258px; z-index: 150;
+            display: none; padding: 10px;
+            box-shadow: 0 18px 40px rgba(2,6,23,0.45);
+        }
+        .user-dropdown.active { display: flex; flex-direction: column; gap: 8px; }
+        /* Identity header — mirrors the trigger so the menu is self-describing
+           once it covers the button it was opened from. */
+        .user-dropdown-head {
+            display: flex; align-items: center; gap: 11px;
+            padding: 4px 6px 12px; margin-bottom: 2px;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        .user-dropdown-head-avatar {
+            width: 36px; height: 36px; flex: 0 0 auto;
+            border-radius: 50%; display: grid; place-items: center;
+            background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
+            color: #f8fafc; font-size: 14px; font-weight: 700;
+        }
+        .user-dropdown-head-text { min-width: 0; }
+        .user-dropdown-head-name {
+            font-size: 13px; font-weight: 700; color: #f8fafc; line-height: 1.3;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        /* No text-transform: the email is user-supplied data, so it must render
+                   exactly as entered rather than being force-uppercased. */
+                .user-dropdown-head-role {
+                    font-size: 11px; font-weight: 500; letter-spacing: 0;
+                    color: #94a3b8; line-height: 1.3; margin-top: 2px;
+                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                }
+        /* Each action gets its own bordered form card. The card owns the border
+           and the hover fill; the item inside is borderless so hover never
+           collides with the card outline. */
+        .user-dropdown-form {
+            margin: 0; border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.02);
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .user-dropdown-form:hover { border-color: rgba(255,255,255,0.18); background: rgba(255,255,255,0.05); }
+        .user-dropdown-item {
+            display: flex; align-items: center; gap: 11px; width: 100%;
+            padding: 11px 13px; color: #cbd5e1; font-size: 13px; font-weight: 500;
+            cursor: pointer; transition: background 0.15s, color 0.15s;
+            text-decoration: none; border: none; background: none;
+            text-align: left; font-family: inherit;
+        }
         .user-dropdown-item:hover { background: rgba(255,255,255,0.05); color: #f8fafc; }
+        .user-dropdown-item svg { flex: 0 0 auto; opacity: 0.85; }
         .user-dropdown-item.logout { color: #fca5a5; }
-        .user-dropdown-item.logout:hover { background: rgba(239,68,68,0.1); color: #f87171; }
-        .user-dropdown-divider { height: 1px; background: rgba(255,255,255,0.06); margin: 4px 0; }
-        body.light-theme .user-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); }
+        .user-dropdown-form:has(.logout) { border-color: rgba(239,68,68,0.22); background: rgba(239,68,68,0.05); }
+        .user-dropdown-form:has(.logout):hover { border-color: rgba(239,68,68,0.45); background: rgba(239,68,68,0.10); }
+        .user-dropdown-item.logout:hover { background: rgba(239,68,68,0.14); color: #f87171; }
+        .user-dropdown-divider { display: none; }
+        body.light-theme .user-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); box-shadow: 0 18px 40px rgba(15,23,42,0.14); }
+        body.light-theme .user-dropdown-head { border-bottom-color: rgba(15,23,42,0.08); }
+        body.light-theme .user-dropdown-head-avatar { background: #e2e8f0; border-color: rgba(15,23,42,0.12); color: #334155; }
+        body.light-theme .user-dropdown-head-name { color: #0f172a; }
+        body.light-theme .user-dropdown-head-role { color: #64748b; }
+        body.light-theme .user-dropdown-form { background: rgba(15,23,42,0.015); border-color: rgba(15,23,42,0.08); }
+        body.light-theme .user-dropdown-form:hover { background: rgba(15,23,42,0.04); border-color: rgba(15,23,42,0.16); }
         body.light-theme .user-dropdown-item { color: #475569; border: none; background: none; width: 100%; text-align: left; font-family: inherit; }
         body.light-theme .user-dropdown-item:hover { background: rgba(15,23,42,0.05); color: #0f172a; }
         body.light-theme .user-dropdown-item.logout { color: #dc2626; }
+        body.light-theme .user-dropdown-form:has(.logout) { border-color: rgba(220,38,38,0.2); background: rgba(239,68,68,0.035); }
+        body.light-theme .user-dropdown-form:has(.logout):hover { border-color: rgba(220,38,38,0.4); background: rgba(239,68,68,0.07); }
         body.light-theme .user-dropdown-item.logout:hover { background: rgba(239,68,68,0.08); color: #ef4444; }
         body.light-theme .user-dropdown-divider { background: rgba(15,23,42,0.08); }
 
         /* LIGHT THEME */
         body.light-theme { background: #f3f4f6; color: #334155; }
         body.light-theme .top-header { background: #ffffff; border-bottom-color: rgba(15,23,42,0.08); }
-        body.light-theme .header-brand .brand-name { color: #0f172a; }
-        body.light-theme .header-brand .brand-subtitle { color: #64748b; }
+        body.light-theme .header-brand .brand-name,
+                body.light-theme .header-brand .brand-subtitle { color: #0f172a; }
         body.light-theme .header-btn { color: #64748b; border-color: rgba(15,23,42,0.1); }
         body.light-theme .header-btn:hover { background: rgba(15,23,42,0.05); color: #0f172a; }
         body.light-theme .header-user { border-color: rgba(15,23,42,0.1); background: #fff; }
@@ -248,7 +349,7 @@
                otherwise squash it into an oval. */
             #themeToggleBtn { padding: 0; width: 36px; min-width: 36px; height: 36px; }
             .alert-dropdown { width: min(280px, calc(100vw - 24px)); }
-            .user-dropdown { width: min(180px, calc(100vw - 24px)); }
+            .user-dropdown { width: min(258px, calc(100vw - 24px)); }
             /* Show hamburger menu button on mobile */
             .mobile-menu-button { display: flex; }
             .header-brand { display: flex; padding: 0; }
@@ -539,7 +640,7 @@
                     <polyline class="mk-arrow" points="67,11 80,11 80,24"/>
                 </svg>
                 <div>
-                    <div class="brand-name">Smart</div>
+                    <div class="brand-name">SMART</div>
                     <div class="brand-subtitle">Stock</div>
                 </div>
             </a>
@@ -549,6 +650,12 @@
         </div>
         <div class="header-center" id="headerNav">
             <a href="{{ route('home') }}" class="header-center-btn {{ request()->routeIs('home') ? 'active' : '' }}">Home</a>
+            {{-- Shown for every role. /dashboard is Admin-only, so a Staff
+                 click is redirected back to the POS screen by the route
+                 middleware rather than hitting an error page. The active
+                 state intentionally matches Admin: these two buttons are the
+                 only top-level sections, so anything that is not Home counts
+                 as the Dashboard section. --}}
             <a href="{{ route('dashboard') }}" class="header-center-btn {{ !request()->routeIs('home') ? 'active' : '' }}">Dashboard</a>
         </div>
         <div class="header-right">
@@ -581,18 +688,34 @@
             </div>
             @endif
             <div class="header-user" id="headerUserBtn" onclick="toggleUserDropdown(event)">
-                <div class="user-avatar">{{ Auth::user()->name ? substr(Auth::user()->name, 0, 1) : 'U' }}</div>
+                <div class="user-avatar">{{ Auth::user()->name ? mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) : 'U' }}</div>
                 <div class="user-info">
-                    <div class="user-name">{{ Auth::user()->name }}</div>
+                    <div class="user-name">{{ $isAdmin ? 'Admin' : 'Cashier' }} {{ Auth::user()->name ? ucfirst(trim(explode(' ', Auth::user()->name)[0])) : '' }}</div>
                     <div class="user-email">{{ Auth::user()->email }}</div>
                 </div>
                 <div class="user-dropdown" id="userDropdown">
-                    <a href="#" class="user-dropdown-item" onclick="navigateToSettings(event)">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82-.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
-                        <span>Settings</span>
-                    </a>
-                    <div class="user-dropdown-divider"></div>
-                    <form method="POST" action="{{ route('logout') }}" style="margin:0;" id="logoutForm">
+                    <div class="user-dropdown-head">
+                        <div class="user-dropdown-head-avatar">{{ Auth::user()->name ? mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) : 'U' }}</div>
+                        <div class="user-dropdown-head-text">
+                            <div class="user-dropdown-head-name">{{ $isAdmin ? 'Admin' : 'Cashier' }} {{ Auth::user()->name ? ucfirst(trim(explode(' ', Auth::user()->name)[0])) : '' }}</div>
+                            <div class="user-dropdown-head-role">{{ Auth::user()->email }}</div>
+                        </div>
+                    </div>
+                    @if($isAdmin)
+                    <form class="user-dropdown-form" method="GET" action="{{ route('users') }}">
+                        <button type="submit" class="user-dropdown-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            <span>User Accounts</span>
+                        </button>
+                    </form>
+                    @endif
+                    <form class="user-dropdown-form" method="GET" action="{{ route('dashboard') }}">
+                        <button type="submit" class="user-dropdown-item">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                            <span>Dashboard</span>
+                        </button>
+                    </form>
+                    <form class="user-dropdown-form" method="POST" action="{{ route('logout') }}" id="logoutForm">
                         @csrf
                         <button type="submit" class="user-dropdown-item logout" onclick="handleLogout(event)">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
@@ -608,23 +731,27 @@
     <aside class="sidebar" id="mobileNavigation">
         <div class="mobile-menu-header">
             <span class="mobile-menu-title">Smart-Stock</span>
-            <button type="button" class="mobile-menu-close" onclick="closeMobileMenu()" aria-label="Close navigation menu">Ã—</button>
+            <button type="button" class="mobile-menu-close" onclick="closeMobileMenu()" aria-label="Close navigation menu">&times;</button>
         </div>
         @php
             // Role-aware navigation.
-            // Cashier: exactly 3 tabs â€” Overview, Products, POS Checkout.
-            // Admin:   full set â€” Overview, Products, Suppliers, Stock-In,
+            // BRD (Account Management): "Staff Role = POS Access Only." Cashier
+            // sees just the POS tab under a single "Sales" heading; the Home
+            // heading is Admin-only, so it is not rendered for Staff.
+            // Admin:   full set — Overview, Products, Suppliers, Stock-In,
             //          POS Checkout, Transactions, User Accounts, Backups.
             // NOTE: $isAdmin is already resolved at the top of this layout.
         @endphp
         <nav class="sidebar-nav">
-            <div class="nav-label">{{ $isAdmin ? 'Home' : 'Main' }}</div>
-            <a href="{{ route('dashboard') }}" class="nav-item" id="navOverview" data-page="overview">
-                <span class="nav-icon">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                </span>
-                <span>Overview</span>
-            </a>
+            @if($isAdmin)
+                <div class="nav-label">Home</div>
+                <a href="{{ route('dashboard') }}" class="nav-item" id="navOverview" data-page="overview">
+                    <span class="nav-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    </span>
+                    <span>Overview</span>
+                </a>
+            @endif
             @if($isAdmin)
                 <div class="nav-label">Management</div>
                 {{-- BRD (Account Management) Business rules:
@@ -820,12 +947,12 @@
                 }
                 list.innerHTML = alerts.map(a => {
                     const severity = a.current_stock <= 5 ? 'critical' : 'low';
-                    const sku = escapeHtml(a.sku || 'â€”');
+                    const sku = escapeHtml(a.sku || '\u2014');
                     const name = escapeHtml(a.name);
                     const stockLeft = a.current_stock;
                     const threshold = a.reorder_threshold;
                     const lastDate = getLastActivityDate(a);
-                    return `<div class="alert-card" id="alert-card-${a.id}">
+                    return `<div class="alert-card ${severity}" id="alert-card-${a.id}">
                         <div class="alert-card-severity ${severity}"></div>
                         <div class="alert-card-body">
                             <div class="alert-card-top-row">
@@ -840,7 +967,7 @@
                                 <span class="alert-date-tag">${lastDate}</span>
                             </div>
                         </div>
-                        <button class="alert-dismiss-btn" onclick="dismissAlert(${a.id}, event)" title="Dismiss">Ã—</button>
+                        <button class="alert-dismiss-btn" onclick="dismissAlert(${a.id}, event)" title="Dismiss">&times;</button>
                     </div>`;
                 }).join('');
             } catch (e) { console.error(e); }

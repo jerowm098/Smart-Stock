@@ -169,19 +169,31 @@
 <style>
     /* ===== SHARED SECTION CARD STYLES (same as products.blade.php) ===== */
     .pos-page { padding: 0; }
-    .page-title { font-size: 30px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
-    .page-subtitle { color: #475569; font-size: 14px; margin: 0; line-height: 1.5; }
+    /* Hero banner surface + text are theme tokens: the base block is the DARK
+       treatment and .light-theme overrides it. Hardcoding #ffffff on the base
+       rule left the banner white in dark mode with near-invisible text. */
+    .page-header.hero {
+        --hero-card-bg: #13294f;
+        --hero-card-border: rgba(96,165,250,0.18);
+        --hero-card-title: #f8fafc;
+        --hero-card-subtitle: rgba(226,232,240,0.88);
+    }
+    .page-title { font-size: 30px; font-weight: 800; color: var(--hero-card-title, #f8fafc); margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
+    .page-subtitle { color: var(--hero-card-subtitle, rgba(226,232,240,0.88)); font-size: 14px; margin: 0; line-height: 1.5; }
     .page-header.hero .page-subtitle { margin-bottom: 0; }
     .page-header.hero {
         position: relative; overflow: hidden; border-radius: 16px;
-        border: 1px solid rgba(37,99,235,0.15); margin-bottom: 20px;
+        border: 1px solid var(--hero-card-border); margin-bottom: 20px;
         min-height: 140px; display: flex; align-items: flex-end;
-        padding: 28px 28px 24px; background: #ffffff;
+        padding: 28px 28px 24px; background: var(--hero-card-bg);
     }
     .hero-content { position: relative; z-index: 1; max-width: 640px; }
-    body.light-theme .page-header.hero { background: #ffffff; border-color: rgba(37,99,235,0.15); }
-    body.light-theme .page-title { color: #0f172a; }
-    body.light-theme .page-subtitle { color: #475569; }
+    body.light-theme .page-header.hero {
+        --hero-card-bg: #ffffff;
+        --hero-card-border: rgba(37,99,235,0.15);
+        --hero-card-title: #0f172a;
+        --hero-card-subtitle: #475569;
+    }
     .section-card {
         background: rgba(255,255,255,0.025);
         border: 1px solid rgba(255,255,255,0.07);
@@ -285,6 +297,7 @@
     /* Hide text until data loads */
     #tableView.loading tbody td:not(.empty-state) { color: transparent; }
     #tableView.loading tbody td.empty-state { color: #64748b; }
+    #tableView.loading table { min-width: 0; }
     body.light-theme table thead th { background: rgba(15,23,42,0.02); color: #64748b; }
     body.light-theme table tbody td { color: #475569; }
     body.light-theme table tbody tr:hover { background: rgba(15,23,42,0.025); }
@@ -519,9 +532,8 @@
     }
     .pos-modal-footer .pos-btn { min-width: 120px; }
 
-    /* ===== LIGHT THEME PAGE ===== */
-    body.light-theme .page-title { color: #0f172a; }
-    body.light-theme .page-subtitle { color: #64748b; }
+    /* Page title/subtitle colours now come from the --hero-card-* tokens on
+       .page-header.hero, so these duplicate overrides are no longer needed. */
 
     /* ===== RESPONSIVE ===== */
     @media (max-width: 900px) {
@@ -547,6 +559,7 @@
         .product-card-body { padding: 10px; }
         .table-wrapper { border-radius: 10px; }
         table { min-width: 400px; }
+        #tableView.loading table { min-width: 0; }
         thead th, tbody td { padding: 10px 10px; font-size: 12px; }
         .empty-state { padding: 32px 16px; font-size: 13px; }
     }
@@ -594,6 +607,8 @@
     async function loadPosProducts() {
         const tbody = document.getElementById('posProductTableBody');
         const grid = document.getElementById('posProductGridBody');
+        const tableView = document.getElementById('tableView');
+        tableView.classList.add('loading');
         try {
             // Cashier-safe catalog: excludes deactivated products and Admin-only fields.
             const res = await fetch('/api/pos/products');
@@ -605,6 +620,8 @@
             tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Unable to load products. Please try again.</td></tr>';
             grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;">Unable to load products. Please try again.</div>';
             showToast('Failed to load products', 'error');
+        } finally {
+            tableView.classList.remove('loading');
         }
     }
 
@@ -912,6 +929,7 @@
 
     // Initialize
     // Show loading message initially
+    document.getElementById('tableView').classList.add('loading');
     document.getElementById('posProductTableBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading products...</td></tr>';
     loadPosProducts();
 </script>

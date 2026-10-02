@@ -47,22 +47,23 @@
             <div class="filter-actions">
                 <button class="btn-primary" onclick="applyFilters()">Apply</button>
                 <button class="btn-ghost" onclick="resetFilters()">Reset</button>
-                <button class="btn-export" onclick="exportCsv()" title="Download filtered transactions as CSV (Excel-compatible)">⬇ Export CSV</button>
             </div>
         </div>
     </div>
 
-    <div class="result-meta" id="resultMeta">Loading...</div>
-
     <!-- ====== TABLE ====== -->
     <div class="white-form">
-        <div class="section-card-header">
+        <div class="section-card-header section-card-header--with-meta">
             <div>
                 <h2 class="section-card-title">Transaction History</h2>
                 <p class="section-card-desc">View all completed sales and receipts</p>
             </div>
+            <div class="section-card-actions">
+                <span class="result-meta" id="resultMeta">Loading...</span>
+                <button class="btn-export" onclick="exportCsv()" title="Download filtered transactions as CSV (Excel-compatible)">⬇ Export CSV</button>
+            </div>
         </div>
-        <div class="table-wrapper">
+        <div class="table-wrapper" id="txnTableView">
                 <table>
                     <thead>
                         <tr>
@@ -119,8 +120,17 @@
         }
         .section-card-header {
             margin-bottom: 20px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+        }
+        .section-card-header--with-meta {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .section-card-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
         .section-card-title {
             font-size: 18px;
@@ -188,12 +198,13 @@
         }
         .btn-ghost:hover { background: rgba(255,255,255,0.08); }
         .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
-        .result-meta { font-size: 12px; color: #64748b; margin-bottom: 12px; }
+        .result-meta { font-size: 12px; color: #64748b; white-space: nowrap; }
         .table-wrapper {
             background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 12px; overflow-x: auto; overflow-y: visible;
         }
         table { width: 100%; min-width: 800px; border-collapse: separate; border-spacing: 0; border: 1px solid rgba(255,255,255,0.08); table-layout: fixed; }
+        #txnTableView.loading table { min-width: 0; }
         thead th {
             background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left;
             font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border-bottom: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.06); line-height: 1.4;
@@ -282,7 +293,9 @@
         async function loadTxns() {
             const body = document.getElementById('txnBody');
             const meta = document.getElementById('resultMeta');
+            const tableView = document.getElementById('txnTableView');
             // Show loading message
+            tableView.classList.add('loading');
             body.innerHTML = '<tr><td colspan="8" class="empty-state">Loading transactions...</td></tr>';
             try {
                 const res = await fetch('/api/dashboard/transactions?' + qs());
@@ -311,6 +324,7 @@
 
                 if (state.cache.length === 0) {
                     body.innerHTML = '<tr><td colspan="8" class="empty-state">No transactions found. Try changing the filters.</td></tr>';
+                    tableView.classList.remove('loading');
                     return;
                 }
 
@@ -319,7 +333,7 @@
                         <td class="receipt-no">${escapeHtml(t.receipt_no)}</td>
                         <td>${escapeHtml(t.date)}</td>
                         <td><div class="cashier-name">${escapeHtml(t.cashier_name)}</div><div class="cashier-email">${escapeHtml(t.cashier_email)}</div></td>
-                        <td>${t.items_count} pcs (${t.lines_count} lines)</td>
+                        <td>${t.items_count} pcs</td>
                         <td class="money total">₱${Number(t.total_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
                         <td class="money">₱${Number(t.payment_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
                         <td class="money">₱${Number(t.change_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
@@ -328,6 +342,8 @@
             } catch (e) {
                 body.innerHTML = '<tr><td colspan="8" class="empty-state">Unable to load transactions</td></tr>';
                 console.error('Transactions load error:', e);
+            } finally {
+                tableView.classList.remove('loading');
             }
         }
 

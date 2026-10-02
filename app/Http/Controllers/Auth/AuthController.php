@@ -15,10 +15,10 @@ class AuthController extends Controller
      * Sign-in surface.
      *
      * There is no standalone login page any more: the homepage presents the
-     * form as a modal (auth/login-card.blade.php, shared with the guest
-     * landing page), so guests never leave /home to sign in. This route stays
-     * as a redirect rather than being deleted so that an existing bookmark or
-     * a hand-typed URL lands somewhere useful instead of a 404.
+     * form as a modal (home-login-modal.blade.php), so guests never leave
+     * /home to sign in. This route stays as a redirect rather than being
+     * deleted so that an existing bookmark or a hand-typed URL lands somewhere
+     * useful instead of a 404.
      *
      * Authenticated users are routed by role, as before.
      */
