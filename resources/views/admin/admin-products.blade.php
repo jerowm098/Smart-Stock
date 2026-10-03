@@ -303,19 +303,28 @@
 
 @push('styles')
     <style>
-        .page-title { font-size: 30px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
-        .page-subtitle { color: #475569; font-size: 14px; margin: 0; line-height: 1.5; }
+        .page-header.hero {
+            --hero-card-bg: #13294f;
+            --hero-card-border: rgba(96,165,250,0.18);
+            --hero-card-title: #f8fafc;
+            --hero-card-subtitle: rgba(226,232,240,0.88);
+        }
+        .page-title { font-size: 30px; font-weight: 800; color: var(--hero-card-title, #f8fafc); margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
+        .page-subtitle { color: var(--hero-card-subtitle, rgba(226,232,240,0.88)); font-size: 14px; margin: 0; line-height: 1.5; }
         .page-header.hero .page-subtitle { margin-bottom: 0; }
         .page-header.hero {
             position: relative; overflow: hidden; border-radius: 16px;
-            border: 1px solid rgba(37,99,235,0.15); margin-bottom: 20px;
+            border: 1px solid var(--hero-card-border); margin-bottom: 20px;
             min-height: 140px; display: flex; align-items: flex-end;
-            padding: 28px 28px 24px; background: #ffffff;
+            padding: 28px 28px 24px; background: var(--hero-card-bg);
         }
         .hero-content { position: relative; z-index: 1; max-width: 640px; }
-        body.light-theme .page-header.hero { background: #ffffff; border-color: rgba(37,99,235,0.15); }
-        body.light-theme .page-title { color: #0f172a; }
-        body.light-theme .page-subtitle { color: #475569; }
+        body.light-theme .page-header.hero {
+            --hero-card-bg: #ffffff;
+            --hero-card-border: rgba(37,99,235,0.15);
+            --hero-card-title: #0f172a;
+            --hero-card-subtitle: #475569;
+        }
         .section-card {
             background: rgba(255,255,255,0.025);
             border: 1px solid rgba(255,255,255,0.07);
@@ -458,12 +467,10 @@
             padding: 3px 8px;
             border-radius: 6px;
         }
-        .product-card-stock.stock-ok { background: rgba(74,222,128,0.12); color: #4ade80; }
-        .product-card-stock.stock-low { background: rgba(251,191,36,0.12); color: #fbbf24; }
-        .product-card-stock.stock-critical { background: rgba(248,113,113,0.12); color: #f87171; }
-        body.light-theme .product-card-stock.stock-ok { background: rgba(22,163,74,0.1); color: #16a34a; }
-        body.light-theme .product-card-stock.stock-low { background: rgba(202,138,4,0.1); color: #ca8a04; }
-        body.light-theme .product-card-stock.stock-critical { background: rgba(220,38,38,0.1); color: #dc2626; }
+        .product-card-stock.stock-low { background: rgba(248,113,113,0.12); color: #f87171; }
+        .product-card-stock.stock-high { background: rgba(74,222,128,0.12); color: #4ade80; }
+        body.light-theme .product-card-stock.stock-low { background: rgba(220,38,38,0.1); color: #dc2626; }
+        body.light-theme .product-card-stock.stock-high { background: rgba(22,163,74,0.1); color: #16a34a; }
         .product-card-category {
             display: inline-block;
             font-size: 11px;
@@ -657,7 +664,7 @@
         /* While only the "Loading" row is present, drop the table's min-width so the
            placeholder fits the viewport and no horizontal scrollbar appears. */
         #tableView.loading table { min-width: 0; }
-        .stock-cell { font-weight: 600; } .stock-ok { color: #4ade80; } .stock-low { color: #fbbf24; } .stock-critical { color: #f87171; }
+        .stock-cell { font-weight: 600; } .stock-low { color: #f87171; } .stock-high { color: #4ade80; }
         .status-text { font-size: 13px; font-weight: 500; }
         .action-link { background: none; border: 1px solid transparent; padding: 4px 10px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; color: #60a5fa; text-decoration: none; transition: all 0.15s; margin-right: 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; }
         .action-link:last-child { margin-right: 0; }
@@ -1400,9 +1407,8 @@
         }
 
         function getStatus(stock, threshold) {
-            if (stock <= threshold) return { label: 'Critical', class: 'critical' };
-            if (stock <= threshold * 1.5) return { label: 'Low', class: 'low' };
-            return { label: 'OK', class: 'ok' };
+            if (stock <= threshold) return { label: 'Low', class: 'low' };
+            return { label: 'High', class: 'high' };
         }
 
         // --- Read-only product view (cashier) ---

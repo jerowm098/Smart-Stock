@@ -131,19 +131,28 @@
 
 @push('styles')
     <style>
-        .page-title { font-size: 30px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
-        .page-subtitle { color: #475569; font-size: 14px; margin: 0; line-height: 1.5; }
+        .page-header.hero {
+            --hero-card-bg: #13294f;
+            --hero-card-border: rgba(96,165,250,0.18);
+            --hero-card-title: #f8fafc;
+            --hero-card-subtitle: rgba(226,232,240,0.88);
+        }
+        .page-title { font-size: 30px; font-weight: 800; color: var(--hero-card-title, #f8fafc); margin: 0 0 6px 0; line-height: 1.25; letter-spacing: -0.02em; }
+        .page-subtitle { color: var(--hero-card-subtitle, rgba(226,232,240,0.88)); font-size: 14px; margin: 0; line-height: 1.5; }
         .page-header.hero .page-subtitle { margin-bottom: 0; }
         .page-header.hero {
             position: relative; overflow: hidden; border-radius: 16px;
-            border: 1px solid rgba(37,99,235,0.15); margin-bottom: 20px;
+            border: 1px solid var(--hero-card-border); margin-bottom: 20px;
             min-height: 140px; display: flex; align-items: flex-end;
-            padding: 28px 28px 24px; background: #ffffff;
+            padding: 28px 28px 24px; background: var(--hero-card-bg);
         }
         .hero-content { position: relative; z-index: 1; max-width: 640px; }
-        body.light-theme .page-header.hero { background: #ffffff; border-color: rgba(37,99,235,0.15); }
-        body.light-theme .page-title { color: #0f172a; }
-        body.light-theme .page-subtitle { color: #475569; }
+        body.light-theme .page-header.hero {
+            --hero-card-bg: #ffffff;
+            --hero-card-border: rgba(37,99,235,0.15);
+            --hero-card-title: #0f172a;
+            --hero-card-subtitle: #475569;
+        }
 
         /* SECTION CARD */
         .section-card {
