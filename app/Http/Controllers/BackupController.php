@@ -72,7 +72,7 @@ class BackupController extends Controller
         return response()->json([
             'count' => count($items),
             'backups' => $items,
-            'schedule' => 'Auto daily 02:00 (Asia/Manila) · keep newest 7',
+            'schedule' => 'Automatic backup daily at 2:00 AM (Manila)',
             'driver' => config('database.default') . ' / ' . config('database.connections.' . config('database.default') . '.driver'),
         ]);
     }

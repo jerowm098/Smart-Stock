@@ -17,13 +17,17 @@
             <p class="section-card-desc">Configure and manage database backup policies</p>
         </div>
         <div class="policy-card">
-            <div>
-                <div class="policy-title">Backup Policy (SS-39)</div>
-                <div class="policy-text" id="policyText">Auto daily 02:00 (Asia/Manila) · keep newest 7 · Supabase PostgreSQL JSON dump</div>
-                <div class="policy-sub" id="driverText"></div>
-            </div>
-            <button class="btn-primary" id="runBtn" onclick="runBackup()">▶ Run Backup Now</button>
-        </div>
+                    <div class="policy-info">
+                <div class="policy-title">Backup Policy</div>
+                <div class="policy-text" id="policyText">Automatic backup daily at 2:00 AM (Manila)</div>
+                    </div>
+                    <div class="policy-action">
+                                            <button class="btn-primary btn-run" id="runBtn" onclick="runBackup()">
+                                                <span class="btn-run-label" id="runBtnLabel">▶ Run Backup Now</span>
+                                                <span class="btn-run-path">Files are saved in <code>storage/app/private/backups</code></span>
+                                            </button>
+                                        </div>
+                </div>
     </div>
 
     <!-- ====== TABLE ====== -->
@@ -39,7 +43,7 @@
                 <div class="result-meta" id="resultMeta"></div>
             </div>
         </div>
-        <div class="table-wrapper">
+        <div class="table-wrapper is-loading">
                 <table>
                     <thead>
                         <tr>
@@ -47,7 +51,7 @@
                             <th>Type</th>
                             <th>Size</th>
                             <th>Created</th>
-                            <th></th>
+                                                        <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="backupBody">
@@ -61,10 +65,10 @@
 @push('styles')
     <style>
         .white-form {
-            background: #ffffff;
+            background: rgba(255, 255, 255, 0.02);
             border-radius: 12px;
             padding: 24px;
-            border: 1px solid rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             margin-bottom: 20px;
         }
         .white-form:last-child {
@@ -74,22 +78,25 @@
             background: #ffffff;
             border-color: rgba(15, 23, 42, 0.08);
         }
-        .section-card-header {
-            margin-bottom: 20px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid rgba(15, 23, 42, 0.06);
-        }
+        /* No divider under the header — the card's own background already
+                   separates it from the content below. */
+                .section-card-header {
+                    margin-bottom: 20px;
+                    padding-bottom: 0;
+                }
         .section-card-title {
             font-size: 18px;
             font-weight: 700;
-            color: #0f172a;
+            color: #f8fafc;
             margin: 0 0 6px 0;
         }
         .section-card-desc {
             font-size: 13px;
-            color: #64748b;
+            color: #94a3b8;
             margin: 0;
         }
+        body.light-theme .section-card-title { color: #0f172a; }
+        body.light-theme .section-card-desc { color: #64748b; }
         .table-wrapper {
             background: transparent;
             border: none;
@@ -99,14 +106,37 @@
         }
         .page-title { font-size: 22px; font-weight: 700; color: #f8fafc; margin-bottom: 6px; }
         .page-subtitle { color: #64748b; font-size: 14px; margin-bottom: 20px; }
-        .policy-card {
-            display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
-            background: rgba(96,165,250,0.06); border: 1px solid rgba(96,165,250,0.2);
-            border-radius: 12px; padding: 18px 20px; margin-bottom: 12px;
-        }
-        .policy-title { font-size: 14px; font-weight: 700; color: #60a5fa; margin-bottom: 4px; }
+        /* Last child of the card, so no bottom margin — the card's own padding
+                   already provides the gap, and a margin here stacked with it to
+                   leave a dead band under the policy block. */
+                .policy-card {
+                    display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+                    background: rgba(96,165,250,0.06); border: 1px solid rgba(96,165,250,0.2);
+                    border-radius: 12px; padding: 18px 20px;
+                }
+        .policy-title { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
+        body.light-theme .policy-title { color: #0f172a; }
         .policy-text { font-size: 13px; color: #cbd5e1; }
-        .policy-sub { font-size: 12px; color: #64748b; margin-top: 4px; font-family: monospace; }
+        /* The action button carries its own save-path as a small second line,
+                   so the destination is visible on the control that creates it. */
+                .policy-action { flex-shrink: 0; }
+                /* Two-class selector: the shared layout's `.btn-primary` is defined later
+                   in the cascade at equal specificity and would otherwise reset
+                   the padding that gives the path line room to breathe. */
+                .btn-primary.btn-run {
+                    display: flex; flex-direction: column; align-items: center; justify-content: center;
+                    gap: 3px; padding: 9px 34px; line-height: 1.35; white-space: nowrap;
+                    min-width: 260px;
+                }
+                .btn-run-label { font-size: 13px; font-weight: 600; }
+                .btn-run-path {
+                    font-family: 'Inter', sans-serif; font-size: 11px; font-weight: 500;
+                    color: rgba(255,255,255,0.75);
+                }
+                .btn-run-path code {
+                    font-family: monospace; font-size: 11px; font-weight: 500;
+                    color: rgba(255,255,255,0.92);
+                }
         .btn-primary {
             background: #2563eb; color: #fff; border: none;
             border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
@@ -125,7 +155,17 @@
             background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 12px; overflow-x: auto; overflow-y: visible;
         }
-        table { width: 100%; min-width: 680px; border-collapse: separate; border-spacing: 0; border: 1px solid rgba(255,255,255,0.08); table-layout: fixed; }
+        /* The single full-width "Loading..." row never needs the table's
+           min-width, so suppress the horizontal scrollbar until data lands. */
+        .table-wrapper.is-loading { overflow: hidden; }
+        .table-wrapper.is-loading table { min-width: 0; }
+        /* `table-layout: fixed` divides the width evenly across all columns, but the
+           actions cell must fit Download + 8px gap + Delete inside its own padding:
+                      99 + 8 + 78 + 32 = 217px. At 200px the flex row overflowed the cell and
+                      Delete crossed the table's right border. Hand that column an explicit
+                      width and let the remaining four share what is left. */
+                   table { width: 100%; min-width: 680px; border-collapse: separate; border-spacing: 0; border: 1px solid rgba(255,255,255,0.08); table-layout: fixed; }
+                   table th:last-child, table td:last-child { width: 220px; }
         thead th {
             background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left;
             font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border-bottom: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.06); line-height: 1.4;
@@ -137,21 +177,34 @@
         tbody td:last-child { border-right: none; }
         tbody tr:last-child td { border-bottom: none; }
         .file-name { font-family: monospace; font-size: 12px; color: #e2e8f0; }
-        .type-pill {
-            display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
-            padding: 4px 10px; border-radius: 20px; background: rgba(96,165,250,0.12); color: #60a5fa; white-space: nowrap;
-        }
+        /* Text-only pill: no fill, no border — just a slightly darker blue so the
+                   type stays readable without a tinted chip behind it. */
+                .type-pill {
+                    display: inline-block; font-size: 10px; font-weight: 700; text-transform: uppercase;
+                    padding: 4px 10px; border-radius: 20px; background: transparent; border: none;
+                    color: #3b82f6; white-space: nowrap;
+                }
+                body.light-theme .type-pill { color: #1d4ed8; }
         .row-actions { display: flex; gap: 8px; }
-        .btn-dl {
-            background: rgba(74,222,128,0.12); color: #4ade80; border: 1px solid rgba(74,222,128,0.3);
-            border-radius: 7px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
-        }
-        .btn-dl:hover { background: rgba(74,222,128,0.2); }
-        .btn-del {
-            background: rgba(248,113,113,0.1); color: #f87171; border: 1px solid rgba(248,113,113,0.25);
-            border-radius: 7px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
-        }
-        .btn-del:hover { background: rgba(248,113,113,0.2); }
+                /* Row actions, matching the Transactions `.view-btn` treatment: no fill at
+                   rest, the border tracks the text color, and hover shades that same
+                   color. A single `currentColor` rule covers both the green Download and
+                   the red Delete variants. */
+                .btn-dl, .btn-del {
+                    display: inline-flex; align-items: center; gap: 5px;
+                    background: none; border: 1px solid currentColor; border-radius: 7px;
+                    padding: 5px 11px; font-size: 12px; font-weight: 600; cursor: pointer;
+                    white-space: nowrap; transition: all 0.15s;
+                }
+                .btn-dl svg, .btn-del svg { width: 13px; height: 13px; flex-shrink: 0; }
+                .btn-dl  { color: #22c55e; }
+                .btn-del { color: #ef4444; }
+                .btn-dl:hover  { background: color-mix(in srgb, currentColor 14%, transparent); color: #4ade80; }
+                .btn-del:hover { background: color-mix(in srgb, currentColor 14%, transparent); color: #f87171; }
+                body.light-theme .btn-dl  { color: #16a34a; }
+                body.light-theme .btn-del { color: #dc2626; }
+                body.light-theme .btn-dl:hover  { background: rgba(22,163,74,0.1);  color: #15803d; }
+                body.light-theme .btn-del:hover { background: rgba(220,38,38,0.1);  color: #b91c1c; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
         .page-header.hero {
                     --hero-card-bg: #13294f;
@@ -190,14 +243,15 @@
         async function loadBackups() {
             const body = document.getElementById('backupBody');
             const meta = document.getElementById('resultMeta');
+                        const wrapper = body.closest('.table-wrapper');
             try {
                 const res = await fetch('/api/backups');
                 if (!res.ok) throw new Error('Failed (' + res.status + ')');
                 const d = await res.json();
                 document.getElementById('policyText').textContent = d.schedule || '';
-                document.getElementById('driverText').textContent = 'DB driver: ' + (d.driver || '—') + ' · files in storage/app/private/backups';
                 meta.textContent = d.count + ' backup(s) stored';
-                if (!d.backups || d.backups.length === 0) {
+                                wrapper.classList.remove('is-loading');
+                                if (!d.backups || d.backups.length === 0) {
                     body.innerHTML = '<tr><td colspan="5" class="empty-state">No backups yet. Click “Run Backup Now”.</td></tr>';
                     return;
                 }
@@ -208,11 +262,12 @@
                         <td>${escapeHtml(b.size_human)}</td>
                         <td>${escapeHtml(b.modified)}</td>
                         <td><div class="row-actions">
-                            <button class="btn-dl" onclick="downloadBackup('${escapeHtml(b.name)}')">⬇ Download</button>
-                            <button class="btn-del" onclick="deleteBackup('${escapeHtml(b.name)}')">Delete</button>
+                            <button class="btn-dl" onclick="downloadBackup('${escapeHtml(b.name)}')" title="Download this backup file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Download</button>
+                                                        <button class="btn-del" onclick="deleteBackup('${escapeHtml(b.name)}')" title="Permanently delete this backup file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Delete</button>
                         </div></td>
                     </tr>`).join('');
             } catch (e) {
+                wrapper.classList.remove('is-loading');
                 body.innerHTML = '<tr><td colspan="5" class="empty-state">Unable to load backups</td></tr>';
                 console.error('Backups load error:', e);
             }
@@ -220,8 +275,9 @@
 
         window.runBackup = async function () {
             const btn = document.getElementById('runBtn');
-            btn.disabled = true;
-            btn.textContent = '⏳ Running...';
+                    const label = document.getElementById('runBtnLabel');
+                    btn.disabled = true;
+                    label.textContent = '⏳ Running...';
             try {
                 const res = await fetch('/api/backups/run', {
                     method: 'POST',
@@ -236,7 +292,7 @@
                 console.error(e);
             } finally {
                 btn.disabled = false;
-                btn.textContent = '▶ Run Backup Now';
+                                label.textContent = '▶ Run Backup Now';
             }
         };
 

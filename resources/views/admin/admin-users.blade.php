@@ -63,13 +63,11 @@
                     <h2 class="section-card-title">Account List</h2>
                     <p class="section-card-desc">Overview of all registered user accounts</p>
                 </div>
-            </div>
-        </div>
-        <div class="section-card-toolbar">
-            <div class="view-toggle">
-                <button class="view-toggle-btn active" id="tableViewBtn" onclick="switchView('table')" title="Table View">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
-                </button>
+                <div class="view-toggle">
+                    <button class="view-toggle-btn active" id="tableViewBtn" onclick="switchView('table')" title="Table View">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                    </button>
+                </div>
             </div>
         </div>
         <div class="table-wrapper" id="userTableView">
@@ -149,8 +147,29 @@
             margin: 0 16px 16px 16px;
         }
         body.light-theme .filter-bar { background: #f8fafc; border-color: rgba(15,23,42,0.08); }
-        .filter-bar-inner { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
-        .filter-group { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+        /* Two-column field grid instead of a single wrapping flex row. */
+        .filter-bar-inner {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px 16px;
+            align-items: end;
+            /* The shared layout makes `.filter-bar` a flex container, so this
+               grid would shrink-to-fit its content and leave the right half
+               of the bar empty. Claim the full bar width. */
+            width: 100%;
+            min-width: 0;
+        }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        /* The submit action sits on its own row under the fields but stays
+           content-width instead of stretching the full bar. The shared layout
+           sets `.filter-actions { margin-left: auto }`, which would push it to
+           the far right in a grid context — reset so it aligns with the fields. */
+        .filter-bar-inner > .filter-actions {
+            grid-column: 1 / -1;
+            margin-left: 0;
+            justify-content: flex-end;
+        }
+        .filter-bar-inner > .filter-actions .btn-add { width: auto; padding: 0 22px; }
         .filter-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
         body.light-theme .filter-label { color: #94a3b8; }
 
@@ -171,7 +190,8 @@
             -webkit-appearance: none;
             -moz-appearance: none;
             box-sizing: border-box;
-            min-width: 130px;
+            width: 100%;
+            min-width: 0;
         }
         input.field-input { cursor: text; padding: 0 12px 0 14px; }
         select.field-input {
@@ -193,10 +213,14 @@
             background: #2563eb; color: #fff; border: none; border-radius: 8px;
             padding: 0 18px; height: 36px; font-size: 13px; font-weight: 600; cursor: pointer;
             font-family: 'Inter', sans-serif; display: inline-flex; align-items: center; gap: 6px;
-            transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
+            transition: all 0.15s; white-space: nowrap;
+            justify-content: center;
         }
         .btn-add:hover { opacity: 0.9; transform: translateY(-1px); }
-        .section-card-toolbar { display: flex; justify-content: flex-end; padding: 6px 20px 10px 20px; }
+        /* Single column only when the card is too narrow for two usable fields. */
+        @media (max-width: 620px) {
+            .filter-bar-inner { grid-template-columns: minmax(0, 1fr); }
+        }
         .view-toggle {
             display: flex; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
             border-radius: 8px; overflow: hidden;
@@ -251,7 +275,12 @@
         /* LOADING STATE */
         #userTableView.loading tbody td:not(.empty-state) { color: transparent; }
         #userTableView.loading tbody td.empty-state { color: #64748b; }
-        #userTableView.loading .data-table { min-width: 0; }
+        /* `min-width: 0` alone is not enough here: with `table-layout: auto` the
+           seven percentage columns still resolve their content width, so the
+           placeholder row overflows and shows a scrollbar. `fixed` makes the
+           table obey the wrapper width while loading. Loaded rows keep `auto`. */
+        #userTableView.loading .data-table { min-width: 0; table-layout: fixed; }
+        #userTableView.loading { overflow-x: hidden; }
         /* The placeholder must be re-scoped under .data-table tbody td
            (0,3,2). A bare `.empty-state` (0,1,0) loses to it and the loading
            row collapses to a single data-row height instead of the tall
@@ -267,12 +296,18 @@
         }
 
         /* BADGES */
+        /* Badges are text-only: no fill, no border — just a slightly darker
+           shade of the state color so they stay legible on both themes. */
         .role-badge { display:inline-block; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; }
-        .role-badge.admin   { background:rgba(59,130,246,.16); color:#60a5fa; border:1px solid rgba(59,130,246,.35); }
-        .role-badge.cashier { background:rgba(16,185,129,.14); color:#34d399; border:1px solid rgba(16,185,129,.32); }
+        .role-badge.admin   { background:transparent; border:none; color:#3b82f6; }
+        .role-badge.cashier { background:transparent; border:none; color:#059669; }
         .status-badge { display:inline-block; padding:2px 10px; border-radius:999px; font-size:11px; font-weight:700; }
-        .status-badge.active  { background:rgba(16,185,129,.14); color:#34d399; border:1px solid rgba(16,185,129,.32); }
-        .status-badge.inactive{ background:rgba(148,163,184,.14); color:#94a3b8; border:1px solid rgba(148,163,184,.32); }
+        .status-badge.active  { background:transparent; border:none; color:#059669; }
+        .status-badge.inactive{ background:transparent; border:none; color:#64748b; }
+        body.light-theme .role-badge.admin    { color:#1d4ed8; }
+        body.light-theme .role-badge.cashier  { color:#047857; }
+        body.light-theme .status-badge.active { color:#047857; }
+        body.light-theme .status-badge.inactive { color:#475569; }
         .row-inactive td { opacity:.55; }
 
         /* ROW ACTION BUTTONS */
@@ -295,7 +330,6 @@
         @media (max-width: 640px) {
             .section-card .table-wrapper { margin: 0 12px 12px 12px; width: calc(100% - 24px); }
             .section-card-header { padding: 14px 14px 0 14px; }
-            .section-card-toolbar { padding: 4px 14px 8px 14px; }
             .section-card .filter-bar { margin: 10px 12px 12px 12px; padding: 12px; }
         }
     </style>

@@ -135,7 +135,7 @@
             <div class="section-header">
                 <h2 class="section-title">Transaction History</h2>
                 <div class="panel-controls">
-                    <button class="btn-export-sm" onclick="exportSummaryCsv()" title="Download transaction summary as CSV (Excel-compatible)">⬇ Export Summary CSV</button>
+                    <button class="btn-export-sm" onclick="exportSummaryCsv()" title="Download transaction summary as CSV (Excel-compatible)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Export Summary CSV</button>
                     <a href="{{ route('transactions') }}" class="panel-action" title="View all transactions" aria-label="View all transactions">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
                     </a>
@@ -261,7 +261,12 @@
             border-radius: 16px;
             border: 1px solid rgba(96,165,250,0.18);
             margin-bottom: var(--section-gap);
-            min-height: 140px;
+            /* Was 140px. Raised by 42px — twice the 21px height of the
+               `.page-subtitle` line — since the text block only fills 116px
+               of the box (64.5px content + 52px padding) and the leftover
+               space read as cramped. `align-items: flex-end` keeps the text
+               pinned to the bottom, so the extra room opens up above it. */
+            min-height: 182px;
             display: flex;
             align-items: flex-end;
             justify-content: flex-start;
@@ -531,12 +536,15 @@
             outline: none;
             cursor: pointer;
         }
+        /* Primary action, not a row action: solid fill matching the transactions
+           Export CSV button and the cashier "Complete Sale" button. */
         .ov .btn-export-sm {
             display: inline-flex;
             align-items: center;
-            background: rgba(74,222,128,0.12);
-            color: #4ade80;
-            border: 1px solid rgba(74,222,128,0.3);
+            gap: 6px;
+            background: #2563eb;
+            color: #fff;
+            border: none;
             border-radius: 8px;
             padding: 0 var(--sp-6);
             font-family: 'Inter', sans-serif;
@@ -545,8 +553,12 @@
             line-height: var(--lh-tight);
             white-space: nowrap;
             cursor: pointer;
+            transition: filter 0.1s ease, transform 0.1s ease;
         }
-        .ov .btn-export-sm:hover { background: rgba(74,222,128,0.2); }
+        .ov .btn-export-sm svg { width: 14px; height: 14px; flex-shrink: 0; }
+        .ov .btn-export-sm:hover { background: #1d4ed8; }
+        .ov .btn-export-sm:active { filter: brightness(0.85); transform: scale(0.97); }
+        .ov .btn-export-sm:disabled { opacity: 0.45; cursor: not-allowed; transform: none; filter: none; }
         .ov .chart-period-badge {
             display: inline-flex;
             align-items: center;

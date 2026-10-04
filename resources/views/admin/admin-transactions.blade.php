@@ -60,7 +60,7 @@
             </div>
             <div class="section-card-actions">
                 <span class="result-meta" id="resultMeta">Loading...</span>
-                <button class="btn-export" onclick="exportCsv()" title="Download filtered transactions as CSV (Excel-compatible)">⬇ Export CSV</button>
+                <button class="btn-export" onclick="exportCsv()" title="Download filtered transactions as CSV (Excel-compatible)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>Export CSV</button>
             </div>
         </div>
         <div class="table-wrapper" id="txnTableView">
@@ -105,10 +105,10 @@
 @push('styles')
     <style>
         .white-form {
-            background: #ffffff;
+            background: rgba(255, 255, 255, 0.02);
             border-radius: 12px;
             padding: 24px;
-            border: 1px solid rgba(15, 23, 42, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             margin-bottom: 20px;
         }
         .white-form:last-child {
@@ -135,12 +135,12 @@
         .section-card-title {
             font-size: 18px;
             font-weight: 700;
-            color: #0f172a;
+            color: #f8fafc;
             margin: 0 0 6px 0;
         }
         .section-card-desc {
             font-size: 13px;
-            color: #64748b;
+            color: #94a3b8;
             margin: 0;
         }
         .table-wrapper {
@@ -194,17 +194,39 @@
             background: #2563eb; color: #fff; border: none;
             border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
         }
+        /* Primary action, not a row action: solid fill matching .btn-primary /
+           the cashier "Complete Sale" button, so it reads as the page's main CTA. */
         .btn-export {
-            background: rgba(74,222,128,0.12); color: #4ade80; border: 1px solid rgba(74,222,128,0.3);
-            border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap;
+            background: #2563eb; color: #fff; border: none;
+            border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+            white-space: nowrap; display: inline-flex; align-items: center; gap: 6px;
+            font-family: 'Inter', sans-serif; transition: filter 0.1s ease, transform 0.1s ease;
         }
-        .btn-export:hover { background: rgba(74,222,128,0.2); }
+        .btn-export svg { width: 14px; height: 14px; flex-shrink: 0; }
+        .btn-export:hover { background: #1d4ed8; }
+        .btn-export:active { filter: brightness(0.85); transform: scale(0.97); }
+        .btn-export:disabled { opacity: 0.45; cursor: not-allowed; transform: none; filter: none; }
         .btn-ghost {
             background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
             color: #cbd5e1; border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 500; cursor: pointer;
         }
         .btn-ghost:hover { background: rgba(255,255,255,0.08); }
         .btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+        /* Action button, not a neutral surface: no fill at rest, border tracks
+           the text color, and hover shades that same color. Scoped under
+           .filter-bar so it outranks the layout's `body.light-theme .btn-ghost`
+           (specificity 0,2,1) in light theme. */
+        .filter-bar .filter-actions .btn-ghost {
+            background: transparent; border: 1px solid currentColor; color: #cbd5e1;
+            font-weight: 600; font-family: 'Inter', sans-serif; transition: all 0.15s;
+        }
+        .filter-bar .filter-actions .btn-ghost:hover {
+            border-color: currentColor; background: rgba(203,213,225,0.12); color: #e2e8f0;
+        }
+        body.light-theme .filter-bar .filter-actions .btn-ghost { color: #334155; }
+        body.light-theme .filter-bar .filter-actions .btn-ghost:hover {
+            border-color: currentColor; background: rgba(30,41,59,0.08); color: #0f172a;
+        }
         .result-meta { font-size: 12px; color: #64748b; white-space: nowrap; }
         .table-wrapper {
             background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08);
@@ -228,10 +250,13 @@
         .money { font-weight: 600; white-space: nowrap; }
         .money.total { color: #4ade80; }
         .view-btn {
-            background: rgba(96,165,250,0.12); color: #60a5fa; border: none; border-radius: 7px;
-            padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+            background: none; color: #60a5fa; border: 1px solid currentColor; border-radius: 7px;
+            padding: 5px 11px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;
+            transition: all 0.15s;
         }
-        .view-btn:hover { background: rgba(96,165,250,0.2); }
+        .view-btn:hover { border-color: currentColor; background: rgba(96,165,250,0.12); color: #93c5fd; }
+        body.light-theme .view-btn { color: #1e293b; }
+        body.light-theme .view-btn:hover { border-color: currentColor; background: rgba(30,41,59,0.08); color: #0f172a; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
         .pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 16px; }
         #pageLabel { font-size: 13px; color: #94a3b8; }
@@ -257,6 +282,8 @@
             border-radius: 8px; padding: 10px 28px; font-size: 13px; font-weight: 600; cursor: pointer;
         }
         body.light-theme .page-title { color: #0f172a; }
+        body.light-theme .section-card-title { color: #0f172a; }
+        body.light-theme .section-card-desc { color: #64748b; }
         body.light-theme .filter-bar { background: #fff; border-color: rgba(15,23,42,0.08); }
         body.light-theme .filter-group input, body.light-theme .filter-group select { background: #fff; border-color: rgba(15,23,42,0.12); color: #0f172a; }
         body.light-theme .table-wrapper { background: #fff; border-color: rgba(15,23,42,0.08); }

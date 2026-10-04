@@ -666,16 +666,28 @@
         #tableView.loading table { min-width: 0; }
         .stock-cell { font-weight: 600; } .stock-low { color: #f87171; } .stock-high { color: #4ade80; }
         .status-text { font-size: 13px; font-weight: 500; }
-        .action-link { background: none; border: 1px solid transparent; padding: 4px 10px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; color: #60a5fa; text-decoration: none; transition: all 0.15s; margin-right: 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; }
+        /* Border tracks the text colour (currentColor) so the outline always
+           matches the label, and hover shades that same colour instead of
+           falling back to a fixed blue. */
+        .action-link { background: none; border: 1px solid currentColor; padding: 4px 10px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; color: #60a5fa; text-decoration: none; transition: all 0.15s; margin-right: 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; }
         .action-link:last-child { margin-right: 0; }
-        .action-link:hover { border-color: rgba(96,165,250,0.4); background: rgba(96,165,250,0.08); color: #93c5fd; }
+        /* The Actions column is narrow, so Edit/Adjust/Deactivate wrap onto their
+           own lines. As inline-flex siblings separated only by `margin-right`,
+           every wrapped line box began flush against the one above it — no
+           vertical breathing room at all. Making the cell a wrapping flex row
+           with an explicit `gap` spaces the buttons on BOTH axes in one rule,
+           and the button's own margin collapses to nothing so it can't skew
+           the alignment of the last item in a row. */
+        tbody td.actions-cell { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
+        tbody td.actions-cell .action-link { margin-right: 0; }
+        .action-link:hover { border-color: currentColor; background: rgba(96,165,250,0.12); color: #93c5fd; }
         .action-link svg { width: 13px; height: 13px; flex-shrink: 0; }
         .action-link.danger { color: #f87171; }
-        .action-link.danger:hover { border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.08); color: #fca5a5; }
+        .action-link.danger:hover { border-color: currentColor; background: rgba(248,113,113,0.12); color: #fca5a5; }
         body.light-theme .action-link { color: #1e293b; }
-        body.light-theme .action-link:hover { border-color: rgba(37,99,235,0.3); background: rgba(37,99,235,0.06); color: #1d4ed8; }
+        body.light-theme .action-link:hover { border-color: currentColor; background: rgba(30,41,59,0.08); color: #0f172a; }
         body.light-theme .action-link.danger { color: #dc2626; }
-        body.light-theme .action-link.danger:hover { border-color: rgba(220,38,38,0.3); background: rgba(220,38,38,0.06); color: #b91c1c; }
+        body.light-theme .action-link.danger:hover { border-color: currentColor; background: rgba(220,38,38,0.08); color: #b91c1c; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
         /* MODAL */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; padding: 84px 20px 24px; }
@@ -990,7 +1002,7 @@
                         <td class="stock-cell stock-${s.class}">${p.current_stock}</td>
                         <td>${p.reorder_threshold}</td>
                         <td><span class="status-text stock-${s.class}">${s.label}</span></td>
-                        <td>${canManageProducts ? '<button class="action-link" onclick="openEditModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Edit</button>' : '<button class="action-link" onclick="openViewModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>View</button>'}${canAdjustStock ? '<button class="action-link" onclick="openAdjustModal(' + p.id + ', ' + p.current_stock + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Adjust</button>' : ''}${canManageProducts ? (p.is_active === false ? '<button class="action-link" onclick="setProductActive(' + p.id + ', true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Reactivate</button>' : '<button class="action-link danger" onclick="setProductActive(' + p.id + ', false)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>Deactivate</button>') : ''}${p.is_active === false ? '<span class="status-text" style="color:#94a3b8;">Inactive</span>' : ''}</td>
+                        <td class="actions-cell">${canManageProducts ? '<button class="action-link" onclick="openEditModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Edit</button>' : '<button class="action-link" onclick="openViewModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>View</button>'}${canAdjustStock ? '<button class="action-link" onclick="openAdjustModal(' + p.id + ', ' + p.current_stock + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Adjust</button>' : ''}${canManageProducts ? (p.is_active === false ? '<button class="action-link" onclick="setProductActive(' + p.id + ', true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Reactivate</button>' : '<button class="action-link danger" onclick="setProductActive(' + p.id + ', false)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>Deactivate</button>') : ''}${p.is_active === false ? '<span class="status-text" style="color:#94a3b8;">Inactive</span>' : ''}</td>
                     </tr>`;
                 }).join('');
             }

@@ -272,17 +272,38 @@
             margin: 0 16px 16px 16px; width: calc(100% - 32px); overflow-x: auto; overflow-y: visible;
         }
         body.light-theme .section-card .table-wrapper { border-color: rgba(15,23,42,0.12); background: #ffffff; }
-        table { width: 100%; min-width: 700px; border-collapse: separate; border-spacing: 0; border: 1px solid rgba(255,255,255,0.08); table-layout: fixed; }
-        thead th { background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border-bottom: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.06); line-height: 1.4; }
-        thead th:last-child { border-right: none; }
-        tbody tr { border-top: 1px solid rgba(255,255,255,0.06); transition: background 0.15s; }
+        /* The shared layout clears every inner border and draws the outline on the
+           wrapper only. This page's own `table` rule re-added a full 1px
+           border on the <table>, which nests a second outline just inside the
+           wrapper's and reads as a stray line hugging the header band's
+           right edge. Drop it — the wrapper is the only outer frame. */
+        table { width: 100%; min-width: 700px; border-collapse: separate; border-spacing: 0; border: none; table-layout: fixed; }
+        /* With table-layout:fixed and no column widths, all six columns split
+           the row evenly at 117px. An email address needs ~171px, so it
+           overflowed its cell and printed on top of the Status badge. Name
+           and Contact Person get the surplus; Phone, Status and Actions are
+           sized to their content; Email takes what it actually needs. */
+        table th:nth-child(1), table td:nth-child(1) { width: 18%; }
+        table th:nth-child(2), table td:nth-child(2) { width: 15%; }
+        table th:nth-child(3), table td:nth-child(3) { width: 15%; }
+        table th:nth-child(4), table td:nth-child(4) { width: 27%; }
+        table th:nth-child(5), table td:nth-child(5) { width: 10%; }
+        table th:nth-child(6), table td:nth-child(6) { width: 15%; }
+        /* Long addresses break inside their own cell rather than spilling
+           into the next column. */
+        table td:nth-child(4) { overflow-wrap: anywhere; }
+        thead th { background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; line-height: 1.4; }
+        tbody tr { transition: background 0.15s; }
         tbody tr:hover { background: rgba(255,255,255,0.03); }
-        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border-right: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
-        tbody td:last-child { border-right: none; }
-        tbody tr:last-child td { border-bottom: none; }
+        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; vertical-align: middle; }
         /* Hide text until data loads */
         #tableView.loading tbody td:not(.empty-state) { color: transparent; }
         #tableView.loading tbody td.empty-state { color: #64748b; }
+        /* While loading there is only one full-width placeholder cell, which
+           never needs the table's 700px min-width. Collapse it and hide the
+           scrollbar until real rows arrive. Loaded rows keep the scrollbar. */
+        #tableView.loading table { min-width: 0; }
+        #tableView.loading { overflow-x: hidden; }
         .status-text { font-size: 13px; font-weight: 500; }
         .status-text.stock-ok { color: #4ade80; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
@@ -321,12 +342,15 @@
         .product-card-actions { display: flex; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.06); }
         body.light-theme .product-card-actions { border-top-color: rgba(15,23,42,0.06); }
         .product-card-actions .action-link { font-size: 12px; padding: 4px 8px; }
-        .action-link { background: none; border: 1px solid transparent; padding: 4px 10px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; color: #60a5fa; text-decoration: none; transition: all 0.15s; margin-right: 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; }
+        /* Border tracks the text colour (currentColor) so the outline always
+           matches the label, and hover shades that same colour instead of
+           falling back to a fixed blue. */
+        .action-link { background: none; border: 1px solid currentColor; padding: 4px 10px; cursor: pointer; font-size: 13px; font-family: 'Inter', sans-serif; color: #60a5fa; text-decoration: none; transition: all 0.15s; margin-right: 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 4px; }
         .action-link:last-child { margin-right: 0; }
-        .action-link:hover { border-color: rgba(96,165,250,0.4); background: rgba(96,165,250,0.08); color: #93c5fd; }
+        .action-link:hover { border-color: currentColor; background: rgba(96,165,250,0.12); color: #93c5fd; }
         .action-link svg { width: 13px; height: 13px; flex-shrink: 0; }
         .action-link.danger { color: #f87171; }
-        .action-link.danger:hover { border-color: rgba(248,113,113,0.4); background: rgba(248,113,113,0.08); color: #fca5a5; }
+        .action-link.danger:hover { border-color: currentColor; background: rgba(248,113,113,0.12); color: #fca5a5; }
 
         /* MODAL */
         .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 200; align-items: center; justify-content: center; }
@@ -389,9 +413,9 @@
         body.light-theme .modal .form-group input::placeholder { color: #94a3b8; }
         body.light-theme .modal-actions .btn-cancel { background: #e2e8f0; color: #334155; }
         body.light-theme .action-link { color: #1e293b; }
-        body.light-theme .action-link:hover { border-color: rgba(37,99,235,0.3); background: rgba(37,99,235,0.06); color: #1d4ed8; }
+        body.light-theme .action-link:hover { border-color: currentColor; background: rgba(30,41,59,0.08); color: #0f172a; }
         body.light-theme .action-link.danger { color: #dc2626; }
-        body.light-theme .action-link.danger:hover { border-color: rgba(220,38,38,0.3); background: rgba(220,38,38,0.06); color: #b91c1c; }
+        body.light-theme .action-link.danger:hover { border-color: currentColor; background: rgba(220,38,38,0.08); color: #b91c1c; }
 
         /* MOBILE */
         @media (max-width: 640px) {

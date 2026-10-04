@@ -354,18 +354,21 @@
     body.light-theme .product-card-actions { border-top-color: rgba(15,23,42,0.06); }
 
     /* ===== ACTION LINKS ===== */
+    /* Border tracks the text colour (currentColor) so the outline always
+       matches the label, and hover shades that same colour instead of
+       falling back to a fixed blue. */
     .action-link {
-        background: none; border: 1px solid transparent; padding: 4px 10px; cursor: pointer;
+        background: none; border: 1px solid currentColor; padding: 4px 10px; cursor: pointer;
         font-size: 13px; font-family: 'Inter', sans-serif; color: #60a5fa; text-decoration: none;
         transition: all 0.15s; margin-right: 8px; display: inline-flex; align-items: center; gap: 5px;
         border-radius: 6px;
     }
     .action-link:last-child { margin-right: 0; }
-    .action-link:hover { border-color: rgba(96,165,250,0.4); background: rgba(96,165,250,0.08); color: #93c5fd; }
+    .action-link:hover { border-color: currentColor; background: rgba(96,165,250,0.12); color: #93c5fd; }
     .action-link svg { width: 13px; height: 13px; flex-shrink: 0; }
     .action-link:disabled { opacity: 0.4; cursor: not-allowed; transform: none; filter: none; }
     body.light-theme .action-link { color: #1e293b; }
-    body.light-theme .action-link:hover { border-color: rgba(37,99,235,0.3); background: rgba(37,99,235,0.06); color: #1d4ed8; }
+    body.light-theme .action-link:hover { border-color: currentColor; background: rgba(30,41,59,0.08); color: #0f172a; }
 
     /* ===== POS 2-COLUMN GRID ===== */
     .pos-content-grid {
