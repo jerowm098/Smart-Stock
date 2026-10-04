@@ -598,30 +598,59 @@
         .ov .split-row .table-wrapper {
             flex: 1;
             min-height: var(--table-h);
+            min-width: 0;
         }
         .ov .top-products-list { min-height: var(--list-h); }
         /* These tables are full-width, so the only thing that ever pushed
            them wide was `white-space: nowrap` on a long product name. Text
-           now wraps inside its column instead. */
+           wraps inside its column instead. */
         .ov .split-row td { overflow-wrap: break-word; }
 
         /* === TABLE — identical cell rhythm for every table on the page ===
-           No inner scrollbars anywhere: each table is exactly as tall as its
-           rows, and the pane scrolls instead. Columns are sized with shares
-           rather than a fixed min-width so they fit the pane and let text
-           wrap instead of forcing a horizontal scrollbar. */
+           Each table is exactly as tall as its rows (no inner vertical
+           scrollbar) and scrolls HORIZONTALLY inside its own frame once the
+           pane is narrower than the table's min-width — the same
+           scroll-to-view pattern the Products tab uses. Columns are sized
+           with shares of that min-width, so the layout is identical at every
+           viewport and only the scrollbar appears. */
         .ov .table-wrapper {
             /* Radius comes from the shared frame's --table-radius so the
                header band's corners line up with this wrapper's outline. */
             border-radius: var(--table-radius, 12px);
-            overflow: visible;
+            /* Matches the Products tab frame: scroll the table sideways,
+               never clip it. */
+            overflow-x: auto;
+            overflow-y: hidden;
+            /* Room for the scrollbar so it does not sit on the last row. */
+            scrollbar-width: thin;
         }
+        .ov .table-wrapper::-webkit-scrollbar { height: 8px; }
+        .ov .table-wrapper::-webkit-scrollbar-track { background: transparent; }
+        .ov .table-wrapper::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.28); border-radius: 4px; }
+        .ov .table-wrapper::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.45); }
+        body.light-theme .ov .table-wrapper::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.2); }
+        body.light-theme .ov .table-wrapper::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.32); }
         /* Floor only — the table grows past it when there are more rows. */
         .ov .table-scroll {
             position: relative;
             min-height: var(--table-h);
-            overflow: visible;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: thin;
+            /* As a flex item the frame's default `min-width: auto` would let it
+               grow to its content's min-width instead of shrinking, so the
+               wide Order Suggestions table stretched its panel and got clipped
+               by the panel's `overflow: hidden` rather than scrolling.
+               `min-width: 0` lets the frame stay exactly the panel's width
+               and scroll internally. */
+            min-width: 0;
         }
+        .ov .table-scroll::-webkit-scrollbar { height: 8px; }
+        .ov .table-scroll::-webkit-scrollbar-track { background: transparent; }
+        .ov .table-scroll::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.28); border-radius: 4px; }
+        .ov .table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.45); }
+        body.light-theme .ov .table-scroll::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.2); }
+        body.light-theme .ov .table-scroll::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.32); }
         /* Spinner strip: centered in the reserved body, removed on settle. */
         .ov .table-loading {
             display: flex;
@@ -636,8 +665,18 @@
            so all three read as one system; it grows if rows run long. */
         .ov #suggestTable.table-scroll { min-height: var(--suggest-h); }
         /* border-collapse is inherited from the shared table frame in
-           layouts/app.blade.php (separate, so row borders survive). */
-        .ov table { width: 100%; table-layout: fixed; }
+           layouts/app.blade.php (separate, so row borders survive).
+           The min-width is what makes the frame scroll instead of squeezing
+           the columns: below it, overflow-x on .table-wrapper kicks in and
+           the user scrolls to see the remaining columns. Sized per table so
+           the widest header ("Suggested order", "Unit Price") still reads
+           without wrapping, at the same rhythm the desktop layout has. */
+        .ov table { width: 100%; table-layout: fixed; min-width: 720px; }
+        /* Order Suggestions has 7 columns with two long sentence headers, so
+           it needs more room than the two 5/6-column tables. The id is on the
+           scroll frame, not the <table>, so the min-width must target the
+           table inside it — on the frame it would just widen the scroller. */
+        .ov #suggestTable table { min-width: 1040px; }
         .ov thead th {
             /* background, colour and corner radius come from the shared
                table frame in layouts/app.blade.php so this page matches
@@ -864,60 +903,17 @@
             .ov .stat-icon svg { width: 16px; height: 16px; }
             .ov .section-header { gap: var(--sp-3); }
             .ov .table-wrapper { border-radius: 10px; }
-            /* Cancels the shared layout's mobile `table { min-width: 600px }`.
-               Scoped to .ov so the other pages keep their scroll-to-view
-               tables. */
-            .ov table { min-width: 0; }
-        }
-        /* === NARROW SCREENS: table → card grid ===
-           Seven columns cannot share 350px legibly no matter how the
-           percentages are tuned, so below 640px each row becomes a small
-           grid: the label sits above its value. The <thead> is hidden and the
-           per-cell label comes from the data-label attribute the renderers
-           emit. This is what removes the last scrollbar on a phone. */
-        @media (max-width: 640px) {
-            .ov thead { display: none; }
-            .ov table, .ov tbody, .ov tr, .ov td { display: block; width: 100%; }
-            .ov tbody tr {
-                padding: var(--sp-4) 0;
-            }
-            /* Two columns per row keeps each value wide enough to read. */
-            .ov tbody td {
-                display: grid;
-                grid-template-columns: minmax(0, 40%) minmax(0, 60%);
-                gap: var(--sp-3);
-                align-items: baseline;
-                padding: var(--sp-2) var(--cell-x);
-            }
-            .ov tbody td::before {
-                content: attr(data-label);
-                font-size: var(--fs-micro);
-                font-weight: 600;
-                letter-spacing: var(--track-caps);
-                text-transform: uppercase;
-                color: #64748b;
-            }
-            /* The identity cell reads better as one full-width block. */
-            .ov tbody td:nth-child(2) {
-                grid-template-columns: 1fr;
-                gap: var(--sp-1);
-            }
-            .ov tbody td:nth-child(2)::before { display: none; }
-            /* The reason keeps its label but takes the full row width — it is
-               a sentence, and squeezing it into the value column left a
-               one-word-per-line ribbon. */
-            .ov tbody td.suggest-why {
-                grid-template-columns: 1fr;
-                gap: var(--sp-2);
-                margin-top: var(--sp-2);
-                padding-top: var(--sp-3);
-                border-top: 1px dashed rgba(255,255,255,0.08);
-            }
-            /* Reclaim the space the hidden header used to reserve. */
-            .ov .table-scroll,
-            .ov #suggestTable.table-scroll { min-height: 0; }
-            .ov .table-loading { min-height: 120px; }
-            .ov .empty-state { display: block; }
+            /* Table min-widths step down with the cell padding so a phone
+               still scrolls the minimum distance needed to read the columns,
+               rather than the full desktop width. The frame below keeps
+               overflow-x: auto, so the scrollbar appears instead of the
+               columns squeezing. */
+            .ov table { min-width: 560px; }
+            .ov #suggestTable table { min-width: 880px; }
+            /* Reveal the scroll affordance on touch devices, where an
+               overlay scrollbar is otherwise invisible until you swipe. */
+            .ov .table-wrapper,
+            .ov .table-scroll { -webkit-overflow-scrolling: touch; }
         }
     </style>
 @endpush
