@@ -56,14 +56,7 @@ Thumbs.db
 Homestead.json
 Homestead.yaml
 auth.json
-
-*.pdf
-myFiles/
+files/
 .venv
-*.mp4
-plans/
-tmp_extract.py
-tmp_frames/
-tests/
 .vs
 .vscode

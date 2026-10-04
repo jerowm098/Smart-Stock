@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.dashboard-main-frame')
 
 @section('title', 'Transaction History - Smart-Stock')
 

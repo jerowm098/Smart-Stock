@@ -22,14 +22,7 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
-
-*.pdf
-myFiles/
+files/
 .venv
-*.mp4
-plans/
-tmp_extract.py
-tmp_frames/
-tests/
 .vs
 .vscode

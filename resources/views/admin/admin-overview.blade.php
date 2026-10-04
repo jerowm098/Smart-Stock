@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.dashboard-main-frame')
 
 @section('title', 'Overview - Smart-Stock')
 
@@ -571,7 +571,7 @@
             flex-direction: column;
             overflow: hidden;
         }
-        /* The shared table frame in layouts/app.blade.php supplies the outer
+        /* The shared table frame in layouts/dashboard-main-frame.blade.php supplies the outer
            border and column rules; only the fill is dropped here so the
            wrapper blends into its content panel. */
         .ov .content-panel .table-wrapper { background: transparent; }
@@ -665,7 +665,7 @@
            so all three read as one system; it grows if rows run long. */
         .ov #suggestTable.table-scroll { min-height: var(--suggest-h); }
         /* border-collapse is inherited from the shared table frame in
-           layouts/app.blade.php (separate, so row borders survive).
+           layouts/dashboard-main-frame.blade.php (separate, so row borders survive).
            The min-width is what makes the frame scroll instead of squeezing
            the columns: below it, overflow-x on .table-wrapper kicks in and
            the user scrolls to see the remaining columns. Sized per table so
@@ -679,7 +679,7 @@
         .ov #suggestTable table { min-width: 1040px; }
         .ov thead th {
             /* background, colour and corner radius come from the shared
-               table frame in layouts/app.blade.php so this page matches
+               table frame in layouts/dashboard-main-frame.blade.php so this page matches
                every other table. Only rhythm lives here — and the rhythm is
                the same 14px vertical padding every other table uses, so the
                header reads at the same height as Products / User Accounts. */
@@ -717,7 +717,7 @@
         .ov #stockInTable th:nth-child(6) { width: 18%; }
         /* Rows carry no height and no border of their own — the rhythm comes
            from the cell padding below, and each row is drawn as a filled
-           container by the shared table frame in layouts/app.blade.php. */
+           container by the shared table frame in layouts/dashboard-main-frame.blade.php. */
         .ov tbody tr {
             height: auto;
             transition: background 0.15s;

@@ -1,4 +1,4 @@
-@extends('layouts.app')
+@extends('layouts.dashboard-main-frame')
 
 @section('title', 'Backups - Smart-Stock')
 

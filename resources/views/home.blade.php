@@ -22,7 +22,7 @@
         body.light-theme { background: #f3f4f6; color: #334155; }
 
         /* ── SCROLL PANE ─────────────────────────────────────────
-           Mirrors .main from layouts/app.blade.php so the homepage and the
+           Mirrors .main from layouts/dashboard-main-frame.blade.php so the homepage and the
            dashboard scroll identically, and the bar starts below the header. */
         .page-pane {
             flex: 1;
@@ -284,7 +284,7 @@
         body.light-theme .user-email { color: #64748b; }
 
         /* User dropdown ? each action is its own bordered "form" card inside a
-           padded menu, with an identity header on top. Mirrors app.blade.php. */
+           padded menu, with an identity header on top. Mirrors dashboard-main-frame.blade.php. */
         .user-dropdown {
             position: absolute; top: calc(100% + 10px); right: 0;
             background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
