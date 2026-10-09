@@ -12,13 +12,17 @@
         body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; height: 100%; display: flex; flex-direction: column; overflow: hidden; }
 
         /* SIDEBAR */
-        .sidebar { width: 240px; min-height: calc(100vh - 64px); background: #253347; border-right: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; position: fixed; top: 64px; left: 0; bottom: 0; z-index: 90; }
+        /* The frame (sidebar + top header) uses the same surface tone as the
+           content cards. It is written as the opaque composite of
+           rgba(255,255,255,0.025) over the #0f172a body so the mobile
+           slide-in sidebar cannot show page content through itself. */
+        .sidebar { width: 240px; min-height: calc(100vh - 64px); background: #151d2f; border-right: 1px solid rgba(255,255,255,0.07); display: flex; flex-direction: column; position: fixed; top: 64px; left: 0; bottom: 0; z-index: 90; }
         .sidebar-nav { flex: 1; padding: 12px; overflow-y: auto; }
-        .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; padding: 6px 12px; font-weight: 600; margin-top: 22px; }
+        .nav-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; padding: 6px 12px; font-weight: 600; margin-top: 22px; }
         .sidebar-nav > .nav-label:first-child { margin-top: 4px; }
         .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: #94a3b8; text-decoration: none; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s; margin-bottom: 6px; }
         .nav-item:hover { background: rgba(255,255,255,0.05); color: #e2e8f0; }
-        .nav-item.active { background: rgba(96,165,250,0.15); color: #60a5fa; }
+        .nav-item.active { background: rgba(255,255,255,0.09); color: #f1f5f9; }
         .nav-icon { width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; color: currentColor; }
         .nav-icon svg { display: block; }
         .mobile-menu-button { display: none; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: rgba(255,255,255,0.06); color: #f8fafc; cursor: pointer; align-items: center; justify-content: center; transition: background 0.15s; }
@@ -34,13 +38,13 @@
         .mobile-menu-overlay { display: none; position: fixed; inset: 0; z-index: 85; background: rgba(15,23,42,0.62); opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .mobile-menu-overlay.active { display: block; opacity: 1; pointer-events: auto; }
         .mobile-menu-header { display: none; align-items: center; justify-content: space-between; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-        .mobile-menu-title { color: #f8fafc; font-size: 16px; font-weight: 700; }
+        .mobile-menu-title { color: #e2e8f0; font-size: 16px; font-weight: 700; }
         .mobile-menu-close { width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: rgba(255,255,255,0.06); color: #f8fafc; font-size: 20px; line-height: 1; cursor: pointer; }
         .mobile-menu-close:hover { background: rgba(255,255,255,0.12); }
         .mobile-menu-open { overflow: auto; }
 
         /* TOP HEADER - FIXED */
-        .top-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 40px; background: #253347; border-bottom: 1px solid rgba(255,255,255,0.08); position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 64px; }
+        .top-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 12px 40px; background: #151d2f; border-bottom: 1px solid rgba(255,255,255,0.07); position: fixed; top: 0; left: 0; right: 0; z-index: 100; height: 64px; }
         /* `space-between` only centres the middle child when the left and
            right clusters are the same width. The right cluster is always
            wider, so pin the nav to the true centre instead. */
@@ -62,7 +66,7 @@
            the dark header, and inactive tabs sit back in muted gray. The
            light theme below keeps the usual dark-on-light treatment. */
         .header-center-btn:hover { color: #e2e8f0; }
-        .header-center-btn.active { color: #ffffff; font-weight: 700; background: rgba(255,255,255,0.10); }
+        .header-center-btn.active { color: #f1f5f9; font-weight: 700; background: rgba(255,255,255,0.09); }
         body.light-theme .header-center-btn { color: #64748b; }
         body.light-theme .header-center-btn:hover { color: #0f172a; }
         body.light-theme .header-center-btn.active { color: #0f172a; font-weight: 700; background: rgba(15,23,42,0.06); }
@@ -83,7 +87,7 @@
         /* Both lines share one rule so they can never drift apart again. Only the
                    text content differs — the second line reads "Stock". */
                 .header-brand .brand-name,
-                .header-brand .brand-subtitle { color: #f8fafc; font-size: 17px; font-weight: 700; line-height: 1.05; letter-spacing: 0.01em; }
+                .header-brand .brand-subtitle { color: #e2e8f0; font-size: 17px; font-weight: 700; line-height: 1.05; letter-spacing: 0.01em; }
         .header-right { display: flex; align-items: center; gap: 12px; }
         .header-btn { cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08); color: #94a3b8; font-size: 14px; font-weight: 500; transition: background 0.15s; user-select: none; background: none; min-height: 40px; }
         /* Square the theme toggle. Fixed width and height plus centered
@@ -111,7 +115,7 @@
         }
         body.light-theme .user-avatar { background: #e2e8f0; border-color: rgba(15,23,42,0.12); color: #334155; }
         .user-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-        .user-name { font-size: 13px; font-weight: 600; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+        .user-name { font-size: 13px; font-weight: 600; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
         .user-email { font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
         /* ALERT WRAPPER - anchors alert dropdown */
         .header-alert-wrapper { position: relative; }

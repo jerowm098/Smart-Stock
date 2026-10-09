@@ -75,11 +75,20 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user): JsonResponse
     {
+        if (! $user->is_active) {
+            return response()->json([
+                'message' => 'Reactivate the account first before changing its details.',
+            ], 422);
+        }
+
         $data = $request->validate([
-            'name'     => ['sometimes', 'required', 'string', 'max:100'],
-            'username' => ['sometimes', 'required', 'string', 'min:3', 'max:255', 'alpha_dash', Rule::unique('users', 'username')->ignore($user->id)],
+            'name'     => ['sometimes', 'required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ]+(?: [A-Za-zÑñ]+)*$/'],
+            'username' => ['sometimes', 'required', 'string', 'min:3', 'max:255', 'regex:/^[A-Za-z0-9]+$/', Rule::unique('users', 'username')->ignore($user->id)],
             'email'    => ['sometimes', 'required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
             'role'     => ['sometimes', 'required', Rule::in(self::ROLES)],
+        ], [
+            'name.regex' => 'Full name may only contain letters and spaces.',
+            'username.regex' => 'Username may only contain letters and numbers, no special characters.',
         ]);
 
         // Guard against an Admin demoting themselves out of the admin tier and
@@ -135,6 +144,12 @@ class UserController extends Controller
      */
     public function resetPassword(Request $request, User $user): JsonResponse
     {
+        if (! $user->is_active) {
+            return response()->json([
+                'message' => 'Reactivate the account first before resetting its password.',
+            ], 422);
+        }
+
         $data = $request->validate([
             'password' => ['required', 'string', 'min:6', 'confirmed'],
         ]);
@@ -152,11 +167,14 @@ class UserController extends Controller
     private function validateCreate(Request $request): array
     {
         return $request->validate([
-            'name'     => ['required', 'string', 'max:100'],
-            'username' => ['required', 'string', 'min:3', 'max:255', 'alpha_dash', Rule::unique('users', 'username')],
+            'name'     => ['required', 'string', 'max:100', 'regex:/^[A-Za-zÑñ]+(?: [A-Za-zÑñ]+)*$/'],
+            'username' => ['required', 'string', 'min:3', 'max:255', 'regex:/^[A-Za-z0-9]+$/', Rule::unique('users', 'username')],
             'email'    => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
             'role'     => ['required', Rule::in(self::ROLES)],
             'password' => ['required', 'string', 'min:6', 'confirmed'],
+        ], [
+            'name.regex' => 'Full name may only contain letters and spaces.',
+            'username.regex' => 'Username may only contain letters and numbers, no special characters.',
         ]);
     }
 

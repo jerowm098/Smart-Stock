@@ -1460,9 +1460,14 @@
 
     {{-- The homepage's sign-in popup is the REAL login form, not a copy.
              home-login-modal.blade.php is the only login surface in the app; the
-             /login route redirects here. --}}
-    <div class="auth-modal-overlay" id="loginModalOverlay" role="dialog" aria-modal="true" aria-labelledby="loginModalHeading"
-         onclick="if (event.target === this) closeLoginModal();">
+             /login route redirects here.
+
+             No backdrop-click handler on purpose: this overlay wraps a form the
+             user may be part-way through filling in, so a stray click on the
+             dimmed area must not discard it. The X button inside the card is the
+             only way to dismiss it. (The Login Required prompt above keeps its
+             backdrop click — it holds no user input.) --}}
+    <div class="auth-modal-overlay" id="loginModalOverlay" role="dialog" aria-modal="true" aria-labelledby="loginModalHeading">
             @include('home-login-modal', ['asModal' => true])
     </div>
 
