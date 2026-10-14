@@ -9,46 +9,116 @@
             <p class="page-subtitle">Browse and manage your inventory</p>
         </div>
     </div>
-    <div class="section-card">
+
+    <!-- ====== STAT CARDS ====== -->
+    <div class="prod-stats-grid">
+        <div class="prod-stat-card">
+            <div class="prod-stat-header">
+                <h3>Total Products</h3>
+                <span class="prod-stat-icon blue">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </span>
+            </div>
+            <div class="prod-stat-value blue" id="prodStatTotal">0</div>
+            <div class="prod-stat-subtext">Product catalog count</div>
+        </div>
+        <div class="prod-stat-card">
+            <div class="prod-stat-header">
+                <h3>High Stock</h3>
+                <span class="prod-stat-icon green">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7L9 17l-5-5"></path><path d="M9 17h6v6"></path></svg>
+                </span>
+            </div>
+            <div class="prod-stat-value green" id="prodStatHigh">0</div>
+            <div class="prod-stat-subtext">Above reorder threshold</div>
+        </div>
+        <div class="prod-stat-card">
+            <div class="prod-stat-header">
+                <h3>Low Stock</h3>
+                <span class="prod-stat-icon amber">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </span>
+            </div>
+            <div class="prod-stat-value amber" id="prodStatLow">0</div>
+            <div class="prod-stat-subtext">At or below threshold</div>
+        </div>
+        <div class="prod-stat-card">
+            <div class="prod-stat-header">
+                <h3>Damage / Defect</h3>
+                <span class="prod-stat-icon red">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </span>
+            </div>
+            <div class="prod-stat-value red" id="prodStatDamage">0</div>
+            <div class="prod-stat-subtext">Inactive / damaged items</div>
+        </div>
+    </div>
+
+    <div class="section-card filter-card">
         <div class="section-card-header">
-            <h2 class="section-card-title">Search & Filter</h2>
+            <h2 class="section-card-title">Search and Filter Options</h2>
             <p class="section-card-desc">Find and narrow down products using the controls below</p>
         </div>
         <div class="filter-bar">
-            <div class="filter-bar-inner">
-                <div class="search-bar">
-                    <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <input type="text" class="search-input-full" id="searchInput" placeholder="Search products by name, SKU, or category..." oninput="filterProducts()" autocomplete="off">
-                </div>
-                <div class="filter-bar-divider"></div>
-                <div class="filter-group">
-                    <label class="filter-label">Search In</label>
-                    <select class="search-column-select" id="searchColumn" onchange="filterProducts()">
-                        <option value="">All Columns</option>
-                        <option value="sku">SKU / Code</option>
-                        <option value="name">Item Name</option>
-                        <option value="category">Category</option>
-                    </select>
+            <div class="prod-filter-inner">
+                <div class="filter-group prod-filter-search">
+                    <label class="filter-label" for="searchInput">Search</label>
+                    <div class="valid-wrap has-icon-left">
+                        <span class="input-icon-left" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </span>
+                        <input type="text" class="field-input" id="searchInput" placeholder="Search products by name, SKU, or category..." oninput="filterProducts()" autocomplete="off">
+                    </div>
                 </div>
                 <div class="filter-group">
-                    <label class="filter-label">Filter By</label>
-                    <select class="category-select" id="categoryFilter" onchange="filterProducts()">
-                        <option value="">All Categories</option>
-                    </select>
+                    <label class="filter-label" id="searchColumnLabel">Search In</label>
+                    <div class="role-select" id="searchColumnSelect">
+                        <button type="button" class="field-input role-select-btn" id="searchColumnBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="searchColumnLabel searchColumnBtnLabel" onclick="toggleFilterSelect(event, 'searchColumnSelect')">
+                            <span id="searchColumnBtnLabel">All Columns</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="role-select-list" id="searchColumnList" role="listbox" aria-labelledby="searchColumnLabel">
+                            <button type="button" class="role-select-option selected" role="option" aria-selected="true" data-value="" onclick="selectProductFilter('searchColumn', '', 'All Columns')">All Columns</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="sku" onclick="selectProductFilter('searchColumn', 'sku', 'SKU / Code (stock keeping unit)')">SKU / Code (stock keeping unit)</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="name" onclick="selectProductFilter('searchColumn', 'name', 'Item Name')">Item Name</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="category" onclick="selectProductFilter('searchColumn', 'category', 'Category')">Category</button>
+                        </div>
+                        <input type="hidden" id="searchColumn" value="">
+                    </div>
                 </div>
                 <div class="filter-group">
-                    <label class="filter-label">Sort By</label>
-                    <select class="sort-select" id="sortSelect" onchange="filterProducts()">
-                        <option value="">Default</option>
-                        <option value="name-asc">Name (A → Z)</option>
-                        <option value="name-desc">Name (Z → A)</option>
-                        <option value="price-asc">Price (Low → High)</option>
-                        <option value="price-desc">Price (High → Low)</option>
-                        <option value="stock-asc">Stock (Low → High)</option>
-                        <option value="stock-desc">Stock (High → Low)</option>
-                        <option value="date-desc">Date Added (Newest)</option>
-                        <option value="date-asc">Date Added (Oldest)</option>
-                    </select>
+                    <label class="filter-label" id="categoryFilterLabel">Filter By</label>
+                    <div class="role-select" id="categoryFilterSelect">
+                        <button type="button" class="field-input role-select-btn" id="categoryFilterBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="categoryFilterLabel categoryFilterBtnLabel" onclick="toggleFilterSelect(event, 'categoryFilterSelect')">
+                            <span id="categoryFilterBtnLabel">All Categories</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="role-select-list" id="categoryFilterList" role="listbox" aria-labelledby="categoryFilterLabel">
+                            <button type="button" class="role-select-option selected" role="option" aria-selected="true" data-value="" data-label="All Categories">All Categories</button>
+                        </div>
+                        <input type="hidden" id="categoryFilter" value="">
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" id="sortSelectLabel">Sort By</label>
+                    <div class="role-select" id="sortSelectWrap">
+                        <button type="button" class="field-input role-select-btn" id="sortSelectBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="sortSelectLabel sortSelectBtnLabel" onclick="toggleFilterSelect(event, 'sortSelectWrap')">
+                            <span id="sortSelectBtnLabel">Default</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="role-select-list" id="sortSelectList" role="listbox" aria-labelledby="sortSelectLabel">
+                            <button type="button" class="role-select-option selected" role="option" aria-selected="true" data-value="" onclick="selectProductFilter('sortSelect', '', 'Default')">Default</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="name-asc" onclick="selectProductFilter('sortSelect', 'name-asc', 'Name (A → Z)')">Name (A → Z)</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="name-desc" onclick="selectProductFilter('sortSelect', 'name-desc', 'Name (Z → A)')">Name (Z → A)</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="price-asc" onclick="selectProductFilter('sortSelect', 'price-asc', 'Price (Low → High)')">Price (Low → High)</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="price-desc" onclick="selectProductFilter('sortSelect', 'price-desc', 'Price (High → Low)')">Price (High → Low)</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="stock-asc" onclick="selectProductFilter('sortSelect', 'stock-asc', 'Stock (Low → High)')">Stock (Low → High)</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="stock-desc" onclick="selectProductFilter('sortSelect', 'stock-desc', 'Stock (High → Low)')">Stock (High → Low)</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="date-desc" onclick="selectProductFilter('sortSelect', 'date-desc', 'Date Added (Newest)')">Date Added (Newest)</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="date-asc" onclick="selectProductFilter('sortSelect', 'date-asc', 'Date Added (Oldest)')">Date Added (Oldest)</button>
+                        </div>
+                        <input type="hidden" id="sortSelect" value="">
+                    </div>
                 </div>
             </div>
         </div>
@@ -82,23 +152,23 @@
         <div class="table-wrapper" id="tableView">
             <table>
                 <colgroup>
-                    <col span="1" style="width: 12%;">
-                    <col span="1" style="width: 22%;">
-                    <col span="1" style="width: 12%;">
+                    <col span="1" style="width: 8%;">
+                    <col span="1" style="width: 20%;">
                     <col span="1" style="width: 10%;">
-                    <col span="1" style="width: 10%;">
-                    <col span="1" style="width: 10%;">
-                    <col span="1" style="width: 10%;">
-                    <col span="1" style="width: 14%;">
+                    <col span="1" style="width: 9%;">
+                    <col span="1" style="width: 8%;">
+                    <col span="1" style="width: 8%;">
+                    <col span="1" style="width: 9%;">
+                    <col span="1" style="width: 28%;">
                 </colgroup>
                 <thead>
                     <tr>
-                        <th>SKU / Code</th>
+                        <th>SKU / CODE<br><span style="font-size:0.85em;text-transform:none;white-space:nowrap;">(stock keeping unit)</span></th>
                         <th>Item Name</th>
                         <th>Category</th>
                         <th>Unit Price</th>
-                        <th>Current Stock<br>Count</th>
-                        <th>Reorder<br>Threshold</th>
+                        <th>Current Stock Count</th>
+                        <th>Reorder Threshold</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
@@ -304,7 +374,7 @@
 @push('styles')
     <style>
         .page-header.hero {
-            --hero-card-bg: #13294f;
+            --hero-card-bg: rgba(255,255,255,0.025);
             --hero-card-border: rgba(96,165,250,0.18);
             --hero-card-title: #f8fafc;
             --hero-card-subtitle: rgba(226,232,240,0.88);
@@ -358,6 +428,78 @@
             margin: 0;
         }
         body.light-theme .section-card-desc { color: #94a3b8; }
+        /* STAT CARDS — 4 columns */
+        .prod-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .prod-stat-card {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        body.light-theme .prod-stat-card {
+            background: #ffffff;
+            border-color: rgba(15,23,42,0.08);
+        }
+        .prod-stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+        .prod-stat-header h3 {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #ffffff;
+            margin: 0;
+        }
+        body.light-theme .prod-stat-header h3 { color: #64748b; }
+        .prod-stat-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .prod-stat-icon svg { width: 20px; height: 20px; display: block; }
+        .prod-stat-icon.blue   { background: rgba(96,165,250,0.15);  color: #60a5fa; }
+        .prod-stat-icon.green  { background: rgba(74,222,128,0.15);  color: #4ade80; }
+        .prod-stat-icon.amber  { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+        .prod-stat-icon.red    { background: rgba(248,113,113,0.15); color: #f87171; }
+        .prod-stat-value {
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            color: #f8fafc;
+        }
+        .prod-stat-value.blue   { color: #60a5fa; }
+        .prod-stat-value.green  { color: #4ade80; }
+        .prod-stat-value.amber  { color: #fbbf24; }
+        .prod-stat-value.red    { color: #f87171; }
+        .prod-stat-subtext { font-size: 12px; color: #ffffff; }
+        body.light-theme .prod-stat-value { color: #0f172a; }
+        body.light-theme .prod-stat-value.blue   { color: #2563eb; }
+        body.light-theme .prod-stat-value.green  { color: #16a34a; }
+        body.light-theme .prod-stat-value.amber  { color: #d97706; }
+        body.light-theme .prod-stat-value.red    { color: #dc2626; }
+        body.light-theme .prod-stat-subtext { color: #94a3b8; }
+        body.light-theme .prod-stat-icon.blue   { background: rgba(37,99,235,0.1); }
+        body.light-theme .prod-stat-icon.green  { background: rgba(22,163,74,0.1); }
+        body.light-theme .prod-stat-icon.amber  { background: rgba(217,119,6,0.1); }
+        body.light-theme .prod-stat-icon.red    { background: rgba(220,38,38,0.1); }
         .section-card .filter-bar {
             margin: 14px 16px 16px 16px;
         }
@@ -503,161 +645,140 @@
             background: #ffffff;
         }
         .filter-bar {
-            background: rgba(255,255,255,0.03);
+            background: rgba(255,255,255,0.045);
             border: 1px solid rgba(255,255,255,0.08);
             border-radius: 12px;
             padding: 14px 16px;
             margin-bottom: 14px;
         }
         body.light-theme .filter-bar {
-            background: #f8fafc;
+            background: rgba(15,23,42,0.04);
             border-color: rgba(15,23,42,0.08);
         }
-        .filter-bar-inner {
-            display: flex;
-            align-items: flex-end;
-            gap: 14px;
-            flex-wrap: wrap;
+        /* The shared .section-card clips its contents; dropdown lists are drawn
+           outside the card so the filter card must allow overflow. */
+        .section-card.filter-card { overflow: visible; }
+        /* 2 rows: a full-width search field on row 1, the filter dropdowns on
+           row 2. Same layout and field styling as the Transactions / Order
+           Suggestions / POS / Stock-In / Suppliers search sections.
+           Each dropdown list is width-locked to its trigger (left/right: 0), so
+           the Sort By column gets extra room — its labels ("Price (High → Low)",
+           "Date Added (Oldest)") are the longest on this page and would
+           otherwise be ellip-truncated inside the list. */
+        .prod-filter-inner {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1.5fr;
+            gap: 16px 20px;
+            align-items: end;
+            width: 100%;
+            min-width: 0;
         }
-        .filter-bar-divider {
-            width: 1px;
-            height: 28px;
-            background: rgba(255,255,255,0.1);
-            align-self: flex-end;
-            flex-shrink: 0;
-        }
-        body.light-theme .filter-bar-divider {
-            background: rgba(15,23,42,0.12);
-        }
+        .prod-filter-inner > .prod-filter-search { grid-column: 1 / -1; }
         .toolbar-row { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .toolbar-actions { display: flex; align-items: flex-end; }
-        .search-bar {
-            flex: 1 1 200px;
-            min-width: 180px;
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-        .search-icon {
-            position: absolute;
-            left: 12px;
-            color: #64748b;
-            pointer-events: none;
-            z-index: 1;
-            flex-shrink: 0;
-        }
-        body.light-theme .search-icon { color: #94a3b8; }
-        .search-input-full {
-            width: 100%;
-            background: rgba(255,255,255,0.06);
-            border: 1px solid rgba(255,255,255,0.1);
+        /* FIELDS */
+        .field-input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
             border-radius: 8px;
-            padding: 0 14px 0 36px;
+            padding: 0 12px;
             height: 36px;
             color: #f8fafc;
             font-size: 13px;
             font-family: 'Inter', sans-serif;
             outline: none;
             transition: border-color 0.2s;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
             box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
         }
-        .search-input-full:focus { border-color: #3b82f6; }
-        .search-input-full::placeholder { color: #64748b; }
-        body.light-theme .search-input-full { background: #ffffff; border-color: rgba(15,23,42,0.12); color: #0f172a; }
-        body.light-theme .search-input-full::placeholder { color: #94a3b8; }
-        .filter-group { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
-        .filter-label { font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
-        body.light-theme .filter-label { color: #94a3b8; }
+        input.field-input { cursor: text; padding: 0 12px 0 14px; min-width: 0; }
+        .field-input:focus { border-color: #3b82f6; }
+        .field-input::placeholder { color: #64748b; }
+        body.light-theme .field-input { background: #ffffff; border-color: rgba(15,23,42,0.14); color: #0f172a; }
+        body.light-theme .field-input::placeholder { color: #94a3b8; }
+
+        /* CUSTOM DROPDOWN — native <select> popups ignore the page theme, so the
+           filters use a button + listbox pair backed by hidden inputs. */
+        .role-select { position: relative; width: 100%; min-width: 0; }
+        .role-select-btn {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            width: 100%; text-align: left; font-weight: 400;
+        }
+        .role-select-btn > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .role-select-btn svg { flex-shrink: 0; color: #94a3b8; transition: transform 0.15s; }
+        .role-select.open .role-select-btn svg { transform: rotate(180deg); }
+        .role-select-list {
+            position: absolute; top: calc(100% + 6px); left: 0; z-index: 60;
+            min-width: 100%;
+            width: max-content;
+            max-width: calc(100vw - 96px);
+            display: none; flex-direction: column; padding: 6px; gap: 2px;
+            background: #1e293b; border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px; box-shadow: 0 12px 28px rgba(2,6,23,0.5);
+            max-height: 50vh; overflow-y: auto;
+        }
+        .role-select.open .role-select-list { display: flex; }
+        .role-select.drop-up .role-select-list { top: auto; bottom: calc(100% + 6px); }
+        body.light-theme .role-select-list { background: #ffffff; border-color: rgba(15,23,42,0.12); box-shadow: 0 12px 28px rgba(15,23,42,0.15); }
+        .role-select-option {
+            border: none; background: transparent; text-align: left; cursor: pointer;
+            font-family: 'Inter', sans-serif; font-size: 13px; color: #e2e8f0;
+            padding: 9px 10px; border-radius: 6px; width: 100%;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .role-select-option:hover { background: rgba(59,130,246,0.15); }
+        .role-select-option.selected { color: #93c5fd; font-weight: 600; }
+        body.light-theme .role-select-option { color: #0f172a; }
+        body.light-theme .role-select-option:hover { background: rgba(37,99,235,0.08); }
+        body.light-theme .role-select-option.selected { color: #1d4ed8; }
+
+        /* LEADING INPUT ICON (inside the field, on the left) */
+        .valid-wrap { position: relative; width: 100%; min-width: 0; }
+        .input-icon-left {
+            position: absolute; top: 50%; left: 12px; transform: translateY(-50%);
+            width: 16px; height: 16px; display: inline-flex;
+            align-items: center; justify-content: center;
+            color: #64748b; pointer-events: none;
+        }
+        .input-icon-left svg { width: 16px; height: 16px; display: block; }
+        .valid-wrap.has-icon-left .field-input { padding-left: 36px; }
+        body.light-theme .input-icon-left { color: #94a3b8; }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .filter-group .filter-label {
+            font-size: 11px; font-weight: 700; color: #cbd5e1;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        body.light-theme .filter-group .filter-label { color: #334155; }
         .btn-add { background: #2563eb; color: #fff; border: none; border-radius: 8px; padding: 0 18px; height: 36px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; white-space: nowrap; flex-shrink: 0; }
         .btn-add:hover { opacity: 0.9; transform: translateY(-1px); }
         .btn-add:hover { opacity: 0.9; }
-        .sort-select {
-            background-color: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 8px;
-            padding: 0 30px 0 12px;
-            height: 36px;
-            color: #f8fafc;
-            font-size: 13px;
-            font-family: 'Inter', sans-serif;
-            cursor: pointer;
-            outline: none;
-            appearance: none;
-            -webkit-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            transition: border-color 0.2s;
-            min-width: 150px;
-            box-sizing: border-box;
-        }
-        .sort-select:focus { border-color: #3b82f6; }
-        .sort-select option { background: #1e293b; color: #e2e8f0; }
-        .search-column-select {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 8px;
-            padding: 0 30px 0 12px;
-            height: 36px;
-            color: #f8fafc;
-            font-size: 13px;
-            font-family: 'Inter', sans-serif;
-            outline: none;
-            transition: border-color 0.2s;
-            cursor: pointer;
-            min-width: 120px;
-            box-sizing: border-box;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 12px;
-        }
-        .search-column-select:focus { border-color: #3b82f6; }
-        .search-column-select option { background: #1e293b; color: #e2e8f0; }
-        .category-select {
-            background: rgba(255,255,255,0.05);
-            border: 1px solid rgba(255,255,255,0.12);
-            border-radius: 8px;
-            padding: 0 30px 0 12px;
-            height: 36px;
-            color: #f8fafc;
-            font-size: 13px;
-            font-family: 'Inter', sans-serif;
-            outline: none;
-            transition: border-color 0.2s;
-            cursor: pointer;
-            min-width: 140px;
-            box-sizing: border-box;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 12px;
-        }
-        .category-select:focus { border-color: #3b82f6; }
-        .category-select option { background: #1e293b; color: #e2e8f0; }
         .search-input { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 8px 14px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; width: 240px; outline: none; transition: border-color 0.2s; }
         .search-input:focus { border-color: #3b82f6; } .search-input::placeholder { color: #64748b; }
         .table-wrapper { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 0 4px; overflow-x: auto; overflow-y: visible; }
-        table { width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 0 4px; border: none; table-layout: fixed; }
-        table colgroup col:nth-child(1) { width: 12%; }
-        table colgroup col:nth-child(2) { width: 22%; }
+        /* table-layout: auto lets widths follow content (give the actions cell
+           enough room to render all its buttons on a single line, and trim
+           excess space from the lower-need columns). */
+        table { width: 100%; min-width: 900px; border-collapse: separate; border-spacing: 0 4px; border: none; table-layout: auto; }
+        /* keep product name readable: wrap long names gracefully (≈2 lines) */
+        tbody td:nth-child(2) { white-space: normal; word-break: break-word; }
+        table colgroup col:nth-child(1) { width: 14%; }
+        table colgroup col:nth-child(2) { width: 28%; }
         table colgroup col:nth-child(3) { width: 12%; }
-        table colgroup col:nth-child(4) { width: 10%; }
-        table colgroup col:nth-child(5) { width: 10%; }
-        table colgroup col:nth-child(6) { width: 10%; }
-        table colgroup col:nth-child(7) { width: 10%; }
+        table colgroup col:nth-child(4) { width: 8%; }
+        table colgroup col:nth-child(5) { width: 8%; }
+        table colgroup col:nth-child(6) { width: 8%; }
+        table colgroup col:nth-child(7) { width: 8%; }
         table colgroup col:nth-child(8) { width: 14%; }
-        thead th { background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border: none; line-height: 1.4; }
+        thead th { background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: center !important; font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border: none; line-height: 1.4; overflow-wrap: break-word; }
         thead th:first-child { border-top-left-radius: 9px; }
         thead th:last-child { border-top-right-radius: 9px; }
         tbody tr, tbody tr:hover { background: rgba(255,255,255,0.045); border: none; border-radius: 8px; transition: none; }
-        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border: none; vertical-align: middle; }
+        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border: none; vertical-align: middle; text-align: center !important; }
         /* Hide text until data loads */
         #tableView.loading tbody td:not(.empty-state) { color: transparent; }
         #tableView.loading tbody td.empty-state { color: #64748b; }
@@ -678,8 +799,8 @@
            with an explicit `gap` spaces the buttons on BOTH axes in one rule,
            and the button's own margin collapses to nothing so it can't skew
            the alignment of the last item in a row. */
-        tbody td.actions-cell { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; }
-        tbody td.actions-cell .action-link { margin-right: 0; }
+        tbody td.actions-cell { display: flex; flex-wrap: nowrap; gap: 6px 8px; align-items: center; justify-content: center; }
+        tbody td.actions-cell .action-link { margin-right: 0; white-space: nowrap; }
         .action-link:hover { border-color: currentColor; background: rgba(96,165,250,0.12); color: #93c5fd; }
         .action-link svg { width: 13px; height: 13px; flex-shrink: 0; }
         .action-link.danger { color: #f87171; }
@@ -751,29 +872,7 @@
         /* LIGHT THEME */
         body.light-theme .page-title { color: #0f172a; }
         body.light-theme .page-subtitle { color: #64748b; }
-        body.light-theme .search-column-select {
-            background: #ffffff;
-            border-color: rgba(15,23,42,0.14);
-            color: #0f172a;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 12px;
-        }
-        body.light-theme .search-column-select option { background: #ffffff; color: #0f172a; }
-        body.light-theme .category-select {
-            background: #ffffff;
-            border-color: rgba(15,23,42,0.14);
-            color: #0f172a;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-position: right 10px center;
-            background-size: 12px;
-        }
-        body.light-theme .category-select option { background: #ffffff; color: #0f172a; }
         body.light-theme .search-input { background: #ffffff; border-color: rgba(15,23,42,0.14); color: #0f172a; }
-        body.light-theme .sort-select { background-color: #ffffff; border-color: rgba(15,23,42,0.14); color: #0f172a; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); }
-        body.light-theme .sort-select option { background: #ffffff; color: #0f172a; }
         body.light-theme .search-input::placeholder { color: #94a3b8; }
         body.light-theme .table-wrapper { background: #ffffff; border-color: rgba(15,23,42,0.12); }
         body.light-theme table thead th { background: rgba(100,116,139,0.16); color: #1e293b; }
@@ -838,6 +937,9 @@
         body.light-theme #adjustModal .modal .form-hint { color: #64748b; }
         body.light-theme #adjustModal .modal .btn-cancel { background: #e2e8f0; color: #334155; }
         /* MOBILE */
+        @media (max-width: 900px) {
+            .prod-filter-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
         @media (max-width: 760px) {
             /* Collapse to a single column before two columns get cramped. */
             .modal .form-grid { grid-template-columns: 1fr; }
@@ -851,10 +953,7 @@
             .section-card-header { padding: 14px 14px 0 14px; }
             .section-card .filter-bar { margin: 10px 12px 12px 12px; padding: 12px; }
             .section-card .table-wrapper { margin: 0 12px 12px 12px; width: calc(100% - 24px); }
-            .filter-bar-inner { gap: 10px; }
-            .filter-bar-divider { display: none; }
-            .search-bar { flex-basis: 100%; min-width: 0; }
-            .filter-group { flex: 1 1 120px; min-width: 120px; }
+            .prod-filter-inner { grid-template-columns: minmax(0, 1fr); gap: 10px; }
             .section-card-header-row { flex-direction: column; }
             .section-card-header-row .btn-add { width: 100%; justify-content: center; }
             .section-card-toolbar { padding: 4px 14px 8px 14px; }
@@ -891,6 +990,80 @@
         const canManageProducts = {{ Auth::user()->isAdmin() ? 'true' : 'false' }};
         let allProducts = [];
         let currentView = 'table';
+
+        /* ---- Filter dropdowns ---------------------------------------------
+           The native <select> popup is OS-rendered and ignores the page theme,
+           so the Search In / Filter By / Sort By controls use a button +
+           listbox pair backed by hidden inputs. The rest of the filter code
+           keeps reading the hidden input `.value`, so nothing else changes. */
+        function toggleFilterSelect(e, wrapId) {
+            if (e) e.stopPropagation();
+            const wrap = document.getElementById(wrapId);
+            if (!wrap) return;
+            const btn = wrap.querySelector('.role-select-btn');
+            const willOpen = !wrap.classList.contains('open');
+            closeAllFilterSelects();
+            if (willOpen) {
+                // Flip the list upward when the viewport bottom would clip it.
+                const list = wrap.querySelector('.role-select-list');
+                let listH = 0;
+                if (list) {
+                    list.style.visibility = 'hidden';
+                    list.style.display = 'flex';
+                    listH = list.offsetHeight;
+                    list.style.display = '';
+                    list.style.visibility = '';
+                }
+                const spaceBelow = window.innerHeight - btn.getBoundingClientRect().bottom;
+                wrap.classList.toggle('drop-up', spaceBelow < listH + 16);
+            }
+            wrap.classList.toggle('open', willOpen);
+            btn?.setAttribute('aria-expanded', String(willOpen));
+        }
+
+        function closeAllFilterSelects() {
+            document.querySelectorAll('.role-select.open').forEach((wrap) => {
+                wrap.classList.remove('open');
+                wrap.querySelector('.role-select-btn')?.setAttribute('aria-expanded', 'false');
+            });
+        }
+
+        function selectFilterOption(inputId, value, label, silent = false) {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.value = value;
+                if (!silent) input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            const wrap = input?.closest('.role-select');
+            const labelEl = wrap?.querySelector('.role-select-btn span');
+            if (labelEl) labelEl.textContent = label;
+            wrap?.querySelectorAll('.role-select-option').forEach((opt) => {
+                const selected = opt.dataset.value === value;
+                opt.classList.toggle('selected', selected);
+                opt.setAttribute('aria-selected', String(selected));
+            });
+            closeAllFilterSelects();
+        }
+
+        // Update the chosen filter value, then re-run the product filter.
+        function selectProductFilter(inputId, value, label) {
+            selectFilterOption(inputId, value, label);
+            filterProducts();
+        }
+
+        // Category options are rebuilt from data, so select via a delegated handler.
+        document.getElementById('categoryFilterList')?.addEventListener('click', (e) => {
+            const opt = e.target.closest('.role-select-option');
+            if (!opt) return;
+            selectProductFilter('categoryFilter', opt.dataset.value, opt.dataset.label || 'All Categories');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.role-select')) closeAllFilterSelects();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAllFilterSelects();
+        });
 
         // Product image mapping by category/name keywords
         const productImages = {
@@ -957,6 +1130,7 @@
                 const res = await fetch('/api/inventory/products');
                 if (!res.ok) throw new Error('Unable to load products');
                 allProducts = await res.json();
+                window.allProducts = allProducts;
                 populateCategoryFilter();
                 populateCategorySelects();
                 filterProducts();
@@ -969,9 +1143,35 @@
             }
         }
 
+        function updateProductStatCards() {
+            if (!window.allProducts) return;
+            const products = window.allProducts;
+            const total = products.length;
+            const high = products.filter(p => {
+                const stock = p.current_stock || 0;
+                const threshold = p.reorder_threshold || 0;
+                return stock > threshold;
+            }).length;
+            const low = products.filter(p => {
+                const stock = p.current_stock || 0;
+                const threshold = p.reorder_threshold || 0;
+                return stock <= threshold && stock > 0;
+            }).length;
+            const damage = products.filter(p => {
+                const stock = p.current_stock || 0;
+                return stock <= 0 || p.is_active === false;
+            }).length;
+            document.getElementById('prodStatTotal').textContent = total.toLocaleString();
+            document.getElementById('prodStatHigh').textContent = high.toLocaleString();
+            document.getElementById('prodStatLow').textContent = low.toLocaleString();
+            document.getElementById('prodStatDamage').textContent = damage.toLocaleString();
+        }
+
         function populateCategoryFilter() {
-            const select = document.getElementById('categoryFilter');
-            const selectedCategory = select.value;
+            const list = document.getElementById('categoryFilterList');
+            const input = document.getElementById('categoryFilter');
+            if (!list || !input) return;
+            const selectedCategory = input.value;
             const categories = [
                 ...new Set(
                     allProducts
@@ -980,11 +1180,14 @@
                 )
             ].sort((a, b) => a.localeCompare(b));
 
-            select.innerHTML = '<option value="">All Categories</option>' + categories.map(category =>
-                `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`
-            ).join('');
+            const option = (value, label, isSel) => `<button type="button" class="role-select-option${isSel ? ' selected' : ''}" role="option" aria-selected="${isSel}" data-value="${escapeHtml(value)}" data-label="${escapeHtml(label)}">${escapeHtml(label)}</button>`;
+            list.innerHTML = option('', 'All Categories', selectedCategory === '')
+                + categories.map(category => option(category, category, category === selectedCategory)).join('');
 
-            select.value = categories.includes(selectedCategory) ? selectedCategory : '';
+            // If the selected category vanished, fall back to All Categories.
+            if (selectedCategory && !categories.includes(selectedCategory)) {
+                selectFilterOption('categoryFilter', '', 'All Categories');
+            }
         }
 
         function renderFullTable(products) {
@@ -1077,6 +1280,7 @@
             const sorted = sortProducts(f);
             renderFullTable(sorted);
             renderGrid(sorted);
+            updateProductStatCards();
         }
 
         function sortProducts(products) {

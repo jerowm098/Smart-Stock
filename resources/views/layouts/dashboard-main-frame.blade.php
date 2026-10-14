@@ -435,7 +435,7 @@
 
     .filter-bar {
         display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
-        background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.08);
         border-radius: 12px; padding: 16px; margin-bottom: 12px;
     }
     .filter-group { display: flex; flex-direction: column; gap: 6px; }
@@ -481,7 +481,7 @@
     body.light-theme .page-title { color: #0f172a; }
     body.light-theme .page-subtitle { color: #475569; }
     body.light-theme .page-subtitle code { background: rgba(15,23,42,0.06); border-color: rgba(15,23,42,0.12); color: #1d4ed8; }
-    body.light-theme .filter-bar { background: #fff; border-color: rgba(15,23,42,0.08); }
+    body.light-theme .filter-bar { background: rgba(15,23,42,0.04); border-color: rgba(15,23,42,0.08); }
     body.light-theme .filter-group input, body.light-theme .filter-group select { background: #fff; border-color: rgba(15,23,42,0.12); color: #0f172a; }
     body.light-theme .table-wrap { background: #fff; border-color: rgba(15,23,42,0.08); }
     body.light-theme .data-table thead th { background: rgba(15,23,42,0.02); color: #64748b; }
@@ -713,12 +713,6 @@
                         </button>
                     </form>
                     @endif
-                    <form class="user-dropdown-form" method="GET" action="{{ route('dashboard') }}">
-                        <button type="submit" class="user-dropdown-item">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                            <span>Dashboard</span>
-                        </button>
-                    </form>
                     <form class="user-dropdown-form" method="POST" action="{{ route('logout') }}" id="logoutForm">
                         @csrf
                         <button type="submit" class="user-dropdown-item logout" onclick="handleLogout(event)">

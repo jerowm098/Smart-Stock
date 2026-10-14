@@ -10,43 +10,98 @@
         </div>
     </header>
 
+    <!-- ====== STAT CARDS ====== -->
+    <div class="txn-stats-grid">
+        <div class="txn-stat-card">
+            <div class="txn-stat-header">
+                <h3>Total Revenue</h3>
+                <span class="txn-stat-icon green">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                </span>
+            </div>
+            <div class="txn-stat-value green" id="txnStatRevenue">₱0.00</div>
+            <div class="txn-stat-subtext">From completed sales</div>
+        </div>
+        <div class="txn-stat-card">
+            <div class="txn-stat-header">
+                <h3>Items Sold</h3>
+                <span class="txn-stat-icon blue">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </span>
+            </div>
+            <div class="txn-stat-value blue" id="txnStatItems">0</div>
+            <div class="txn-stat-subtext">Total units sold</div>
+        </div>
+        <div class="txn-stat-card">
+            <div class="txn-stat-header">
+                <h3>Cashiers</h3>
+                <span class="txn-stat-icon purple">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                </span>
+            </div>
+            <div class="txn-stat-value purple" id="txnStatCashiers">0</div>
+            <div class="txn-stat-subtext">Active cashiers</div>
+        </div>
+    </div>
+
     <!-- ====== FILTERS ====== -->
     <div class="white-form">
         <div class="section-card-header">
-            <h2 class="section-card-title">Search & Filter</h2>
+            <h2 class="section-card-title">Search and Filter Options</h2>
             <p class="section-card-desc">Find transactions by receipt, product, or date range</p>
         </div>
         <div class="filter-bar">
-            <div class="filter-group">
-                <label for="fSearch">Search</label>
-                <input type="text" id="fSearch" placeholder="Receipt no, product, SKU..." autocomplete="off">
-            </div>
-            <div class="filter-group">
-                <label for="fCashier">Cashier</label>
-                <select id="fCashier">
-                    <option value="">All cashiers</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label for="fFrom">From</label>
-                <input type="date" id="fFrom" value="">
-            </div>
-            <div class="filter-group">
-                <label for="fTo">To</label>
-                <input type="date" id="fTo" value="">
-            </div>
-            <div class="filter-group">
-                <label for="fPerPage">Rows</label>
-                <select id="fPerPage">
-                    <option value="10">10</option>
-                    <option value="15" selected>15</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                </select>
-            </div>
-            <div class="filter-actions">
-                <button class="btn-primary" onclick="applyFilters()">Apply</button>
-                <button class="btn-ghost" onclick="resetFilters()">Reset</button>
+            <div class="txn-filter-inner">
+                <div class="filter-group txn-filter-search">
+                    <label class="filter-label" for="fSearch">Search</label>
+                    <div class="valid-wrap has-icon-left">
+                        <span class="input-icon-left" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        </span>
+                        <input type="text" class="field-input" id="fSearch" placeholder="Receipt no, product, SKU..." autocomplete="off">
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" id="fCashierLabel">Cashier</label>
+                    <div class="role-select" id="fCashierSelect">
+                        <button type="button" class="field-input role-select-btn" id="fCashierBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="fCashierLabel fCashierBtnLabel" onclick="toggleFilterSelect(event, 'fCashierSelect')">
+                            <span id="fCashierBtnLabel">All cashiers</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="role-select-list" id="fCashierList" role="listbox" aria-labelledby="fCashierLabel">
+                            <button type="button" class="role-select-option selected" role="option" aria-selected="true" data-value="" data-label="All cashiers">All cashiers</button>
+                        </div>
+                        <input type="hidden" id="fCashier" value="">
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="fFrom">From</label>
+                    <input type="date" class="field-input" id="fFrom" value="">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" for="fTo">To</label>
+                    <input type="date" class="field-input" id="fTo" value="">
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label" id="fPerPageLabel">Rows</label>
+                    <div class="role-select" id="fPerPageSelect">
+                        <button type="button" class="field-input role-select-btn" id="fPerPageBtn" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="fPerPageLabel fPerPageBtnLabel" onclick="toggleFilterSelect(event, 'fPerPageSelect')">
+                            <span id="fPerPageBtnLabel">15</span>
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                        </button>
+                        <div class="role-select-list" id="fPerPageList" role="listbox" aria-labelledby="fPerPageLabel">
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="10" onclick="selectFilterOption('fPerPage', '10', '10')">10</button>
+                            <button type="button" class="role-select-option selected" role="option" aria-selected="true" data-value="15" onclick="selectFilterOption('fPerPage', '15', '15')">15</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="25" onclick="selectFilterOption('fPerPage', '25', '25')">25</button>
+                            <button type="button" class="role-select-option" role="option" aria-selected="false" data-value="50" onclick="selectFilterOption('fPerPage', '50', '50')">50</button>
+                        </div>
+                        <input type="hidden" id="fPerPage" value="15">
+                    </div>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn-primary" onclick="applyFilters()">Apply</button>
+                    <button class="btn-ghost" onclick="resetFilters()">Reset</button>
+                </div>
             </div>
         </div>
     </div>
@@ -74,7 +129,7 @@
                             <th>Total</th>
                             <th>Payment</th>
                             <th>Change</th>
-                            <th></th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody id="txnBody">
@@ -143,6 +198,74 @@
             color: #94a3b8;
             margin: 0;
         }
+        /* STAT CARDS — mirrors User Accounts / Order Suggestions */
+        .txn-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .txn-stat-card {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        body.light-theme .txn-stat-card {
+            background: #ffffff;
+            border-color: rgba(15,23,42,0.08);
+        }
+        .txn-stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+        .txn-stat-header h3 {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #ffffff;
+            margin: 0;
+        }
+        body.light-theme .txn-stat-header h3 { color: #64748b; }
+        .txn-stat-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .txn-stat-icon svg { width: 20px; height: 20px; display: block; }
+        .txn-stat-icon.green  { background: rgba(74,222,128,0.15);  color: #4ade80; }
+        .txn-stat-icon.blue   { background: rgba(96,165,250,0.15);  color: #60a5fa; }
+        .txn-stat-icon.purple { background: rgba(167,139,250,0.15); color: #a78bfa; }
+        .txn-stat-value {
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            color: #f8fafc;
+        }
+        .txn-stat-value.green  { color: #4ade80; }
+        .txn-stat-value.blue   { color: #60a5fa; }
+        .txn-stat-value.purple { color: #a78bfa; }
+        .txn-stat-subtext { font-size: 12px; color: #ffffff; }
+        body.light-theme .txn-stat-value { color: #0f172a; }
+        body.light-theme .txn-stat-value.green  { color: #16a34a; }
+        body.light-theme .txn-stat-value.blue   { color: #2563eb; }
+        body.light-theme .txn-stat-value.purple { color: #9333ea; }
+        body.light-theme .txn-stat-subtext { color: #94a3b8; }
+        body.light-theme .txn-stat-icon.green  { background: rgba(22,163,74,0.1); }
+        body.light-theme .txn-stat-icon.blue   { background: rgba(37,99,235,0.1); }
+        body.light-theme .txn-stat-icon.purple { background: rgba(147,51,234,0.1); }
         .table-wrapper {
             background: transparent;
             border: none;
@@ -151,7 +274,7 @@
             overflow-y: visible;
         }
         .page-header.hero {
-            --hero-card-bg: #13294f;
+            --hero-card-bg: rgba(255,255,255,0.025);
             --hero-card-border: rgba(96,165,250,0.18);
             --hero-card-title: #f8fafc;
             --hero-card-subtitle: rgba(226,232,240,0.88);
@@ -180,7 +303,7 @@
         }
         .filter-bar {
             display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
-            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+            background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 12px; padding: 16px; margin-bottom: 12px;
         }
         .filter-group { display: flex; flex-direction: column; gap: 6px; }
@@ -189,13 +312,16 @@
             background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
             color: #e2e8f0; font-size: 13px; border-radius: 8px; padding: 8px 10px; outline: none; min-width: 160px;
         }
+        body.light-theme .filter-group input, body.light-theme .filter-group select { background: #f1f5f9; border-color: rgba(15,23,42,0.12); color: #0f172a; }
         .filter-actions { display: flex; gap: 8px; margin-left: auto; }
         .btn-primary {
             background: #2563eb; color: #fff; border: none;
-            border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
+            border-radius: 8px; padding: 0 18px; height: 36px; font-size: 13px; font-weight: 600; cursor: pointer;
         }
         /* Primary action, not a row action: solid fill matching .btn-primary /
            the cashier "Complete Sale" button, so it reads as the page's main CTA. */
+        body.light-theme .btn-primary { background: #2563eb; color: #fff; }
+        body.light-theme .btn-primary:hover { background: #1d4ed8; }
         .btn-export {
             background: #2563eb; color: #fff; border: none;
             border-radius: 8px; padding: 9px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
@@ -218,16 +344,143 @@
            (specificity 0,2,1) in light theme. */
         .filter-bar .filter-actions .btn-ghost {
             background: transparent; border: 1px solid currentColor; color: #cbd5e1;
+            padding: 0 16px; height: 36px;
             font-weight: 600; font-family: 'Inter', sans-serif; transition: all 0.15s;
         }
         .filter-bar .filter-actions .btn-ghost:hover {
             border-color: currentColor; background: rgba(203,213,225,0.12); color: #e2e8f0;
         }
-        body.light-theme .filter-bar .filter-actions .btn-ghost { color: #334155; }
+        body.light-theme .filter-bar { background: rgba(15,23,42,0.04); border-color: rgba(15,23,42,0.08); }
+        body.light-theme .filter-bar .filter-actions .btn-ghost { background: #f1f5f9; border-color: rgba(15,23,42,0.12); color: #334155; }
         body.light-theme .filter-bar .filter-actions .btn-ghost:hover {
             border-color: currentColor; background: rgba(30,41,59,0.08); color: #0f172a;
         }
         .result-meta { font-size: 12px; color: #64748b; white-space: nowrap; }
+
+        /* SEARCH & FILTER — 2 rows: the search field spans the full width on
+           row 1, row 2 holds the Cashier / From / To / Rows controls plus the
+           Apply / Reset actions. Same surface and field styling as the Order
+           Suggestions and User Accounts filter sections. */
+        .txn-filter-inner {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+            gap: 14px 16px;
+            align-items: end;
+            /* The shared layout makes `.filter-bar` a flex container, so this
+               grid would shrink-to-fit its content and leave the right half of
+               the bar empty. Claim the full bar width. */
+            width: 100%;
+            min-width: 0;
+        }
+        .txn-filter-inner > .txn-filter-search { grid-column: 1 / -1; }
+        /* The shared `.filter-actions { margin-left: auto }` would push the
+           buttons to the far right in a grid context — reset so it stays in
+           its own column next to the filters. */
+        .txn-filter-inner > .filter-actions {
+            grid-column: auto;
+            margin-left: 0;
+            justify-content: flex-end;
+        }
+        .txn-filter-inner .field-input { cursor: pointer; }
+        .txn-filter-inner input.field-input { cursor: text; }
+        .filter-group .filter-label {
+            font-size: 11px; font-weight: 700; color: #cbd5e1;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        body.light-theme .filter-group .filter-label { color: #334155; }
+
+        /* FIELDS */
+        .field-input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px;
+            padding: 0 12px;
+            height: 36px;
+            color: #f8fafc;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            box-sizing: border-box;
+            width: 100%;
+            min-width: 0;
+            color-scheme: dark;
+        }
+        input.field-input { cursor: text; padding: 0 12px 0 14px; min-width: 0; }
+        .field-input:focus { border-color: #3b82f6; }
+        .field-input::placeholder { color: #64748b; }
+        body.light-theme .field-input { background: #ffffff; border-color: rgba(15,23,42,0.14); color: #0f172a; color-scheme: light; }
+        body.light-theme .field-input::placeholder { color: #94a3b8; }
+        /* Date inputs keep their native calendar picker; only the surface changes. */
+        input[type="date"].field-input {
+            appearance: auto; -webkit-appearance: auto; -moz-appearance: auto;
+            cursor: pointer; padding-right: 8px;
+        }
+        input[type="date"].field-input::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 0.6; }
+
+        /* CUSTOM DROPDOWN — width-locked to its field so the list can never
+           overflow the card like the native <select> popup did. */
+        .role-select { position: relative; width: 100%; min-width: 0; }
+        .role-select-btn {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            width: 100%; text-align: left; font-weight: 400;
+        }
+        .role-select-btn > span {
+            min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .role-select-btn svg { flex-shrink: 0; color: #94a3b8; transition: transform 0.15s; }
+        .role-select.open .role-select-btn svg { transform: rotate(180deg); }
+        .role-select-list {
+            position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 60;
+            display: none; flex-direction: column; padding: 4px;
+            background: #1e293b; border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 8px; box-shadow: 0 12px 28px rgba(2,6,23,0.45);
+            max-height: 180px; overflow-y: auto;
+        }
+        .role-select.open .role-select-list { display: flex; }
+        /* The bottom row sits near the card edge, so flip the list upward when
+           there is not enough room below the trigger. */
+        .role-select.drop-up .role-select-list { top: auto; bottom: calc(100% + 6px); }
+        body.light-theme .role-select-list { background: #ffffff; border-color: rgba(15,23,42,0.12); box-shadow: 0 12px 28px rgba(15,23,42,0.15); }
+        .role-select-option {
+            border: none; background: transparent; text-align: left; cursor: pointer;
+            font-family: 'Inter', sans-serif; font-size: 13px; color: #e2e8f0;
+            padding: 9px 10px; border-radius: 6px; width: 100%;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .role-select-option:hover { background: rgba(59,130,246,0.15); }
+        .role-select-option.selected { color: #93c5fd; font-weight: 600; }
+        .role-select-option.selected:hover { background: rgba(59,130,246,0.15); }
+        body.light-theme .role-select-option { color: #0f172a; }
+        body.light-theme .role-select-option:hover { background: rgba(37,99,235,0.08); }
+        body.light-theme .role-select-option.selected { color: #1d4ed8; }
+        body.light-theme .role-select-option.selected:hover { background: rgba(37,99,235,0.08); }
+
+        /* LEADING INPUT ICON (left side inside the field) */
+        .valid-wrap { position: relative; width: 100%; min-width: 0; }
+        .input-icon-left {
+            position: absolute; top: 50%; left: 12px; transform: translateY(-50%);
+            width: 16px; height: 16px; display: inline-flex;
+            align-items: center; justify-content: center;
+            color: #64748b; pointer-events: none;
+        }
+        .input-icon-left svg { width: 16px; height: 16px; display: block; }
+        .valid-wrap.has-icon-left .field-input { padding-left: 36px; }
+        body.light-theme .input-icon-left { color: #94a3b8; }
+
+        /* Keep the 2-row feel on medium screens: fields pair up, actions span. */
+        @media (max-width: 900px) {
+            .txn-filter-inner { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .txn-filter-inner > .filter-actions { grid-column: 1 / -1; }
+        }
+        @media (max-width: 620px) {
+            .txn-filter-inner { grid-template-columns: minmax(0, 1fr); }
+            .txn-filter-inner > .filter-actions { grid-column: 1 / -1; justify-content: flex-start; }
+        }
         .table-wrapper {
             background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08);
             border-radius: 12px; overflow-x: auto; overflow-y: visible;
@@ -235,13 +488,13 @@
         table { width: 100%; min-width: 800px; border-collapse: separate; border-spacing: 0; border: 1px solid rgba(255,255,255,0.08); table-layout: fixed; }
         #txnTableView.loading table { min-width: 0; }
         thead th {
-            background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left;
+            background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: center;
             font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border-bottom: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.06); line-height: 1.4;
         }
         thead th:last-child { border-right: none; }
         tbody tr { border-top: 1px solid rgba(255,255,255,0.06); }
         tbody tr:hover { background: rgba(255,255,255,0.03); }
-        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border-right: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border-right: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; text-align: center; }
         tbody td:last-child { border-right: none; }
         tbody tr:last-child td { border-bottom: none; }
         .receipt-no { font-family: monospace; font-weight: 700; color: #60a5fa; }
@@ -284,7 +537,7 @@
         body.light-theme .page-title { color: #0f172a; }
         body.light-theme .section-card-title { color: #0f172a; }
         body.light-theme .section-card-desc { color: #64748b; }
-        body.light-theme .filter-bar { background: #fff; border-color: rgba(15,23,42,0.08); }
+        body.light-theme .filter-bar { background: rgba(15,23,42,0.04); border-color: rgba(15,23,42,0.08); }
         body.light-theme .filter-group input, body.light-theme .filter-group select { background: #fff; border-color: rgba(15,23,42,0.12); color: #0f172a; }
         body.light-theme .table-wrapper { background: #fff; border-color: rgba(15,23,42,0.08); }
         body.light-theme table thead th { background: rgba(15,23,42,0.02); }
@@ -313,6 +566,77 @@
 
         let state = { page: 1, per_page: 15, search: '', cashier_id: '', date_from: isoThirtyDaysAgo, date_to: isoToday, last_page: 1, total: 0, cache: [] };
 
+        /* ---- Custom filter dropdowns --------------------------------------
+           The native <select> popup is OS-rendered and ignores the page theme,
+           so the Cashier / Rows filters use a button + listbox pair backed by
+           a hidden input. Values stay on the hidden input, so the existing
+           filter code keeps reading `document.getElementById(id).value`. */
+        window.toggleFilterSelect = function (e, wrapId) {
+            if (e) e.stopPropagation();
+            const wrap = document.getElementById(wrapId);
+            if (!wrap) return;
+            const btn = wrap.querySelector('.role-select-btn');
+            const willOpen = !wrap.classList.contains('open');
+            closeAllFilterSelects();
+            if (willOpen) {
+                // Flip the list upward when the viewport bottom would clip it.
+                const list = wrap.querySelector('.role-select-list');
+                let listH = 0;
+                if (list) {
+                    list.style.visibility = 'hidden';
+                    list.style.display = 'flex';
+                    listH = list.offsetHeight;
+                    list.style.display = '';
+                    list.style.visibility = '';
+                }
+                const spaceBelow = window.innerHeight - btn.getBoundingClientRect().bottom;
+                wrap.classList.toggle('drop-up', spaceBelow < listH + 16);
+            }
+            wrap.classList.toggle('open', willOpen);
+            btn?.setAttribute('aria-expanded', String(willOpen));
+        };
+
+        function closeAllFilterSelects() {
+            document.querySelectorAll('.role-select.open').forEach((wrap) => {
+                wrap.classList.remove('open');
+                wrap.querySelector('.role-select-btn')?.setAttribute('aria-expanded', 'false');
+            });
+        }
+
+        /* `silent` skips the change event so resetFilters() can normalise every
+           control at once and reload the list a single time. */
+        window.selectFilterOption = function (inputId, value, label, silent = false) {
+            const input = document.getElementById(inputId);
+            if (input) {
+                input.value = value;
+                if (!silent) input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+            const wrap = input?.closest('.role-select');
+            const labelEl = wrap?.querySelector('.role-select-btn span');
+            if (labelEl) labelEl.textContent = label;
+            wrap?.querySelectorAll('.role-select-option').forEach((opt) => {
+                const selected = opt.dataset.value === value;
+                opt.classList.toggle('selected', selected);
+                opt.setAttribute('aria-selected', String(selected));
+            });
+            closeAllFilterSelects();
+        };
+
+        // Cashier options come from data, so select via a delegated handler.
+        document.getElementById('fCashierList')?.addEventListener('click', (e) => {
+            const opt = e.target.closest('.role-select-option');
+            if (!opt) return;
+            window.selectFilterOption('fCashier', opt.dataset.value, opt.dataset.label || 'All cashiers');
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.role-select')) closeAllFilterSelects();
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeAllFilterSelects();
+        });
+
         function qs() {
             const p = new URLSearchParams();
             p.set('page', state.page);
@@ -339,16 +663,21 @@
                 state.total = d.total || 0;
                 state.cache = d.data || [];
 
-                // Fill cashier dropdown once
-                const sel = document.getElementById('fCashier');
-                if (sel && sel.options.length <= 1 && d.cashiers) {
-                    d.cashiers.forEach(c => {
-                        const o = document.createElement('option');
-                        o.value = c.id;
-                        o.textContent = c.name + ' (' + c.email + ')';
-                        sel.appendChild(o);
-                    });
-                    if (state.cashier_id) sel.value = state.cashier_id;
+                updateStatCards(state.cache, d.cashiers);
+
+                // Fill the cashier dropdown once (custom listbox backed by #fCashier)
+                const list = document.getElementById('fCashierList');
+                if (list && list.dataset.filled !== '1' && d.cashiers) {
+                    list.innerHTML = '<button type="button" class="role-select-option selected" role="option" aria-selected="true" data-value="" data-label="All cashiers">All cashiers</button>'
+                        + d.cashiers.map(c => {
+                            const label = c.name + ' (' + c.email + ')';
+                            return `<button type="button" class="role-select-option" role="option" aria-selected="false" data-value="${escapeHtml(String(c.id))}" data-label="${escapeHtml(label)}">${escapeHtml(label)}</button>`;
+                        }).join('');
+                    list.dataset.filled = '1';
+                    if (state.cashier_id) {
+                        const match = list.querySelector(`.role-select-option[data-value="${state.cashier_id}"]`);
+                        if (match) window.selectFilterOption('fCashier', match.dataset.value, match.dataset.label, true);
+                    }
                 }
 
                 meta.textContent = state.total + ' transactions · Page ' + d.current_page + ' of ' + d.last_page;
@@ -381,6 +710,15 @@
             }
         }
 
+        function updateStatCards(transactions, cashiers) {
+            const revenue = transactions.reduce((sum, t) => sum + Number(t.total_amount || 0), 0);
+            const items = transactions.reduce((sum, t) => sum + Number(t.items_count || 0), 0);
+            const cashierCount = (cashiers && Array.isArray(cashiers)) ? cashiers.length : 0;
+            document.getElementById('txnStatRevenue').textContent = '₱' + revenue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            document.getElementById('txnStatItems').textContent = items.toLocaleString();
+            document.getElementById('txnStatCashiers').textContent = cashierCount;
+        }
+
         function exportQs() {
             const p = new URLSearchParams();
             const search = document.getElementById('fSearch').value.trim();
@@ -411,7 +749,7 @@
 
         window.resetFilters = function () {
             document.getElementById('fSearch').value = '';
-            document.getElementById('fCashier').value = '';
+            window.selectFilterOption('fCashier', '', 'All cashiers', true);
             // Reset to last 30 days so seeded demo data is visible
             const t = new Date();
             const thirtyDaysAgo = new Date(t);
@@ -424,7 +762,7 @@
                 + String(t.getDate()).padStart(2, '0');
             document.getElementById('fFrom').value = iso;
             document.getElementById('fTo').value = isoToday;
-            document.getElementById('fPerPage').value = '15';
+            window.selectFilterOption('fPerPage', '15', '15', true);
             state = { page: 1, per_page: 15, search: '', cashier_id: '', date_from: iso, date_to: isoToday, last_page: 1, total: 0, cache: state.cache };
             loadTxns();
         };

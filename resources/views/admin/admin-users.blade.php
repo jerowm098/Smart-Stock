@@ -138,7 +138,7 @@
     <!-- ====== SEARCH & FILTER ====== -->
     <div class="section-card">
         <div class="section-card-header">
-            <h2 class="section-card-title">Search &amp; Filter</h2>
+            <h2 class="section-card-title">Search and Filter Options</h2>
             <p class="section-card-desc">Find accounts by name, username, email, role, or status</p>
         </div>
         <div class="filter-bar">
@@ -705,8 +705,9 @@
         }
         .section-card .table-wrapper .data-table tbody td {
             padding: 14px 16px; font-size: 13px; color: #cbd5e1; border: none; vertical-align: middle;
+            text-align: center;
         }
-        .section-card .table-wrapper .data-table tbody td:last-child { text-align: right; }
+        .section-card .table-wrapper .data-table tbody td:last-child { text-align: center; }
         /* One unified card per row: radius lives on the end cells because
            border-radius on <tr> itself is ignored by browsers. */
         .section-card .table-wrapper .data-table tbody td:first-child {

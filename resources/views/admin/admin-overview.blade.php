@@ -271,7 +271,7 @@
             align-items: flex-end;
             justify-content: flex-start;
             padding: 28px 28px 24px;
-            background: #13294f;
+            background: rgba(255,255,255,0.025);
         }
         .ov .hero-decor { position: absolute; inset: 0; pointer-events: none; }
         .ov .hero-content { position: relative; z-index: 1; max-width: 640px; }
@@ -696,7 +696,7 @@
                the same 14px vertical padding every other table uses, so the
                header reads at the same height as Products / User Accounts. */
             padding: 14px var(--cell-x);
-            text-align: left;
+            text-align: center !important;
             font-size: var(--fs-label);
             font-weight: 600;
             /* 1.4 reproduces the `normal` line-height the other tabs inherit
@@ -709,7 +709,7 @@
                header row, not the data, the thing that forces a horizontal
                scrollbar on a narrow pane. */
             white-space: normal;
-            overflow-wrap: normal;
+            overflow-wrap: break-word;
         }
         /* Proportional columns. Without these, fixed layout divides the pane
            evenly and squeezes the date/supplier columns; the split below
@@ -745,6 +745,7 @@
             line-height: var(--lh-body);
             color: #cbd5e1;
             vertical-align: middle;
+            text-align: center !important;
         }
         /* Cells that stack a name over a sub-line read tighter when the two
            lines are pulled together. */
@@ -850,9 +851,9 @@
         body.light-theme .ov .suggest-qty { color: #16a34a; }
         body.light-theme .ov .page-title { color: #0f172a; }
         body.light-theme .ov .page-subtitle { color: #64748b; }
-        body.light-theme .ov .page-header.hero { border-color: rgba(37,99,235,0.18); }
-        body.light-theme .ov .page-header.hero .page-title { color: #ffffff; }
-        body.light-theme .ov .page-header.hero .page-subtitle { color: rgba(226,232,240,0.88); }
+        body.light-theme .ov .page-header.hero { background: #ffffff; border-color: rgba(37,99,235,0.15); }
+        body.light-theme .ov .page-header.hero .page-title { color: #0f172a; }
+        body.light-theme .ov .page-header.hero .page-subtitle { color: #475569; }
         body.light-theme .ov .hero-eyebrow { color: #dbeafe; background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.35); }
         body.light-theme .ov .stat-card { background: #ffffff; border-color: rgba(15,23,42,0.08); }
         body.light-theme .ov .stat-card:hover { background: rgba(37,99,235,0.02); border-color: rgba(37,99,235,0.2); }

@@ -10,6 +10,40 @@
         </div>
     </div>
 
+    <!-- ====== STAT CARDS ====== -->
+    <div class="bkp-stats-grid">
+        <div class="bkp-stat-card">
+            <div class="bkp-stat-header">
+                <h3>Total Backups</h3>
+                <span class="bkp-stat-icon blue">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                </span>
+            </div>
+            <div class="bkp-stat-value blue" id="bkpStatTotal">0</div>
+            <div class="bkp-stat-subtext">All backup files</div>
+        </div>
+        <div class="bkp-stat-card">
+            <div class="bkp-stat-header">
+                <h3>Today's Backups</h3>
+                <span class="bkp-stat-icon green">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7L9 17l-5-5"></path><path d="M9 17h6v6"></path></svg>
+                </span>
+            </div>
+            <div class="bkp-stat-value green" id="bkpStatToday">0</div>
+            <div class="bkp-stat-subtext">Created today</div>
+        </div>
+        <div class="bkp-stat-card">
+            <div class="bkp-stat-header">
+                <h3>Old Backups</h3>
+                <span class="bkp-stat-icon amber">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                </span>
+            </div>
+            <div class="bkp-stat-value amber" id="bkpStatOld">0</div>
+            <div class="bkp-stat-subtext">Older than 30 days</div>
+        </div>
+    </div>
+
     <!-- ====== POLICY CARD ====== -->
     <div class="white-form">
         <div class="section-card-header">
@@ -111,7 +145,7 @@
                    leave a dead band under the policy block. */
                 .policy-card {
                     display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
-                    background: rgba(96,165,250,0.06); border: 1px solid rgba(96,165,250,0.2);
+                    background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.08);
                     border-radius: 12px; padding: 18px 20px;
                 }
         .policy-title { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
@@ -143,6 +177,74 @@
         }
         .btn-primary:disabled { opacity: 0.5; cursor: wait; }
         .result-meta { font-size: 12px; color: #64748b; white-space: nowrap; }
+        /* STAT CARDS — 3 columns */
+        .bkp-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .bkp-stat-card {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+            padding: 18px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        body.light-theme .bkp-stat-card {
+            background: #ffffff;
+            border-color: rgba(15,23,42,0.08);
+        }
+        .bkp-stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+        .bkp-stat-header h3 {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #ffffff;
+            margin: 0;
+        }
+        body.light-theme .bkp-stat-header h3 { color: #64748b; }
+        .bkp-stat-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .bkp-stat-icon svg { width: 20px; height: 20px; display: block; }
+        .bkp-stat-icon.blue   { background: rgba(96,165,250,0.15);  color: #60a5fa; }
+        .bkp-stat-icon.green  { background: rgba(74,222,128,0.15);  color: #4ade80; }
+        .bkp-stat-icon.amber  { background: rgba(251,191,36,0.15);  color: #fbbf24; }
+        .bkp-stat-value {
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+            color: #f8fafc;
+        }
+        .bkp-stat-value.blue   { color: #60a5fa; }
+        .bkp-stat-value.green  { color: #4ade80; }
+        .bkp-stat-value.amber  { color: #fbbf24; }
+        .bkp-stat-subtext { font-size: 12px; color: #ffffff; }
+        body.light-theme .bkp-stat-value { color: #0f172a; }
+        body.light-theme .bkp-stat-value.blue   { color: #2563eb; }
+        body.light-theme .bkp-stat-value.green  { color: #16a34a; }
+        body.light-theme .bkp-stat-value.amber  { color: #d97706; }
+        body.light-theme .bkp-stat-subtext { color: #94a3b8; }
+        body.light-theme .bkp-stat-icon.blue   { background: rgba(37,99,235,0.1); }
+        body.light-theme .bkp-stat-icon.green  { background: rgba(22,163,74,0.1); }
+        body.light-theme .bkp-stat-icon.amber  { background: rgba(217,119,6,0.1); }
         /* Same flex row the Products/Users cards use, so the count sits at the
            top-right of the header instead of below it. */
         .section-card-header-row {
@@ -167,13 +269,13 @@
                    table { width: 100%; min-width: 680px; border-collapse: separate; border-spacing: 0; border: 1px solid rgba(255,255,255,0.08); table-layout: fixed; }
                    table th:last-child, table td:last-child { width: 220px; }
         thead th {
-            background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: left;
+            background: rgba(255,255,255,0.04); padding: 14px 16px; text-align: center;
             font-size: 11px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; white-space: normal; border-bottom: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.06); line-height: 1.4;
         }
         thead th:last-child { border-right: none; }
         tbody tr { border-top: 1px solid rgba(255,255,255,0.06); }
         tbody tr:hover { background: rgba(255,255,255,0.03); }
-        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border-right: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; }
+        tbody td { padding: 14px 16px; font-size: 13px; color: #cbd5e1; border-right: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06); vertical-align: middle; text-align: center; }
         tbody td:last-child { border-right: none; }
         tbody tr:last-child td { border-bottom: none; }
         .file-name { font-family: monospace; font-size: 12px; color: #e2e8f0; }
@@ -185,7 +287,7 @@
                     color: #3b82f6; white-space: nowrap;
                 }
                 body.light-theme .type-pill { color: #1d4ed8; }
-        .row-actions { display: flex; gap: 8px; }
+        .row-actions { display: flex; gap: 8px; justify-content: center; }
                 /* Row actions, matching the Transactions `.view-btn` treatment: no fill at
                    rest, the border tracks the text color, and hover shades that same
                    color. A single `currentColor` rule covers both the green Download and
@@ -207,7 +309,7 @@
                 body.light-theme .btn-del:hover { background: rgba(220,38,38,0.1);  color: #b91c1c; }
         .empty-state { text-align: center; color: #475569; padding: 48px; font-size: 14px; }
         .page-header.hero {
-                    --hero-card-bg: #13294f;
+                    --hero-card-bg: rgba(255,255,255,0.025);
                     --hero-card-border: rgba(96,165,250,0.18);
                     --hero-card-title: #f8fafc;
                     --hero-card-subtitle: rgba(226,232,240,0.88);
@@ -228,7 +330,7 @@
                     --hero-card-title: #0f172a;
                     --hero-card-subtitle: #475569;
                 }
-        body.light-theme .policy-card { background: rgba(37,99,235,0.05); border-color: rgba(37,99,235,0.2); }
+        body.light-theme .policy-card { background: rgba(15,23,42,0.04); border-color: rgba(15,23,42,0.08); }
         body.light-theme .policy-text { color: #475569; }
         body.light-theme .table-wrapper { background: #fff; border-color: rgba(15,23,42,0.08); }
         body.light-theme table thead th { background: rgba(15,23,42,0.02); }
@@ -250,6 +352,7 @@
                 const d = await res.json();
                 document.getElementById('policyText').textContent = d.schedule || '';
                 meta.textContent = d.count + ' backup(s) stored';
+                updateBackupStatCards(d);
                                 wrapper.classList.remove('is-loading');
                                 if (!d.backups || d.backups.length === 0) {
                     body.innerHTML = '<tr><td colspan="5" class="empty-state">No backups yet. Click “Run Backup Now”.</td></tr>';
@@ -271,6 +374,27 @@
                 body.innerHTML = '<tr><td colspan="5" class="empty-state">Unable to load backups</td></tr>';
                 console.error('Backups load error:', e);
             }
+        }
+
+        function updateBackupStatCards(d) {
+            if (!d || !d.backups) return;
+            const backups = d.backups;
+            const total = backups.length;
+            const today = new Date().toISOString().split('T')[0];
+            const todayCount = backups.filter(b => {
+                const dateStr = b.modified ? b.modified.split(' ')[0] : '';
+                return dateStr === today;
+            }).length;
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            const oldCount = backups.filter(b => {
+                if (!b.modified) return false;
+                const modDate = new Date(b.modified.replace(' ', 'T'));
+                return modDate < thirtyDaysAgo;
+            }).length;
+            document.getElementById('bkpStatTotal').textContent = total;
+            document.getElementById('bkpStatToday').textContent = todayCount;
+            document.getElementById('bkpStatOld').textContent = oldCount;
         }
 
         window.runBackup = async function () {
