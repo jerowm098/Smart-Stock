@@ -234,7 +234,7 @@
                                 <div class="user-header-field">Email</div>
                                 <div class="user-header-field">Role</div>
                                 <div class="user-header-field">Status</div>
-                                <div class="user-header-field">Created</div>
+                                <div class="user-header-field">Date Added</div>
                                 <div class="user-header-field">Actions</div>
                             </div>
                         </th>
@@ -1590,7 +1590,7 @@
                         <div class="user-row-field">${highlightMatch(u.email)}</div>
                         <div class="user-row-field"><span class="role-badge ${escapeHtml(u.role)}">${u.role === 'admin' ? 'Admin' : 'Staff'}</span></div>
                         <div class="user-row-field"><span class="status-badge ${u.is_active ? 'active' : 'inactive'}">${u.is_active ? 'Active' : 'Deactivated'}</span></div>
-                        <div class="user-row-field">${escapeHtml(u.created_at || '—')}</div>
+                        <div class="user-row-field" title="Last updated: ${escapeHtml(u.updated_at || '—')}">${escapeHtml(u.created_at || '—')}</div>
                         <div class="user-row-field actions-field">
                             <div class="actions-inner">
                                 <button class="btn-mini" ${u.is_active ? '' : 'disabled title="Reactivate the account first"'} onclick="promptResetPassword(${u.id}, ${escapeHtml(JSON.stringify(u.username))})">Reset Password</button>

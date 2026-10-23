@@ -153,6 +153,7 @@
                         <th>Phone</th>
                         <th>Email</th>
                         <th>Status</th>
+                        <th>Date Added</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -682,7 +683,7 @@
         }
 
         function showTableError(message) {
-            document.getElementById('supplierTableBody').innerHTML = `<tr><td colspan="6" class="empty-state">${escapeHtml(message)}</td></tr>`;
+            document.getElementById('supplierTableBody').innerHTML = `<tr><td colspan="7" class="empty-state">${escapeHtml(message)}</td></tr>`;
             document.getElementById('supplierGridBody').innerHTML = `<div class="empty-state" style="grid-column: 1/-1;">${escapeHtml(message)}</div>`;
         }
 
@@ -766,7 +767,7 @@
         function renderSupplierTable(suppliers) {
             const body = document.getElementById('supplierTableBody');
             if (suppliers.length === 0) {
-                body.innerHTML = '<tr><td colspan="6" class="empty-state">No suppliers found</td></tr>';
+                body.innerHTML = '<tr><td colspan="7" class="empty-state">No suppliers found</td></tr>';
             } else {
                 body.innerHTML = suppliers.map(s => `
                     <tr id="supplier-row-${s.id}">
@@ -775,6 +776,7 @@
                         <td>${escapeHtml(s.phone || '—')}</td>
                         <td>${escapeHtml(s.email || '—')}</td>
                         <td><span class="status-text stock-ok">Active</span></td>
+                        <td>${fmtDateTime(s.created_at)}</td>
                         <td>
                             <button class="action-link danger" onclick="deleteSupplier(${s.id}, '${escapeHtml(s.name).replace(/'/g, "\\'")}')" title="Delete supplier">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -806,6 +808,7 @@
                             <div class="product-card-meta">
                                 <span class="product-card-stock stock-ok">Active</span>
                             </div>
+                            <p class="product-card-time">Added ${fmtDateTime(s.created_at)}</p>
                             <div class="product-card-actions">
                                 <button class="action-link danger" onclick="deleteSupplier(${s.id}, '${escapeHtml(s.name).replace(/'/g, "\\'")}')">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
@@ -885,7 +888,7 @@
         // Initial render - show "Loading suppliers..." message
         const tableView = document.getElementById('tableView');
         tableView.classList.add('loading');
-        document.getElementById('supplierTableBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading suppliers...</td></tr>';
+        document.getElementById('supplierTableBody').innerHTML = '<tr><td colspan="7" class="empty-state">Loading suppliers...</td></tr>';
 
         loadSuppliers();
     </script>

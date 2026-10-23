@@ -183,8 +183,10 @@ class UserController extends Controller
      */
     private function listPayload(): array
     {
-        $users = User::orderByRaw("CASE WHEN role = 'admin' THEN 0 ELSE 1 END")
-            ->orderBy('name')
+        // Recently added-or-updated accounts float to the top. updated_at is
+        // bumped by account creation, role changes, (de)activation and
+        // password resets, so the Admin can trace where a change landed.
+        $users = User::orderByDesc('updated_at')
             ->get()
             ->map(fn (User $u) => $this->present($u));
 
@@ -206,7 +208,8 @@ class UserController extends Controller
             'email'      => $user->email,
             'role'       => $user->role,
             'is_active'  => (bool) $user->is_active,
-            'created_at' => optional($user->created_at)->format('M d, Y'),
+            'created_at' => optional($user->created_at)->diffForHumans(),
+            'updated_at' => optional($user->updated_at)->diffForHumans(),
         ];
     }
 }

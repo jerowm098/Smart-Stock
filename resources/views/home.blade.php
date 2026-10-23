@@ -1159,9 +1159,9 @@
         <div class="header-center" id="headerNav">
             <a href="{{ route('home') }}" class="header-center-btn active">Home</a>
             @auth
-                <a href="{{ route('dashboard') }}" class="header-center-btn">Dashboard</a>
+                <a href="{{ route('products') }}" class="header-center-btn">Products</a>
             @else
-                <a href="{{ route('dashboard') }}" class="header-center-btn" onclick="requireLogin(event, 'Dashboard')">Dashboard</a>
+                <a href="{{ route('products') }}" class="header-center-btn" onclick="requireLogin(event, 'Products')">Products</a>
             @endauth
         </div>
 
@@ -1230,10 +1230,10 @@
                                                 </button>
                                             </form>
                                             @endif
-                                            <form class="user-dropdown-form" method="GET" action="{{ route('dashboard') }}">
+                                            <form class="user-dropdown-form" method="GET" action="{{ route('products') }}">
                                                 <button type="submit" class="dropdown-item">
                                                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                                                    Dashboard
+                                                    Products
                                                 </button>
                                             </form>
                                             <form class="user-dropdown-form" method="POST" action="{{ route('logout') }}" style="margin:0;">
@@ -1264,11 +1264,11 @@
                 <span>Home</span>
             </a>
             @guest
-                <a href="{{ route('dashboard') }}" class="mobile-nav-item" onclick="requireLogin(event, 'Dashboard')">
+                <a href="{{ route('products') }}" class="mobile-nav-item" onclick="requireLogin(event, 'Products')">
                     <span class="mobile-nav-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                     </span>
-                    <span>Dashboard</span>
+                    <span>Products</span>
                 </a>
                 <a href="{{ route('login') }}" class="mobile-nav-item" onclick="event.preventDefault(); openLoginModal(); closeMobileMenu();">
                     <span class="mobile-nav-icon">
@@ -1324,7 +1324,7 @@
                         </svg>
                     </a>
                 @else
-                    <a href="{{ route('dashboard') }}" class="btn-primary">Open Dashboard
+                    <a href="{{ route('products') }}" class="btn-primary">Open Products
                         <svg class="btn-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                             <path d="M2 12h13" />
                             <path d="M14 2l9 10-9 10" />

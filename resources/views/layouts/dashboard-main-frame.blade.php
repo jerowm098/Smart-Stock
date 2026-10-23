@@ -654,13 +654,15 @@
         </div>
         <div class="header-center" id="headerNav">
             <a href="{{ route('home') }}" class="header-center-btn {{ request()->routeIs('home') ? 'active' : '' }}">Home</a>
-            {{-- Shown for every role. /dashboard is Admin-only, so a Staff
-                 click is redirected back to the POS screen by the route
-                 middleware rather than hitting an error page. The active
-                 state intentionally matches Admin: these two buttons are the
-                 only top-level sections, so anything that is not Home counts
-                 as the Dashboard section. --}}
-            <a href="{{ route('dashboard') }}" class="header-center-btn {{ !request()->routeIs('home') ? 'active' : '' }}">Dashboard</a>
+            {{-- Label kept as "Dashboard" (its original name) but it now links
+                 to /products, the Admin landing page after the Overview page
+                 was removed. Shown for every role. /products is Admin-only,
+                 so a Staff click is redirected back to the POS screen by the
+                 route middleware rather than hitting an error page. The
+                 active state intentionally matches Admin: these two buttons
+                 are the only top-level sections, so anything that is not
+                 Home counts as the Dashboard section. --}}
+            <a href="{{ route('products') }}" class="header-center-btn {{ !request()->routeIs('home') ? 'active' : '' }}">Dashboard</a>
         </div>
         <div class="header-right">
             <button type="button" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme" class="header-btn">
@@ -734,49 +736,37 @@
         @php
             // Role-aware navigation.
             // BRD (Account Management): "Staff Role = POS Access Only." Cashier
-            // sees just the POS tab under a single "Sales" heading; the Home
-            // heading is Admin-only, so it is not rendered for Staff.
-            // Admin:   full set — Overview, Products, Suppliers, Stock-In,
-            //          POS Checkout, Transactions, User Accounts, Backups.
+            // sees just the POS tab under a single "Sales" heading; the admin
+            // pages are not rendered for Staff.
+            // Admin:   Management (Stock-In, Products), Sales (POS Checkout,
+            //          Transactions, Order Suggestions), Personnel
+            //          (Suppliers, User Accounts), Settings (Backups).
+            //          Tabs read in operational-flow order: receive stock,
+            //          manage the catalog, sell, summarize transactions, then
+            //          review the restock suggestions that feed the next
+            //          Stock-In cycle.
             // NOTE: $isAdmin is already resolved at the top of this layout.
         @endphp
         <nav class="sidebar-nav">
-            @if($isAdmin)
-                <div class="nav-label">Home</div>
-                <a href="{{ route('dashboard') }}" class="nav-item" id="navOverview" data-page="overview">
-                    <span class="nav-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                    </span>
-                    <span>Overview</span>
-                </a>
-            @endif
             @if($isAdmin)
                 <div class="nav-label">Management</div>
                 {{-- BRD (Account Management) Business rules:
                      "Staff Role = POS Access Only." / "Admin Role = POS + Inventory +
                      Demand Suggestions + User Management."
-                     Inventory (Products) is Admin-only, so Staff see just Overview +
-                     POS Checkout. This matches the server: /api/inventory/products
+                     Inventory (Products) is Admin-only, so Staff see just the
+                     POS Checkout tab. This matches the server: /api/inventory/products
                      is an Admin-only route. --}}
-                <a href="{{ route('products') }}" class="nav-item" id="navProducts" data-page="products">
-                    <span class="nav-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                    </span>
-                    <span>Products</span>
-                </a>
-                <a href="{{ route('suppliers') }}" class="nav-item" id="navSuppliers" data-page="suppliers">
-                    <span class="nav-icon">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                    </span>
-                    <span>Suppliers</span>
-                </a>
-            @endif
-            @if($isAdmin)
                 <a href="{{ route('stock-in') }}" class="nav-item" id="navStockIn" data-page="stock-in">
                     <span class="nav-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"></path><path d="M2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
                     </span>
                     <span>Stock-In</span>
+                </a>
+                <a href="{{ route('products') }}" class="nav-item" id="navProducts" data-page="products">
+                    <span class="nav-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    </span>
+                    <span>Products</span>
                 </a>
             @endif
             @if(auth()->user()?->isCashier() || $isAdmin)
@@ -803,13 +793,22 @@
                 @endif
             @endif
             @if($isAdmin)
-                <div class="nav-label">Settings</div>
+                <div class="nav-label">Personnel</div>
+                <a href="{{ route('suppliers') }}" class="nav-item" id="navSuppliers" data-page="suppliers">
+                    <span class="nav-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9.5" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    </span>
+                    <span>Suppliers</span>
+                </a>
                 <a href="{{ route('users') }}" class="nav-item" id="navUsers" data-page="users">
                     <span class="nav-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                     </span>
                     <span>User Accounts</span>
                 </a>
+            @endif
+            @if($isAdmin)
+                <div class="nav-label">Settings</div>
                 <a href="{{ route('backups') }}" class="nav-item" id="navBackups" data-page="backups">
                     <span class="nav-icon">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
@@ -862,7 +861,7 @@
 
         /* Marks the current sidebar entry. Driven by each link's data-page
            attribute rather than a hardcoded path chain — the chain silently
-           fell through to Overview for any route added later. */
+           fell through to Products for any route added later. */
         function setActiveNav() {
             const path = window.location.pathname.replace(/\/+$/, '') || '/';
             document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
@@ -880,7 +879,7 @@
 
             // No nav entry for this route (e.g. /home, /login).
             if (!active) {
-                active = links.find(item => item.id === 'navOverview');
+                active = links.find(item => item.id === 'navProducts');
             }
 
             active?.classList.add('active');
@@ -1038,6 +1037,34 @@
         }
 
         function escapeHtml(str) { if (!str) return ''; const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+
+        /* Shared timestamp formatter for the flow-tracing time columns
+           (Date Added / Last Updated / Latest Received). Renders Laravel ISO
+           dates as an estimated relative time ("2 hrs ago", "1 day ago",
+           "3 weeks ago") so an Admin can compare freshness across pages and
+           see exactly where an add/receive/edit reflected. */
+        function fmtDateTime(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return '—';
+            const diffMs = Date.now() - d.getTime();
+            const min = Math.floor(diffMs / 60000);
+            if (min < 1) return 'Just now';
+            if (min < 60) return min === 1 ? '1 min ago' : min + ' mins ago';
+            const hr = Math.floor(min / 60);
+            if (hr < 24) return hr === 1 ? '1 hr ago' : hr + ' hrs ago';
+            const day = Math.floor(hr / 24);
+            if (day === 1) return '1 day ago';
+            if (day < 7) return day + ' days ago';
+            if (day < 30) {
+                const week = Math.floor(day / 7);
+                return week === 1 ? '1 week ago' : week + ' weeks ago';
+            }
+            const month = Math.floor(day / 30);
+            if (month < 12) return month === 1 ? '1 month ago' : month + ' months ago';
+            const year = Math.floor(day / 365);
+            return year === 1 ? '1 year ago' : year + ' years ago';
+        }
 
         function showToast(msg, type = 'success') {
             const t = document.getElementById('toast');

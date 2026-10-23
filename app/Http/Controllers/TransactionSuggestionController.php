@@ -218,8 +218,8 @@ class TransactionSuggestionController extends Controller
             'urgency'          => $s->urgency,
             'status'           => $s->status,
             'reason'           => $s->reason,
-            'generated_at'     => optional($s->generated_at)->format('M d, Y g:i A'),
-            'actioned_at'      => optional($s->actioned_at)->format('M d, Y g:i A'),
+            'generated_at'     => optional($s->generated_at)->diffForHumans(),
+            'actioned_at'      => optional($s->actioned_at)->diffForHumans(),
         ];
     }
 }

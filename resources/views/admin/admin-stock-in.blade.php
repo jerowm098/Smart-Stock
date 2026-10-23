@@ -132,10 +132,6 @@
                     <h2 class="section-card-title">Stock Receiving</h2>
                     <p class="section-card-desc">Overview of all products and their receiving status</p>
                 </div>
-                <button class="btn-add" onclick="openReceiveModal()">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                    <span>Receive Stock</span>
-                </button>
             </div>
         </div>
         <div class="section-card-toolbar">
@@ -920,19 +916,10 @@
         }
 
         function formatReceivedDate(isoString) {
-            const date = new Date(isoString);
-            if (isNaN(date.getTime())) return isoString;
-            const now = new Date();
-            const diffMs = now - date;
-            const diffMin = Math.floor(diffMs / 60000);
-            const diffHr = Math.floor(diffMs / 3600000);
-            const diffDay = Math.floor(diffMs / 86400000);
-
-            if (diffMin < 1) return 'Just now';
-            if (diffMin < 60) return diffMin + ' min ago';
-            if (diffHr < 24) return diffHr + ' hr ago';
-            if (diffDay < 7) return diffDay + ' day ago';
-            return date.toLocaleDateString();
+            // Delegates to the shared relative-time formatter (layout), so the
+            // Latest Received column matches the other pages ("2 hrs ago",
+            // "1 day ago", "3 weeks ago"...).
+            return fmtDateTime(isoString);
         }
 
         function populateProductSelect() {
@@ -949,13 +936,6 @@
                 allSuppliers.map(s => 
                     `<option value="${s.id}">${escapeHtml(s.name)}</option>`
                 ).join('');
-        }
-
-        function openReceiveModal() {
-            document.getElementById('receiveModal').classList.add('active');
-            document.getElementById('rProductId').focus();
-            document.getElementById('receiveModal').querySelector('form').reset();
-            updatePieceDelta();
         }
 
         function openReceiveModalForProduct(productId) {

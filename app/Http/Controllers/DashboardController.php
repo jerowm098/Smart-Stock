@@ -312,6 +312,7 @@ class DashboardController extends Controller
                 'receipt_no'     => 'SS-' . str_pad((string) $sale->id, 6, '0', STR_PAD_LEFT),
                 'sale_id'        => $sale->id,
                 'date'           => $sale->created_at->format('M d, Y g:i A'),
+                'date_relative'  => $sale->created_at->diffForHumans(),
                 'date_raw'       => $sale->created_at->toDateTimeString(),
                 'cashier_id'     => $sale->user_id,
                 'cashier_name'   => $sale->cashier?->name ?? '—',

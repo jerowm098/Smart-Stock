@@ -39,7 +39,7 @@ class AuthController extends Controller
      *
      * On success the user is routed by role:
      *   - Staff  -> the simplified POS sales interface
-     *   - Admin  -> the main dashboard (inventory and order suggestions)
+     *   - Admin  -> the Products page (inventory management)
      */
     public function login(Request $request): RedirectResponse
     {
@@ -76,12 +76,12 @@ class AuthController extends Controller
      *
      * BRD: "The system shall automatically redirect Staff accounts strictly to the
      * simplified POS sales interface upon successful login." Admins go to the
-     * dashboard instead.
+     * Products page instead (the Overview page was removed).
      */
     private function redirectForRole(User $user): RedirectResponse
     {
         if ($user->isAdmin()) {
-            return redirect()->route('dashboard');
+            return redirect()->route('products');
         }
 
         return redirect()->route('pos');
@@ -154,7 +154,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login successful.',
-            'redirect' => $user->isAdmin() ? route('dashboard') : route('pos'),
+            'redirect' => $user->isAdmin() ? route('products') : route('pos'),
             'user'    => [
                 'id'       => $user->id,
                 'name'     => $user->name,

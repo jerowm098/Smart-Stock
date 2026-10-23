@@ -16,7 +16,7 @@ class EnsureUserIsAdmin
      * BRD: "The system shall restrict Staff accounts to the sales interface only."
      *
      * API/JSON callers get a 403 JSON payload; browser page requests are
-     * redirected back to their own Overview tab so a cashier never lands on
+     * redirected back to the POS screen so a cashier never lands on
      * a raw error screen.
      */
     public function handle(Request $request, Closure $next): Response|JsonResponse
@@ -33,8 +33,9 @@ class EnsureUserIsAdmin
             }
 
             // BRD (Account Management): Staff are redirected "strictly to the
-                        // simplified POS sales interface", and the /dashboard page is now
-                        // Admin-only, so redirecting Staff there would loop.
+                        // simplified POS sales interface", and all admin pages (Products,
+                        // Suppliers, etc.) are Admin-only, so redirecting Staff to any of
+                        // them would loop.
                         return redirect()
                             ->route('pos')
                             ->with('error', 'Administrator access required for that page.');

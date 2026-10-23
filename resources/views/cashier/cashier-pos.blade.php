@@ -145,6 +145,7 @@
                                 <th>Category</th>
                                 <th>Price</th>
                                 <th>Stock</th>
+                                <th>Updated</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -507,6 +508,8 @@
     }
     body.light-theme .product-card-name { color: #1e293b; }
     .product-card-sku { font-size: 12px; color: #64748b; margin: 0 0 8px 0; }
+    .product-card-time { font-size: 11px; line-height: 1.5; color: #64748b; margin: 0 0 8px 0; }
+    body.light-theme .product-card-time { color: #64748b; }
     .product-card-meta { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     .product-card-price { font-size: 15px; font-weight: 700; color: #60a5fa; }
     body.light-theme .product-card-price { color: #2563eb; }
@@ -865,7 +868,7 @@
             populateCategoryFilter();
             filterPosProducts();
         } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Unable to load products. Please try again.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Unable to load products. Please try again.</td></tr>';
             grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;">Unable to load products. Please try again.</div>';
             showToast('Failed to load products', 'error');
         } finally {
@@ -934,7 +937,7 @@
     function renderPosTable(products) {
         const tbody = document.getElementById('posProductTableBody');
         if (products.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No products found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No products found</td></tr>';
             return;
         }
         tbody.innerHTML = products.map(p => {
@@ -950,6 +953,7 @@
                 <td>${escapeHtml(p.category || '—')}</td>
                 <td>₱${parseFloat(p.price).toFixed(2)}</td>
                 <td><span class="stock-cell stock-${s.class}">${p.current_stock}</span></td>
+                <td>${fmtDateTime(p.updated_at)}</td>
                 <td>${actionBtn}</td>
             </tr>`;
         }).join('');
@@ -974,6 +978,7 @@
                     <div class="product-card-category">${escapeHtml(p.category || 'Uncategorized')}</div>
                     <h3 class="product-card-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</h3>
                     <p class="product-card-sku">${escapeHtml(p.sku || '')}</p>
+                    <p class="product-card-time">Updated ${fmtDateTime(p.updated_at)}</p>
                     <div class="product-card-meta">
                         <span class="product-card-price">₱${parseFloat(p.price).toFixed(2)}</span>
                         <span class="product-card-stock stock-${s.class}">${s.label} · ${p.current_stock}</span>
@@ -1194,7 +1199,7 @@
     // Initialize
     // Show loading message initially
     document.getElementById('tableView').classList.add('loading');
-    document.getElementById('posProductTableBody').innerHTML = '<tr><td colspan="6" class="empty-state">Loading products...</td></tr>';
+    document.getElementById('posProductTableBody').innerHTML = '<tr><td colspan="7" class="empty-state">Loading products...</td></tr>';
     loadPosProducts();
     updatePosStatCards(0, 0);
 </script>

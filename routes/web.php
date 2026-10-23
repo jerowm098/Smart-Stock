@@ -37,13 +37,10 @@ Route::get('/home', [HomeController::class, 'index'])->name('home');
 
 // Authenticated routes
 Route::middleware('auth')->group(function () {
-    // Overview / dashboard
-    // BRD (Account Management): "Staff Role = POS Access Only." The overview
-    // page is an Admin surface, so Staff are redirected to the POS screen
-    // instead of landing on a dashboard whose APIs would 403.
-    Route::get('/dashboard', [InventoryController::class, 'index'])
-        ->name('dashboard')
-        ->middleware(EnsureUserIsAdmin::class);
+    // The Overview page was removed. /dashboard now forwards old bookmarks to
+    // Products, the Admin landing page after login. Intentionally unnamed so
+    // no route('dashboard') reference lingers anywhere.
+    Route::get('/dashboard', fn () => redirect()->route('products'));
 
     // POS checkout page (cashier-only)
     Route::get('/pos', [PosCheckoutController::class, 'index'])

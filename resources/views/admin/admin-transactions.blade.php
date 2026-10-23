@@ -122,7 +122,7 @@
                 <table>
                     <thead>
                         <tr>
-                            <th>Receipt No</th>
+                            <th>Receipt Number</th>
                             <th>Date</th>
                             <th>Cashier</th>
                             <th>Items</th>
@@ -694,7 +694,7 @@
                 body.innerHTML = state.cache.map((t, i) => `
                     <tr>
                         <td class="receipt-no">${escapeHtml(t.receipt_no)}</td>
-                        <td>${escapeHtml(t.date)}</td>
+                        <td title="Exact: ${escapeHtml(t.date)}">${escapeHtml(t.date_relative || t.date)}</td>
                         <td><div class="cashier-name">${escapeHtml(t.cashier_name)}</div><div class="cashier-email">${escapeHtml(t.cashier_email)}</div></td>
                         <td>${t.items_count} pcs</td>
                         <td class="money total">₱${Number(t.total_amount).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>

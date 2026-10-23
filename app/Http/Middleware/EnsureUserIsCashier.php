@@ -29,7 +29,7 @@ class EnsureUserIsCashier
             }
 
             return redirect()
-                ->route('dashboard')
+                ->route('products')
                 ->with('error', 'Cashier access required for that page.');
         }
 

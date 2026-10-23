@@ -146,14 +146,15 @@
                 <table class="data-table sug-table">
                     <thead>
                         <tr>
-                            <th>Item</th>
+                            <th>Item Name</th>
                             <th>SKU / CODE<br><span style="font-size:0.85em;text-transform:none;white-space:nowrap;">(stock keeping unit)</span></th>
-                            <th class="num">In Stock</th>
-                            <th class="num">Avg Daily</th>
-                            <th class="num">Reorder Pt</th>
-                            <th class="num">Suggested</th>
-                            <th class="num">Est. Cost</th>
+                            <th class="num">Current Stock</th>
+                            <th class="num">Average Daily Sales</th>
+                            <th class="num">Reorder Point</th>
+                            <th class="num">Suggested Order Quantity</th>
+                            <th class="num">Estimated Cost</th>
                             <th>Urgency</th>
+                            <th>Generated</th>
                             <th class="num">Actions</th>
                         </tr>
                     </thead>
@@ -394,6 +395,11 @@
             .osg-filter-inner { grid-template-columns: minmax(0, 1fr); }
             .osg-filter-inner > .filter-actions { grid-column: 1 / -1; justify-content: flex-start; }
         }
+        /* Narrow viewports (e.g. docked side panels): tighten cell padding and
+           font so the full 10-column table still fits without heavy overflow. */
+        @media (max-width: 1000px) {
+            .sug-table th, .sug-table td { padding: 10px 6px; font-size: 12px; }
+        }
 
         .section-card .table-wrapper {
             border: 1px solid rgba(255,255,255,0.08);
@@ -421,28 +427,33 @@
            being clipped or overflowing into a single cramped line. Urgency and
            Action columns keep their nowrap rules below. */
         .sug-table tbody td { white-space: normal; overflow-wrap: anywhere; }
-        /* Urgency pill + Action buttons must stay on a single line. */
+        /* Urgency pill + Generated + Action buttons must stay on a single line. */
         .sug-table tbody td:nth-child(8),
-        .sug-table tbody td:nth-child(9) { white-space: nowrap; }
+        .sug-table tbody td:nth-child(9),
+        .sug-table tbody td:nth-child(10) { white-space: nowrap; }
         .section-card .table-wrapper.is-loading { overflow-x: hidden; }
         .section-card .table-wrapper.is-loading .sug-table { min-width: 0; }
-        .sug-table th:nth-child(1), .sug-table td:nth-child(1) { width: 20%; }
-        .sug-table th:nth-child(2), .sug-table td:nth-child(2) { width: 11%; }
+        /* Column widths match the 10-column layout: Item Name, SKU,
+           Current Stock, Average Daily Sales, Reorder Point, Suggested
+           Order Quantity, Estimated Cost, Urgency, Generated, Actions. */
+        .sug-table th:nth-child(1), .sug-table td:nth-child(1) { width: 18%; }
+        .sug-table th:nth-child(2), .sug-table td:nth-child(2) { width: 9%; }
         .sug-table th:nth-child(3), .sug-table td:nth-child(3) { width: 7%; }
-        .sug-table th:nth-child(4), .sug-table td:nth-child(4) { width: 8%; }
-        .sug-table th:nth-child(5), .sug-table td:nth-child(5) { width: 9%; }
-        .sug-table th:nth-child(6), .sug-table td:nth-child(6) { width: 9%; }
-        .sug-table th:nth-child(7), .sug-table td:nth-child(7) { width: 10%; }
+        .sug-table th:nth-child(4), .sug-table td:nth-child(4) { width: 9%; }
+        .sug-table th:nth-child(5), .sug-table td:nth-child(5) { width: 8%; }
+        .sug-table th:nth-child(6), .sug-table td:nth-child(6) { width: 11%; }
+        .sug-table th:nth-child(7), .sug-table td:nth-child(7) { width: 8%; }
         /* Urgency holds a nowrap pill, so it must not be squeezed. */
-        .sug-table th:nth-child(8), .sug-table td:nth-child(8) { width: 10%; }
+        .sug-table th:nth-child(8), .sug-table td:nth-child(8) { width: 8%; }
+        .sug-table th:nth-child(9), .sug-table td:nth-child(9) { width: 9%; }
         /* Actions must fit two buttons (~145px) inside the cell's content
            box. Too narrow and the flex row overflows toward the LEFT,
            drawing the buttons over the Urgency column. */
-        .sug-table th:nth-child(9), .sug-table td:nth-child(9) { width: 16%; }
+        .sug-table th:nth-child(10), .sug-table td:nth-child(10) { width: 13%; }
         /* The shared `.data-table thead th` is `white-space: nowrap`, so the
-           three-word headers ("Avg Daily", "Reorder Pt", "Est. Cost") could
-           never wrap and spilled over neighbouring columns.
-           Force wrap + center with higher specificity + !important. */
+           long headers ("Average Daily Sales", "Suggested Order Quantity",
+           "Estimated Cost") could never wrap and spilled over neighbouring
+           columns. Force wrap + center with higher specificity + !important. */
         .section-card .table-wrapper .sug-table thead th {
             letter-spacing: 0.2px;
             white-space: normal;
@@ -558,7 +569,7 @@
            out of the table's column-width algorithm. flex-wrap is a safety
            net: on a narrow viewport the buttons stack inside their own cell
            rather than overflowing left across Urgency. */
-        .sug-table .action-row { display: flex; gap: 6px; justify-content: center; flex-wrap: nowrap; width: 100%; }
+        .sug-table .action-row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; width: 100%; }
         .sug-table .btn-mini { white-space: nowrap; }
         .btn-mini { color:#f87171; }
         .btn-mini:hover { border-color:currentColor; background:color-mix(in srgb, currentColor 12%, transparent); }
@@ -693,7 +704,7 @@
             updateStatCards();
             renderSuggestions(applyFilters(window.ALL_ROWS));
         } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="9" class="empty-state">Unable to load suggestions.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="empty-state">Unable to load suggestions.</td></tr>';
             setResultMeta(null);
         } finally {
             wrapper.classList.remove('is-loading');
@@ -775,7 +786,7 @@
     }
 
     // Initial render - show loading message
-    document.getElementById('sugTableBody').innerHTML = '<tr><td colspan="9" class="empty-state">Loading suggestions...</td></tr>';
+    document.getElementById('sugTableBody').innerHTML = '<tr><td colspan="10" class="empty-state">Loading suggestions...</td></tr>';
 
     function updateStatCards() {
         if (!window.ALL_ROWS) return;
@@ -791,7 +802,7 @@
         const tbody = document.getElementById('sugTableBody');
 
         if (rows.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" class="empty-state">No suggestions match these filters.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="empty-state">No suggestions match these filters.</td></tr>`;
             setResultMeta(0, 0);
             renderPager();
             return;
@@ -824,6 +835,7 @@
                 <td>
                     <span class="urgency-badge ${escapeHtml(s.urgency)}">${escapeHtml(s.urgency)}</span>
                 </td>
+                <td>${escapeHtml(s.generated_at || '—')}</td>
                 <td class="num">
                     ${actionable ? `
                         <div class="action-row">

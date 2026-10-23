@@ -15,18 +15,6 @@ use Illuminate\Validation\ValidationException;
 class InventoryController extends Controller
 {
     /**
-     * Show the overview page (Admin only).
-     *
-     * BRD (Account Management): "Staff Role = POS Access Only." Cashiers are
-     * redirected to /pos by the EnsureUserIsAdmin middleware on the route, so
-     * this action only ever serves the admin analytics dashboard.
-     */
-    public function index()
-    {
-        return view('admin.admin-overview');
-    }
-
-    /**
      * Show the products page.
      */
     public function products()
@@ -331,7 +319,10 @@ public function getProducts(Request $request): JsonResponse
                     ->limit(1);
             }
         ])
-        ->latest()->get();
+        // Most recently added-or-updated products float to the top of the
+        // Products and Stock-In tables. updated_at is bumped by every flow:
+        // add, edit, price change, stock adjustment and stock-in receive.
+        ->latest('updated_at')->get();
 
     return response()->json($products);
 }

@@ -30,12 +30,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // An authenticated user hitting a guest-only route (e.g. /login) is sent
         // to the surface their role allows, matching the post-login rule in
         // AuthController::redirectForRole():
-        //   Admin -> dashboard, Staff (cashier) -> POS.
+        //   Admin -> Products, Staff (cashier) -> POS.
         $middleware->redirectUsersTo(function ($request) {
             $user = $request->user();
 
             if ($user?->isAdmin()) {
-                return route('dashboard');
+                return route('products');
             }
 
             if ($user?->isCashier()) {

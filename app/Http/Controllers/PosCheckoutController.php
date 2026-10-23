@@ -52,8 +52,11 @@ class PosCheckoutController extends Controller
             ->where('is_active', true)
             // reorder_threshold is included because the POS stock badge needs it to
             // show the same low/out-of-stock styling as the Admin inventory list.
-            ->select(['id', 'name', 'sku', 'category', 'price', 'current_stock', 'reorder_threshold'])
-            ->orderBy('name');
+            ->select(['id', 'name', 'sku', 'category', 'price', 'current_stock', 'reorder_threshold', 'updated_at'])
+            // Most recently added-or-updated products first, consistent with the
+            // Admin tables: a newly stocked or newly added item floats to the
+            // top so cashiers immediately see what changed in the catalog.
+            ->orderByDesc('updated_at');
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {

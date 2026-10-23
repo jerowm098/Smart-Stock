@@ -170,6 +170,8 @@
                         <th>Current Stock Count</th>
                         <th>Reorder Threshold</th>
                         <th>Status</th>
+                        <th>Date Added</th>
+                        <th>Last Updated</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -591,6 +593,13 @@
             color: #64748b;
             margin: 0 0 10px 0;
         }
+        .product-card-time {
+            font-size: 11px;
+            line-height: 1.5;
+            color: #64748b;
+            margin: 0 0 10px 0;
+        }
+        body.light-theme .product-card-time { color: #64748b; }
         .product-card-meta {
             display: flex;
             align-items: center;
@@ -1121,7 +1130,7 @@
         }
 
         function showTableError(message) {
-            document.getElementById('productTableBody').innerHTML = `<tr><td colspan="8" class="empty-state">${escapeHtml(message)}</td></tr>`;
+            document.getElementById('productTableBody').innerHTML = `<tr><td colspan="10" class="empty-state">${escapeHtml(message)}</td></tr>`;
             document.getElementById('productGridBody').innerHTML = `<div class="empty-state" style="grid-column: 1/-1;">${escapeHtml(message)}</div>`;
         }
 
@@ -1193,7 +1202,7 @@
         function renderFullTable(products) {
             const body = document.getElementById('productTableBody');
             if (products.length === 0) {
-                body.innerHTML = '<tr><td colspan="8" class="empty-state">No products found</td></tr>';
+                body.innerHTML = '<tr><td colspan="10" class="empty-state">No products found</td></tr>';
             } else {
                 body.innerHTML = products.map(p => {
                     const s = getStatus(p.current_stock, p.reorder_threshold);
@@ -1205,6 +1214,8 @@
                         <td class="stock-cell stock-${s.class}">${p.current_stock}</td>
                         <td>${p.reorder_threshold}</td>
                         <td><span class="status-text stock-${s.class}">${s.label}</span></td>
+                        <td>${fmtDateTime(p.created_at)}</td>
+                        <td>${fmtDateTime(p.updated_at)}</td>
                         <td class="actions-cell">${canManageProducts ? '<button class="action-link" onclick="openEditModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>Edit</button>' : '<button class="action-link" onclick="openViewModal(' + p.id + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>View</button>'}${canAdjustStock ? '<button class="action-link" onclick="openAdjustModal(' + p.id + ', ' + p.current_stock + ')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>Adjust</button>' : ''}${canManageProducts ? (p.is_active === false ? '<button class="action-link" onclick="setProductActive(' + p.id + ', true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg>Reactivate</button>' : '<button class="action-link danger" onclick="setProductActive(' + p.id + ', false)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>Deactivate</button>') : ''}${p.is_active === false ? '<span class="status-text" style="color:#94a3b8;">Inactive</span>' : ''}</td>
                     </tr>`;
                 }).join('');
@@ -1214,7 +1225,7 @@
         // Initial render - show "Loading products..." message
         const tableView = document.getElementById('tableView');
         tableView.classList.add('loading');
-        document.getElementById('productTableBody').innerHTML = '<tr><td colspan="8" class="empty-state">Loading products...</td></tr>';
+        document.getElementById('productTableBody').innerHTML = '<tr><td colspan="10" class="empty-state">Loading products...</td></tr>';
 
         function renderGrid(products) {
             const grid = document.getElementById('productGridBody');
@@ -1241,6 +1252,7 @@
                             <div class="product-card-category">${escapeHtml(p.category || 'Uncategorized')}</div>
                             <h3 class="product-card-name" title="${escapeHtml(p.name)}">${escapeHtml(p.name)}</h3>
                             <p class="product-card-sku">${escapeHtml(p.sku)}</p>
+                            <p class="product-card-time">Added ${fmtDateTime(p.created_at)}<br>Updated ${fmtDateTime(p.updated_at)}</p>
                             <div class="product-card-meta">
                                 <span class="product-card-price">₱${parseFloat(p.price).toFixed(2)}</span>
                                 <span class="product-card-stock stock-${s.class}">${s.label} · ${p.current_stock}</span>
