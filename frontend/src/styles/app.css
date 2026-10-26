@@ -213,7 +213,9 @@ h1, h2, h3, h4 {
 .btn-block { width: 100%; }
 .btn-lg { padding: 12px 22px; font-size: 15px; }
 
-.input {
+.input,
+.field input,
+.field select {
     width: 100%;
     padding: 10px 12px;
     border-radius: 10px;
@@ -222,15 +224,41 @@ h1, h2, h3, h4 {
     color: var(--text);
     font: inherit;
     outline: none;
+    min-height: 40px;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.input:focus {
+/* Normalize: walang browser-default pill/box na itsura */
+.field input:not([type='date']),
+.input[type='search'] { appearance: none; }
+
+.input:hover,
+.field input:hover,
+.field select:hover { border-color: var(--primary-soft-border); }
+
+.input:focus,
+.field input:focus,
+.field select:focus {
     border-color: var(--primary);
     box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
-.input::placeholder { color: var(--placeholder); }
+.input::placeholder,
+.field input::placeholder { color: var(--placeholder); }
+
+/* Date pickers: pantay na taas + themed calendar icon (color-scheme ang bahala sa kulay) */
+.field input[type='date'],
+.input[type='date'] { padding-right: 10px; }
+
+.field input[type='date']::-webkit-calendar-picker-indicator,
+.input[type='date']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.65;
+}
+
+.field input[type='date']::-webkit-calendar-picker-indicator:hover,
+.input[type='date']::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
 
 .pill {
     display: inline-flex;
@@ -543,7 +571,7 @@ h1, h2, h3, h4 {
 
 .input-with-action { position: relative; }
 
-.input-with-action .input { padding-right: 58px; }
+.input-with-action input { padding-right: 58px; }
 
 .input-action {
     position: absolute;
