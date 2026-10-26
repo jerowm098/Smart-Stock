@@ -735,12 +735,16 @@ h1, h2, h3, h4 {
 
 .menu-btn {
     display: none;
+    place-items: center;
     width: 38px;
     height: 38px;
     border-radius: 10px;
     border: 1px solid var(--border);
-    place-items: center;
+    color: var(--muted);
+    background: transparent;
 }
+
+.menu-btn:hover { background: var(--surface-2); color: var(--text); }
 
 .content {
     flex: 1;
