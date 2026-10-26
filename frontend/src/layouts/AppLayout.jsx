@@ -116,11 +116,10 @@ export default function AppLayout() {
                         </svg>
                     </button>
                     <h1 className="topbar-title">{title}</h1>
-                    <span className="topbar-meta">
-                        {user?.role === 'admin' ? 'All store data' : 'Checkout counter'}
-                    </span>
-                    {user?.role === 'admin' && <NotificationBell />}
-                    <ThemeToggle />
+                    <div className="topbar-actions">
+                        {user?.role === 'admin' && <NotificationBell />}
+                        <ThemeToggle />
+                    </div>
                 </header>
 
                 <main className="content">
