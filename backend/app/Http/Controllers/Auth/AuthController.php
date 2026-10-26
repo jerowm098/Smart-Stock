@@ -87,8 +87,10 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login successful.',
-            // SPA landing path per role (admin -> Stock-In, cashier -> POS).
-            'redirect' => $user->isAdmin() ? '/stock-in' : '/pos',
+            // SPA landing path per role. Admin -> Products (SS-17 catalogue is
+            // the first admin feature per Jira Sprint 2 + Confluence backlog
+            // refinement), cashier -> POS. Mirrors the SPA homeFor() helper.
+            'redirect' => $user->isAdmin() ? '/products' : '/pos',
             'user'    => [
                 'id'       => $user->id,
                 'name'     => $user->name,
