@@ -42,8 +42,8 @@ export default function Products() {
     const [message, setMessage] = useState(null);
     const [search, setSearch] = useState('');
     const [busyId, setBusyId] = useState(null);
-    const [sortBy, setSortBy] = useState('current_stock');
-    const [sortDir, setSortDir] = useState('asc');
+    const [sortBy, setSortBy] = useState('updated_at');
+    const [sortDir, setSortDir] = useState('desc');
 
     const [addOpen, setAddOpen] = useState(false);
     const [addForm, setAddForm] = useState(EMPTY_PRODUCT);
@@ -103,6 +103,13 @@ export default function Products() {
             if (sortBy === 'current_stock' || sortBy === 'price' || sortBy === 'reorder_threshold') {
                 av = Number(av ?? 0);
                 bv = Number(bv ?? 0);
+                return (av - bv) * dir;
+            }
+
+            // Date comparison for updated_at
+            if (sortBy === 'updated_at') {
+                av = new Date(av ?? 0).getTime();
+                bv = new Date(bv ?? 0).getTime();
                 return (av - bv) * dir;
             }
 
