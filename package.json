@@ -5,6 +5,6 @@
     "scripts": {
         "dev": "npm --prefix frontend run dev",
         "dev:backend": "cd backend && php artisan serve --host=127.0.0.1 --port=8000",
-        "build:spa": "npm --prefix frontend run build"
+        "build:spa": "npm --prefix frontend run build && node scripts/copy-spa.cjs"
     }
 }
