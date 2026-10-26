@@ -22,8 +22,9 @@ services:
     region: singapore  # malapit sa Pilipinas; pwede mong palitan
     branch: main
 
-    # Awtomatikong madi-detect ng Render ang Dockerfile sa repo root
-    dockerfilePath: ./Dockerfile
+    # Dockerfile ng Laravel app (nasa backend/ folder na)
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
 
     healthCheckPath: /
     autoDeploy: true
