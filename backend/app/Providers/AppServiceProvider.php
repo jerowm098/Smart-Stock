@@ -24,10 +24,10 @@ class AppServiceProvider extends ServiceProvider
     {
         // Defense in depth against plain-HTTP URLs behind Render's TLS proxy.
         // trustProxies() already makes $request->isSecure() true, so this is
-        // normally a no-op - but if the X-Forwarded-Proto chain ever breaks
-        // again, every generated URL (form actions, redirects, route('home'))
-        // stays on https instead of silently degrading to http://, which is
-        // what produced the Chrome "form is not secure" block + 419 on CSRF.
+        // normally a no-op - but if the X-Forwarded-Proto chain ever breaks,
+        // every generated URL (CSRF cookie domain, signed URLs, redirects)
+        // stays on https instead of silently degrading to http://, which
+        // produced Chrome "form is not secure" blocks + 419 on CSRF.
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }

@@ -22,9 +22,10 @@ services:
     region: singapore  # malapit sa Pilipinas; pwede mong palitan
     branch: main
 
-    # Dockerfile ng Laravel app (nasa backend/ folder na)
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    # Dockerfile sa repo root: nagbe-build ng Laravel API + React SPA
+    # (context = buong repo para maabot ang backend/ at frontend/)
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
 
     healthCheckPath: /
     autoDeploy: true

@@ -1,95 +1,81 @@
 <?php
 
-use App\Http\Controllers\TransactionSuggestionController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\HomeController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PosCheckoutController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\TransactionSuggestionController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\Auth\AuthController;
 use App\Http\Middleware\EnsureUserIsAdmin;
 use App\Http\Middleware\EnsureUserIsCashier;
 use Illuminate\Support\Facades\Route;
 
-// Web auth routes
-//
-// BRD (Account Management) — Out of Scope: "Self-service account registration
-// (staff cannot create their own accounts)." Functional Requirement: "The
-// system shall allow an Admin to create new accounts with a designated
-// username, password, and role."
-//
-// Public /register routes were therefore REMOVED. Accounts are provisioned
-// exclusively by an Admin through the User Management screen
-// (see /users + /api/users/* below).
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
-Route::post('/login', [AuthController::class, 'login'])->name('login.post')->middleware('guest');
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
+/*
+|--------------------------------------------------------------------------
+| Smart-Stock API backend
+|--------------------------------------------------------------------------
+|
+| Ang Laravel dito ay PURE API na — walang Blade pages. Ang buong UI ay
+| ang React SPA sa frontend/, na naka-built sa public/app/ sa production
+| (sine-serve ng dalawang route sa dulo ng file na ito).
+|
+| Lahat ng data endpoints ay nasa ilalim ng /api. Ang session cookie +
+| CSRF ang authentication (walang token auth na kailangan dahil
+| same-origin ang SPA at API sa production).
+|
+| BRD (Account Management) — Out of Scope: "Self-service account
+| registration (staff cannot create their own accounts)." Walang /register;
+| ang accounts ay ginagawa ng Admin sa /api/users.
+|
+*/
 
+// SPA entry: ang built React app (frontend/dist -> public/app).
+// Kung wala pang build (fresh clone), magbibigay ng malinaw na 503.
+$serveSpa = function () {
+    $index = public_path('app/index.html');
+
+    if (! is_file($index)) {
+        return response()
+            ->json(['message' => 'SPA build not found. Run `npm run build:spa` first.'], 503);
+    }
+
+    // no-cache para agad makita ang mga bagong deploy ng SPA
+    return response()->file($index, [
+        'Content-Type' => 'text/html; charset=UTF-8',
+        'Cache-Control' => 'no-cache',
+    ]);
+};
+
+Route::get('/', $serveSpa);
+
+// Deep links ng SPA (e.g. /products, /pos, /login) — lahat pauwiin sa
+// index.html at hayaang ang React Router ang humawak. Nilalaktawan ang
+// /api (puro JSON) at /up (health check).
+Route::get('/{any}', $serveSpa)
+    ->where('any', '^(?!api(/|$)|up$).+');
+
+// Auth fallback: kapag nag-expire ang session at may kumatok sa isang
+// protected endpoint nang walang Accept: application/json (hal. download
+// link), dito bumabagsak ang auth middleware imbes na mag-404.
+Route::get('/login', fn () => response()->json(['message' => 'Unauthenticated.'], 401))
+    ->name('login');
+
+// ------------------------------------------------------------------
 // API auth endpoints (JSON responses)
-Route::post('/api/auth/login', [AuthController::class, 'apiLogin'])->name('api.auth.login')->middleware('guest');
+// ------------------------------------------------------------------
+Route::post('/api/auth/login', [AuthController::class, 'apiLogin'])->name('api.auth.login');
 Route::post('/api/auth/logout', [AuthController::class, 'apiLogout'])->name('api.auth.logout')->middleware('auth');
 
 // SPA bootstrap: returns the signed-in user (or null) and sets the
 // XSRF-TOKEN cookie before the frontend's first POST.
 Route::get('/api/auth/user', [AuthController::class, 'apiUser'])->name('api.auth.user');
 
-// Public homepage (accessible to guests and authenticated users)
-Route::get('/', fn () => redirect()->route('home'));
-Route::get('/home', [HomeController::class, 'index'])->name('home');
-
-// Authenticated routes
+// ------------------------------------------------------------------
+// Authenticated API
+// ------------------------------------------------------------------
 Route::middleware('auth')->group(function () {
-    // The Overview page was removed. /dashboard now forwards old bookmarks to
-    // Products, the Admin landing page after login. Intentionally unnamed so
-    // no route('dashboard') reference lingers anywhere.
-    Route::get('/dashboard', fn () => redirect()->route('products'));
-
-    // POS checkout page (cashier-only)
-    Route::get('/pos', [PosCheckoutController::class, 'index'])
-        ->name('pos')
-        ->middleware(EnsureUserIsCashier::class);
-
-    // BRD (Inventory Management) Security: "The system shall restrict all
-    // access to this module; it must be completely inaccessible to accounts with
-    // the Staff role." Staff get the POS catalog instead (/api/pos/products).
-    Route::get('/products', [InventoryController::class, 'products'])
-        ->name('products')
-        ->middleware(EnsureUserIsAdmin::class);
-
-    // Stock-In / Receiving page (SS-87)
-    Route::get('/stock-in', [InventoryController::class, 'stockIn'])
-        ->name('stock-in')
-        ->middleware(EnsureUserIsAdmin::class);
-
-    // SS-24: Transaction History page (Admin only per BRD)
-    Route::get('/transactions', [DashboardController::class, 'transactions'])
-        ->name('transactions')
-        ->middleware(EnsureUserIsAdmin::class);
-
-    // BRD (Demand Forecasting): the dedicated "Order Suggestions" dashboard.
-    Route::get('/order-suggestions', [TransactionSuggestionController::class, 'page'])
-        ->name('order-suggestions')
-        ->middleware(EnsureUserIsAdmin::class);
-
-    // BRD (Account Management): Admin-only user management — create accounts
-    // with a designated username/password/role, deactivate instead of delete,
-    // and reset passwords manually. No self-service registration exists.
-    Route::get('/users', [UserController::class, 'index'])
-        ->name('users')
-        ->middleware(EnsureUserIsAdmin::class);
-
-    // SS-39: Backups page (Admin only per BRD)
-    Route::get('/backups', [BackupController::class, 'index'])
-        ->name('backups')
-        ->middleware(EnsureUserIsAdmin::class);
-
-    // Suppliers directory page
-    Route::get('/suppliers', [SupplierController::class, 'index'])
-        ->name('suppliers')
-        ->middleware(EnsureUserIsAdmin::class);
-
     // API routes — read-only for cashier, write ops admin-only per BRD
     Route::post('/api/inventory/add', [InventoryController::class, 'store'])->name('inventory.add')->middleware(EnsureUserIsAdmin::class);
     Route::put('/api/inventory/update', [InventoryController::class, 'updateProduct'])->name('inventory.update.product')->middleware(EnsureUserIsAdmin::class);
@@ -115,7 +101,7 @@ Route::middleware('auth')->group(function () {
         ->name('inventory.stock-in')
         ->middleware(EnsureUserIsAdmin::class);
 
-    // POS checkout API route (cashier-only)
+    // POS checkout API route (cashier-only; admin retains full access)
     Route::post('/api/pos/checkout', [PosCheckoutController::class, 'checkout'])
         ->name('pos.checkout')
         ->middleware(EnsureUserIsCashier::class);
@@ -136,7 +122,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/users/{user}/activate', [UserController::class, 'activate'])->name('users.activate')->middleware(EnsureUserIsAdmin::class);
     // BRD Constraint: "No external email service integration; all password
     // resets must be done manually by the Admin within the system."
-    Route::post('/api/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password')->middleware(EnsureUserIsAdmin::class);
+    Route::post('/api/users/{user}/reset-password', [UserController::class, 'resetPassword'])->name('user.reset-password')->middleware(EnsureUserIsAdmin::class);
 
     // Order Suggestions API (Admin only) — BRD (Demand Forecasting)
     // BRD Security: "Any attempt to access the suggestion export endpoint

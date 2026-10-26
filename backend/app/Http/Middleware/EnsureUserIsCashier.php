@@ -14,6 +14,8 @@ class EnsureUserIsCashier
      *
      * BRD: "The system shall restrict Staff accounts to the sales interface
      * only." Admin retains full access, including selling.
+     *
+     * Pure API middleware: 401/403 JSON lang, walang page redirects.
      */
     public function handle(Request $request, Closure $next): Response|JsonResponse
     {
@@ -24,15 +26,10 @@ class EnsureUserIsCashier
         }
 
         if (! $user->isCashier() && ! $user->isAdmin()) {
-            if ($request->expectsJson() || $request->is('api/*')) {
-                return response()->json(['message' => 'Cashier access required.'], 403);
-            }
-
-            return redirect()
-                ->route('products')
-                ->with('error', 'Cashier access required for that page.');
+            return response()->json(['message' => 'Cashier access required.'], 403);
         }
 
         return $next($request);
     }
 }
+

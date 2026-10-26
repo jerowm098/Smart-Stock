@@ -30,30 +30,38 @@ Ginagamit natin ang **3 layers** sa loob ng isang container:
 
 ## Ang mga file na ginawa ko (at ang trabaho nila)
 
+> **Phase 4 update:** ang backend ay pure JSON API na at ang React SPA
+> (frontend/) ang buong UI. Ang Blade views ay tinanggal na.
+
 ```
 Smart-Stock/
-├── Dockerfile                        ← Multi-stage build (composer → node → production, may pdo_pgsql)
+├── Dockerfile                        ← Multi-stage build SA REPO ROOT (composer → SPA build → production)
 ├── .dockerignore                     ← Mga file na hindi isasama sa image (importante: .env!)
 ├── render.yaml                       ← Blueprint para sa one-click deploy (Supabase vars, sync false sa secrets)
-├── docker/
-│   ├── entrypoint.sh                 ← Nagha-handle ng $PORT, APP_KEY, Supabase check, caches
-│   ├── nginx/
-│   │   └── default.conf.template     ← Nginx config (nakikinig sa $PORT)
-│   ├── php/
-│   │   └── www.conf                  ← PHP-FPM pool (clear_env=no = nakikita ang env vars)
-│   └── supervisor/
-│       └── supervisord.conf          ← Pinapatakbo ang nginx + php-fpm
-├── .env.example                      ← Template ng Supabase pgsql vars (walang password na naka-commit)
-└── DEPLOYMENT.md                     ← Ito! (ang guide na ito)
+├── backend/
+│   ├── docker/
+│   │   ├── entrypoint.sh             ← Nagha-handle ng $PORT, APP_KEY, Supabase check, caches
+│   │   ├── nginx/
+│   │   │   └── default.conf.template ← Nginx config (nakikinig sa $PORT)
+│   │   ├── php/
+│   │   │   └── www.conf              ← PHP-FPM pool (clear_env=no = nakikita ang env vars)
+│   │   └── supervisor/
+│   │       └── supervisord.conf      ← Pinapatakbo ang nginx + php-fpm
+│   ├── routes/web.php                ← API endpoints + SPA serving (/, deep links)
+│   └── .env.example                  ← Template ng Supabase pgsql vars (walang password na naka-commit)
+├── frontend/                         ← React SPA (npm run dev = localhost:5173; npm run build:spa para sa prod)
+└── DEPLOYMENT.md                     ← Ito! (nasa backend/ folder)
 ```
 
 ### Paano gumagana ang Dockerfile (multi-stage)?
 
-1. **Stage 1 — `composer:2`**: In-install ang PHP dependencies (`vendor/`).
-2. **Stage 2 — `node:20-alpine`**: Ini-compile ang Vite + Tailwind assets (`public/build/`).
+1. **Stage 1 — `composer:2`**: In-install ang PHP dependencies (`backend/vendor/`).
+2. **Stage 2 — `node:20-alpine`**: Ni-build ang React SPA (`frontend/dist` → `backend/public/app/`).
 3. **Stage 3 — `php:8.3-fpm`**: Final image na may nginx, php-fpm + `pdo_pgsql`, supervisor.
 
-> **Key insight:** Ang `.env` file mo ay **HINDI** kasama sa image (nasa [`.dockerignore`](.dockerignore)). Kaya lahat ng Supabase secrets ay dapat ilagay bilang **Environment Variables** sa Render dashboard.
+> **Key insight:** Ang `.env` file mo ay **HINDI** kasama sa image (nasa [`.dockerignore`](../.dockerignore)). Kaya lahat ng Supabase secrets ay dapat ilagay bilang **Environment Variables** sa Render dashboard.
+>
+> **Isang service lang:** ang `/` at mga SPA deep links (e.g. `/products`) ay nagse-serve ng built React app mula sa `public/app/`, habang ang `/api/*` ay JSON. Same-origin kaya gumagana ang session cookie + CSRF nang walang CORS setup.
 
 ---
 

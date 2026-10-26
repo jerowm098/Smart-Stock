@@ -38,14 +38,6 @@ class BackupController extends Controller
     }
 
     /**
-     * Show the Backups page (Admin Dashboard side).
-     */
-    public function index(): \Illuminate\View\View
-    {
-        return view('admin.admin-backups');
-    }
-
-    /**
      * List all backup files (newest first).
      */
     public function list(): JsonResponse

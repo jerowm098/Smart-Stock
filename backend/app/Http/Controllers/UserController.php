@@ -29,14 +29,6 @@ class UserController extends Controller
     private const ROLES = ['admin', 'cashier'];
 
     /**
-     * Render the User Management page.
-     */
-    public function index()
-    {
-        return view('admin.admin-users');
-    }
-
-    /**
      * List all accounts (active and deactivated) for the Admin table.
      */
     public function list(): JsonResponse

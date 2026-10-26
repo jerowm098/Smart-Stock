@@ -1,0 +1,62 @@
+# ------------------------------------------------------------------
+# .dockerignore - mga file na HINDI isasama sa Docker build context.
+# Context: ang repo root (tingnan ang render.yaml -> dockerContext).
+# ------------------------------------------------------------------
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environment - ITO ANG PINAKAMAHALAGA (huwag isama ang .env!)
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+frontend/.env
+frontend/.env.*
+
+# PHP dependencies (bubuo ng container)
+backend/vendor
+
+# Node dependencies at build outputs (bubuo sa loob ng build)
+node_modules
+frontend/node_modules
+frontend/dist
+backend/public/app
+backend/public/build
+backend/public/hot
+npm-debug.log*
+
+# Laravel storage & caches (magre-generate sa runtime)
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/storage/logs/*
+!backend/storage/framework/cache/.gitignore
+!backend/storage/framework/sessions/.gitignore
+!backend/storage/framework/views/.gitignore
+!backend/storage/logs/.gitignore
+
+# Tests & ci
+backend/tests
+backend/phpunit.xml
+.phpunit.cache
+.phpunit.result.cache
+
+# Docs na hindi kailangan sa image
+docs/
+
+# IDE & OS
+.vscode
+.idea
+.fleet
+.nova
+*.log
+.DS_Store
+Thumbs.db
+auth.json
+how to run this.txt
+.venv
+.vs

@@ -16,37 +16,6 @@ use Illuminate\Validation\ValidationException;
 class InventoryController extends Controller
 {
     /**
-     * Show the products page.
-     */
-    public function products()
-    {
-        // Categories are resolved server-side so the Add/Edit product modals
-        // render a fully populated dropdown on first paint, instead of waiting
-        // on the client-side /api/inventory/products fetch to finish.
-        $categories = Product::query()
-            ->select('category')
-            ->whereNotNull('category')
-            ->where('category', '!=', '')
-            ->distinct()
-            ->orderBy('category')
-            ->pluck('category')
-            ->values();
-
-        return view('admin.admin-products', [
-            'categories' => $categories,
-            ...HardwareTerms::toViewData(),
-        ]);
-    }
-
-    /**
-     * SS-87: Show the standalone Stock-In / Receiving page.
-     */
-    public function stockIn()
-    {
-        return view('admin.admin-stock-in', HardwareTerms::toViewData());
-    }
-
-    /**
      * Generate a unique SKU for a product created on the fly from the
      * Receive Stock modal: a short alphanumeric prefix from the name plus a
      * random suffix (e.g. "Trigon Paint 1L" -> "TRI-8F3A21"). The full name

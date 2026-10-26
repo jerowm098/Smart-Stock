@@ -10,14 +10,6 @@ use Illuminate\Support\Facades\Auth;
 class SupplierController extends Controller
 {
     /**
-     * Show the supplier directory page.
-     */
-    public function index()
-    {
-        return view('admin.admin-suppliers');
-    }
-
-    /**
      * Get all active suppliers.
      */
     public function getActive(Request $request): JsonResponse

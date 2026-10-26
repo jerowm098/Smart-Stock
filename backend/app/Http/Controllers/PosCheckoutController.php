@@ -22,14 +22,6 @@ class PosCheckoutController extends Controller
     }
 
     /**
-     * Show the POS checkout page.
-     */
-    public function index()
-    {
-        return view('cashier.cashier-pos');
-    }
-
-    /**
      * Expand a stored unit-of-measure value into a complete English word.
      *
      * Inventory may store short forms ("pc", "kg"), but the POS must never show

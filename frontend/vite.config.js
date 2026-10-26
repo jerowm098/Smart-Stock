@@ -17,6 +17,10 @@ export default defineConfig(({ mode }) => {
     const target = env.VITE_API_PROXY || 'http://127.0.0.1:8000';
 
     return {
+        // Production build is copied to backend/public/app/, served by the
+        // Laravel container at /app/ on the same origin as the API.
+        // Dev keeps the plain root so localhost:5173 stays clean.
+        base: mode === 'production' ? '/app/' : '/',
         plugins: [react()],
         server: {
             host: 'localhost',

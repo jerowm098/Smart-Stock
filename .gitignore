@@ -1,9 +1,10 @@
 # Dependencies & build output (matches at any depth)
 node_modules/
 vendor/
-public/build/
-public/hot/
-public/storage/
+**/public/build/
+**/public/hot/
+**/public/storage/
+**/public/app/
 frontend/dist/
 
 # Environment & secrets
@@ -12,8 +13,8 @@ frontend/dist/
 !.env.example
 
 # Laravel runtime artifacts
-storage/*.key
-storage/pail/
+**/storage/*.key
+**/storage/pail/
 
 # Local tooling
 .vs/

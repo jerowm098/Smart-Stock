@@ -186,7 +186,7 @@ class HardwareTerms
         return static::aliases()[$key] ?? trim($category);
     }
 
-    /** Payload handed to the browser by the shared Blade partial. */
+    /** Payload for API consumers that need the full term dictionary. */
     public static function toViewData(): array
     {
         return [

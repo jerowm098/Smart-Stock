@@ -221,15 +221,6 @@ class DashboardController extends Controller
     }
 
     /**
-     * SS-24: Show the dedicated Transaction History page (Admin only).
-     * Route: GET /transactions — returns the Blade view.
-     */
-    public function transactions(): \Illuminate\View\View
-    {
-        return view('admin.admin-transactions');
-    }
-
-    /**
      * SS-24: Paginated transaction history with staff name (Admin only).
      * BRD Must: "Admins to view the transaction history and the staff
      * member who processed them."

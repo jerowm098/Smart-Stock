@@ -27,14 +27,6 @@ class TransactionSuggestionController extends Controller
     public function __construct(private ForecastingService $forecasting) {}
 
     /**
-     * Render the Order Suggestions dashboard (Admin only).
-     */
-    public function page()
-    {
-        return view('admin.admin-order-suggestions');
-    }
-
-    /**
      * List suggestions. Defaults to the active queue the Admin still has to act
      * on; ?status=all|ordered|dismissed shows the full lifecycle history.
      */
