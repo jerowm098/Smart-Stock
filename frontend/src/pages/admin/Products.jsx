@@ -42,8 +42,8 @@ export default function Products() {
     const [message, setMessage] = useState(null);
     const [search, setSearch] = useState('');
     const [busyId, setBusyId] = useState(null);
-    const [sortBy, setSortBy] = useState('updated_at');
-    const [sortDir, setSortDir] = useState('desc');
+    const [sortBy, setSortBy] = useState(null);
+    const [sortDir, setSortDir] = useState(null);
 
     const [addOpen, setAddOpen] = useState(false);
     const [addForm, setAddForm] = useState(EMPTY_PRODUCT);
@@ -94,6 +94,10 @@ export default function Products() {
     }, [products, search]);
 
     const sorted = useMemo(() => {
+        if (!sortBy) {
+            return filtered;
+        }
+
         const dir = sortDir === 'asc' ? 1 : -1;
         return [...filtered].sort((a, b) => {
             let av = a[sortBy];
@@ -202,7 +206,12 @@ export default function Products() {
 
     function toggleSort(field) {
         if (sortBy === field) {
-            setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+            if (sortDir === 'asc') {
+                setSortDir('desc');
+            } else {
+                setSortBy(null);
+                setSortDir(null);
+            }
         } else {
             setSortBy(field);
             setSortDir('asc');
