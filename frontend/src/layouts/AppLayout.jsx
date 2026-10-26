@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import NotificationBell from '../components/NotificationBell.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 
@@ -118,6 +119,7 @@ export default function AppLayout() {
                     <span className="topbar-meta">
                         {user?.role === 'admin' ? 'All store data' : 'Checkout counter'}
                     </span>
+                    {user?.role === 'admin' && <NotificationBell />}
                     <ThemeToggle />
                 </header>
 
