@@ -4,48 +4,14 @@ import AppLayout from './layouts/AppLayout.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import Products from './pages/admin/Products.jsx';
-import Placeholder from './pages/admin/Placeholder.jsx';
+import StockIn from './pages/admin/StockIn.jsx';
+import Transactions from './pages/admin/Transactions.jsx';
+import OrderSuggestions from './pages/admin/OrderSuggestions.jsx';
+import Suppliers from './pages/admin/Suppliers.jsx';
+import Users from './pages/admin/Users.jsx';
+import Backups from './pages/admin/Backups.jsx';
 import Pos from './pages/cashier/Pos.jsx';
 import NotFound from './pages/NotFound.jsx';
-
-const ADMIN_SCREENS = [
-    {
-        path: '/stock-in',
-        title: 'Stock-In',
-        description: 'Receive deliveries from suppliers and update on-hand quantities.',
-        phase: 'Phase 2',
-    },
-    {
-        path: '/transactions',
-        title: 'Transactions',
-        description: 'Browse the sales history and export transaction summaries.',
-        phase: 'Phase 2',
-    },
-    {
-        path: '/order-suggestions',
-        title: 'Order Suggestions',
-        description: 'Demand-based restocking suggestions generated from 30 days of sales.',
-        phase: 'Phase 2',
-    },
-    {
-        path: '/suppliers',
-        title: 'Suppliers',
-        description: 'Directory of active suppliers used by the receiving screen.',
-        phase: 'Phase 2',
-    },
-    {
-        path: '/users',
-        title: 'Users',
-        description: 'Create accounts, assign roles and reset passwords.',
-        phase: 'Phase 2',
-    },
-    {
-        path: '/backups',
-        title: 'Backups',
-        description: 'Run and download database backups.',
-        phase: 'Phase 2',
-    },
-];
 
 export default function App() {
     return (
@@ -57,14 +23,12 @@ export default function App() {
                 <Route element={<AppLayout />}>
                     <Route element={<RequireRole role="admin" />}>
                         <Route path="/products" element={<Products />} />
-
-                        {ADMIN_SCREENS.map((screen) => (
-                            <Route
-                                key={screen.path}
-                                path={screen.path}
-                                element={<Placeholder {...screen} />}
-                            />
-                        ))}
+                        <Route path="/stock-in" element={<StockIn />} />
+                        <Route path="/transactions" element={<Transactions />} />
+                        <Route path="/order-suggestions" element={<OrderSuggestions />} />
+                        <Route path="/suppliers" element={<Suppliers />} />
+                        <Route path="/users" element={<Users />} />
+                        <Route path="/backups" element={<Backups />} />
                     </Route>
 
                     <Route element={<RequireRole role="cashier" />}>
@@ -77,3 +41,4 @@ export default function App() {
         </Routes>
     );
 }
+

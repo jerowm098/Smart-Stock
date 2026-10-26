@@ -1,4 +1,4 @@
-﻿{
+{
     "name": "smart-stock",
     "private": true,
     "description": "Workspace runner: backend/ = Laravel API, frontend/ = React SPA.",

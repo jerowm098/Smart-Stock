@@ -1,7 +1,25 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { api } from '../../lib/api.js';
+import Modal from '../../components/Modal.jsx';
+import Alert, { FieldError, Loading } from '../../components/Feedback.jsx';
+import { del, get, post, put, validationMessages } from '../../lib/api.js';
 import { formatPeso } from '../../lib/format.js';
+
+const EMPTY_PRODUCT = {
+    name: '',
+    sku: '',
+    category: '',
+    price: '',
+    current_stock: '',
+    reorder_threshold: '',
+};
+
+const ADJUST_REASONS = [
+    { value: 'damaged', label: 'Damaged items' },
+    { value: 'lost', label: 'Lost / missing' },
+    { value: 'internal_transfer', label: 'Internal transfer' },
+    { value: 'correction', label: 'Count correction' },
+];
 
 function stockState(product) {
     if (Number(product.current_stock) <= 0) {
@@ -17,43 +35,47 @@ function stockState(product) {
 
 export default function Products() {
     const navigate = useNavigate();
+
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [message, setMessage] = useState(null);
     const [search, setSearch] = useState('');
+    const [busyId, setBusyId] = useState(null);
+
+    const [addOpen, setAddOpen] = useState(false);
+    const [addForm, setAddForm] = useState(EMPTY_PRODUCT);
+    const [saving, setSaving] = useState(false);
+    const [formError, setFormError] = useState(null);
+    const [fieldErrors, setFieldErrors] = useState([]);
+
+    const [editProduct, setEditProduct] = useState(null);
+    const [editForm, setEditForm] = useState(null);
+    const [editSaving, setEditSaving] = useState(false);
+    const [editError, setEditError] = useState(null);
+
+    const [adjustProduct, setAdjustProduct] = useState(null);
+    const [adjustForm, setAdjustForm] = useState({ delta: '', reason: 'correction', reason_note: '' });
+    const [adjustSaving, setAdjustSaving] = useState(false);
+    const [adjustError, setAdjustError] = useState(null);
+
+    const load = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+
+        try {
+            const rows = await get('/api/inventory/products');
+            setProducts(Array.isArray(rows) ? rows : []);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
-        let active = true;
-
-        api('/api/inventory/products')
-            .then((rows) => {
-                if (active) {
-                    setProducts(Array.isArray(rows) ? rows : []);
-                }
-            })
-            .catch((err) => {
-                if (!active) {
-                    return;
-                }
-
-                if (err.status === 401) {
-                    navigate('/login', { replace: true });
-
-                    return;
-                }
-
-                setError(err.message);
-            })
-            .finally(() => {
-                if (active) {
-                    setLoading(false);
-                }
-            });
-
-        return () => {
-            active = false;
-        };
-    }, [navigate]);
+        load();
+    }, [load]);
 
     const filtered = useMemo(() => {
         const needle = search.trim().toLowerCase();
@@ -78,28 +100,143 @@ export default function Products() {
                 Number(product.current_stock) <= Number(product.reorder_threshold),
         );
 
-        return {
-            total: active.length,
-            low: low.length,
-            out: out.length,
-        };
+        return { total: active.length, low: low.length, out: out.length };
     }, [products]);
+
+    async function handleAdd(event) {
+        event.preventDefault();
+        setSaving(true);
+        setFormError(null);
+        setFieldErrors([]);
+
+        try {
+            const response = await post('/api/inventory/add', {
+                ...addForm,
+                category: addForm.category || null,
+                price: Number(addForm.price),
+                current_stock: Number(addForm.current_stock || 0),
+                reorder_threshold: Number(addForm.reorder_threshold || 0),
+            });
+
+            setMessage(response.message);
+            setAddForm(EMPTY_PRODUCT);
+            setAddOpen(false);
+            await load();
+        } catch (err) {
+            setFormError(err.message);
+            setFieldErrors(validationMessages(err));
+        } finally {
+            setSaving(false);
+        }
+    }
+
+    function openEdit(product) {
+        setEditProduct(product);
+        setEditForm({
+            name: product.name,
+            sku: product.sku,
+            category: product.category ?? '',
+            price: product.price,
+            current_stock: product.current_stock,
+            reorder_threshold: product.reorder_threshold,
+        });
+        setEditError(null);
+    }
+
+    async function handleEdit(event) {
+        event.preventDefault();
+        setEditSaving(true);
+        setEditError(null);
+
+        try {
+            const response = await put('/api/inventory/update', {
+                id: editProduct.id,
+                name: editForm.name,
+                sku: editForm.sku,
+                category: editForm.category || null,
+                price: Number(editForm.price),
+                current_stock: Number(editForm.current_stock),
+                reorder_threshold: Number(editForm.reorder_threshold),
+            });
+
+            setMessage(response.message);
+            setEditProduct(null);
+            await load();
+        } catch (err) {
+            setEditError(validationMessages(err)[0] ?? err.message);
+        } finally {
+            setEditSaving(false);
+        }
+    }
+
+    async function handleAdjust(event) {
+        event.preventDefault();
+        setAdjustSaving(true);
+        setAdjustError(null);
+
+        try {
+            const response = await post('/api/inventory/adjust', {
+                product_id: adjustProduct.id,
+                delta: Number(adjustForm.delta),
+                reason: adjustForm.reason,
+                reason_note: adjustForm.reason_note || null,
+            });
+
+            setMessage(
+                `${response.message}: ${response.adjustment.stock_before} → ${response.adjustment.stock_after}.`,
+            );
+            setAdjustProduct(null);
+            await load();
+        } catch (err) {
+            setAdjustError(validationMessages(err)[0] ?? err.message);
+        } finally {
+            setAdjustSaving(false);
+        }
+    }
+
+    async function handleDeactivate(product) {
+        if (!window.confirm(`Deactivate "${product.name}"? Its history is preserved.`)) {
+            return;
+        }
+
+        setBusyId(product.id);
+        setMessage(null);
+        setError(null);
+
+        try {
+            const response = await del(`/api/inventory/${product.id}`);
+            setMessage(response.message);
+            await load();
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setBusyId(null);
+        }
+    }
 
     return (
         <div className="page">
             <header className="page-head">
                 <div>
                     <h2>Products</h2>
-                    <p>Shared store catalogue. Stock levels update from receiving and sales.</p>
+                    <p>Shared store catalogue. Add items, fix counts, and set reorder thresholds.</p>
                 </div>
-                <input
-                    type="search"
-                    className="input search"
-                    placeholder="Search name, SKU or category…"
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                />
+                <div className="head-actions">
+                    <input
+                        type="search"
+                        className="input search"
+                        placeholder="Search name, SKU or category…"
+                        value={search}
+                        onChange={(event) => setSearch(event.target.value)}
+                    />
+                    <button type="button" className="btn btn-primary" onClick={() => setAddOpen(true)}>
+                        Add product
+                    </button>
+                </div>
             </header>
+
+            {message && <Alert tone="success" onClose={() => setMessage(null)}>{message}</Alert>}
+            {error && <Alert tone="error" onClose={() => setError(null)}>{error}</Alert>}
 
             <div className="stat-grid">
                 <article className="card stat">
@@ -108,11 +245,11 @@ export default function Products() {
                 </article>
                 <article className="card stat">
                     <span>Low stock</span>
-                    <strong className="text-warn">{stats.low}</strong>
+                    <strong className={stats.low > 0 ? 'text-warn' : ''}>{stats.low}</strong>
                 </article>
                 <article className="card stat">
                     <span>Out of stock</span>
-                    <strong className="text-danger">{stats.out}</strong>
+                    <strong className={stats.out > 0 ? 'text-danger' : ''}>{stats.out}</strong>
                 </article>
                 <article className="card stat">
                     <span>Showing</span>
@@ -121,13 +258,7 @@ export default function Products() {
             </div>
 
             <section className="card table-card">
-                {loading && <p className="muted padded">Loading products…</p>}
-
-                {error && (
-                    <p className="form-error padded" role="alert">
-                        {error}
-                    </p>
-                )}
+                {loading && <Loading label="Loading products…" />}
 
                 {!loading && !error && (
                     <div className="table-wrap">
@@ -140,6 +271,7 @@ export default function Products() {
                                     <th className="text-right">Price</th>
                                     <th className="text-right">Stock</th>
                                     <th>Status</th>
+                                    <th className="text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -162,6 +294,32 @@ export default function Products() {
                                             <td>
                                                 <span className={`pill ${state.className}`}>{state.label}</span>
                                             </td>
+                                            <td className="text-right actions-cell">
+                                                <button type="button" className="btn btn-ghost btn-sm" onClick={() => openEdit(product)}>
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-ghost btn-sm"
+                                                    onClick={() => {
+                                                        setAdjustProduct(product);
+                                                        setAdjustForm({ delta: '', reason: 'correction', reason_note: '' });
+                                                        setAdjustError(null);
+                                                    }}
+                                                >
+                                                    Adjust
+                                                </button>
+                                                {product.is_active && (
+                                                    <button
+                                                        type="button"
+                                                        className="btn btn-ghost btn-sm btn-danger-text"
+                                                        disabled={busyId === product.id}
+                                                        onClick={() => handleDeactivate(product)}
+                                                    >
+                                                        Deactivate
+                                                    </button>
+                                                )}
+                                            </td>
                                         </tr>
                                     );
                                 })}
@@ -172,6 +330,154 @@ export default function Products() {
                     </div>
                 )}
             </section>
+
+            {addOpen && (
+                <Modal title="Add product" onClose={() => setAddOpen(false)}>
+                    <form className="form" onSubmit={handleAdd}>
+                        <label className="field">
+                            <span>Product name *</span>
+                            <input type="text" required maxLength={255} value={addForm.name} onChange={(event) => setAddForm((c) => ({ ...c, name: event.target.value }))} autoFocus />
+                        </label>
+                        <div className="field-row">
+                            <label className="field">
+                                <span>SKU *</span>
+                                <input type="text" required maxLength={50} value={addForm.sku} onChange={(event) => setAddForm((c) => ({ ...c, sku: event.target.value }))} />
+                            </label>
+                            <label className="field">
+                                <span>Category</span>
+                                <input type="text" maxLength={100} value={addForm.category} onChange={(event) => setAddForm((c) => ({ ...c, category: event.target.value }))} />
+                            </label>
+                        </div>
+                        <div className="field-row">
+                            <label className="field">
+                                <span>Price *</span>
+                                <input type="number" required min="0" step="0.01" value={addForm.price} onChange={(event) => setAddForm((c) => ({ ...c, price: event.target.value }))} />
+                            </label>
+                            <label className="field">
+                                <span>Starting stock</span>
+                                <input type="number" min="0" step="1" value={addForm.current_stock} onChange={(event) => setAddForm((c) => ({ ...c, current_stock: event.target.value }))} />
+                            </label>
+                            <label className="field">
+                                <span>Reorder threshold</span>
+                                <input type="number" min="0" step="1" value={addForm.reorder_threshold} onChange={(event) => setAddForm((c) => ({ ...c, reorder_threshold: event.target.value }))} />
+                            </label>
+                        </div>
+
+                        {formError && (
+                            <div className="alert alert-error" role="alert">
+                                <span>{formError}</span>
+                                <FieldError messages={fieldErrors} />
+                            </div>
+                        )}
+
+                        <div className="modal-actions">
+                            <button type="button" className="btn btn-ghost" onClick={() => setAddOpen(false)}>Cancel</button>
+                            <button type="submit" className="btn btn-primary" disabled={saving}>
+                                {saving ? 'Saving…' : 'Add product'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {editProduct && editForm && (
+                <Modal title={`Edit — ${editProduct.name}`} onClose={() => setEditProduct(null)}>
+                    <form className="form" onSubmit={handleEdit}>
+                        <label className="field">
+                            <span>Product name *</span>
+                            <input type="text" required maxLength={255} value={editForm.name} onChange={(event) => setEditForm((c) => ({ ...c, name: event.target.value }))} />
+                        </label>
+                        <div className="field-row">
+                            <label className="field">
+                                <span>SKU *</span>
+                                <input type="text" required maxLength={50} value={editForm.sku} onChange={(event) => setEditForm((c) => ({ ...c, sku: event.target.value }))} />
+                            </label>
+                            <label className="field">
+                                <span>Category</span>
+                                <input type="text" maxLength={100} value={editForm.category} onChange={(event) => setEditForm((c) => ({ ...c, category: event.target.value }))} />
+                            </label>
+                        </div>
+                        <div className="field-row">
+                            <label className="field">
+                                <span>Price *</span>
+                                <input type="number" required min="0" step="0.01" value={editForm.price} onChange={(event) => setEditForm((c) => ({ ...c, price: event.target.value }))} />
+                            </label>
+                            <label className="field">
+                                <span>Current stock *</span>
+                                <input type="number" required min="0" step="1" value={editForm.current_stock} onChange={(event) => setEditForm((c) => ({ ...c, current_stock: event.target.value }))} />
+                            </label>
+                            <label className="field">
+                                <span>Reorder threshold *</span>
+                                <input type="number" required min="0" step="1" value={editForm.reorder_threshold} onChange={(event) => setEditForm((c) => ({ ...c, reorder_threshold: event.target.value }))} />
+                            </label>
+                        </div>
+
+                        {editError && <div className="alert alert-error" role="alert"><span>{editError}</span></div>}
+
+                        <div className="modal-actions">
+                            <button type="button" className="btn btn-ghost" onClick={() => setEditProduct(null)}>Cancel</button>
+                            <button type="submit" className="btn btn-primary" disabled={editSaving}>
+                                {editSaving ? 'Saving…' : 'Save changes'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {adjustProduct && (
+                <Modal title={`Adjust stock — ${adjustProduct.name}`} onClose={() => setAdjustProduct(null)}>
+                    <p className="muted modal-note">
+                        On hand: <strong>{adjustProduct.current_stock}</strong>. Use a negative delta to
+                        subtract (e.g. -3) or a positive one to add.
+                    </p>
+                    <form className="form" onSubmit={handleAdjust}>
+                        <div className="field-row">
+                            <label className="field">
+                                <span>Delta (±) *</span>
+                                <input
+                                    type="number"
+                                    required
+                                    step="1"
+                                    placeholder="e.g. -2 or 5"
+                                    value={adjustForm.delta}
+                                    onChange={(event) => setAdjustForm((c) => ({ ...c, delta: event.target.value }))}
+                                />
+                            </label>
+                            <label className="field">
+                                <span>Reason *</span>
+                                <select
+                                    className="input"
+                                    value={adjustForm.reason}
+                                    onChange={(event) => setAdjustForm((c) => ({ ...c, reason: event.target.value }))}
+                                >
+                                    {ADJUST_REASONS.map((reason) => (
+                                        <option key={reason.value} value={reason.value}>{reason.label}</option>
+                                    ))}
+                                </select>
+                            </label>
+                        </div>
+                        <label className="field">
+                            <span>Note</span>
+                            <input
+                                type="text"
+                                maxLength={255}
+                                placeholder="Optional explanation…"
+                                value={adjustForm.reason_note}
+                                onChange={(event) => setAdjustForm((c) => ({ ...c, reason_note: event.target.value }))}
+                            />
+                        </label>
+
+                        {adjustError && <div className="alert alert-error" role="alert"><span>{adjustError}</span></div>}
+
+                        <div className="modal-actions">
+                            <button type="button" className="btn btn-ghost" onClick={() => setAdjustProduct(null)}>Cancel</button>
+                            <button type="submit" className="btn btn-primary" disabled={adjustSaving}>
+                                {adjustSaving ? 'Applying…' : 'Apply adjustment'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
         </div>
     );
 }

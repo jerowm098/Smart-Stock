@@ -69,3 +69,50 @@ export async function api(path, { method = 'GET', body, headers = {}, signal } =
 export function homeFor(user) {
     return user?.role === 'admin' ? '/products' : '/pos';
 }
+
+/* --------------------------------------------------------------------------
+ * Convenience helpers
+ * -------------------------------------------------------------------------- */
+
+function withQuery(path, params = {}) {
+    const query = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(params)) {
+        if (value !== undefined && value !== null && value !== '') {
+            query.append(key, value);
+        }
+    }
+
+    const qs = query.toString();
+
+    return qs ? `${path}?${qs}` : path;
+}
+
+export const get = (path, params) => api(withQuery(path, params));
+export const post = (path, body) => api(path, { method: 'POST', body });
+export const put = (path, body) => api(path, { method: 'PUT', body });
+export const del = (path) => api(path, { method: 'DELETE' });
+
+/**
+ * Trigger a backend-generated file download (CSV export, backup file).
+ * The session cookie rides along because the SPA shares the backend origin
+ * through the Vite proxy.
+ */
+export function downloadFile(path, params = {}) {
+    const link = document.createElement('a');
+    link.href = `${BASE}${withQuery(path, params)}`;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+}
+
+/** Flatten a Laravel validation error payload into displayable lines. */
+export function validationMessages(error) {
+    if (!error?.errors) {
+        return [];
+    }
+
+    return Object.values(error.errors).flat();
+}
+
