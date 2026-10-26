@@ -4,19 +4,19 @@ import ThemeToggle from '../components/ThemeToggle.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 
 /**
- * Sidebar navigation — order follows the SMART-STOCK inventory cycle sa BRD:
+ * Sidebar navigation — order per the team's Jira board + Confluence:
  *
- *   receive delivery (Stock-In) -> stock up (Products) -> sell (POS) ->
- *   track (Transactions) -> forecast (Order Suggestions)
- *
- * Sources: Detailed_BRD_Inventory_Management + AuthController post-login
- * rule (Admin -> Stock-In, the first step of the cycle) + Jira board 34
- * (sprints 2-4) para sa module grouping. Suppliers sumusuporta sa
- * receiving; Users at Backups ay admin tooling.
+ *   - Jira board 34 build order: Inventory Catalogue (SS-17, Sprint 2)
+ *     came before Stock-In/Receiving (SS-40, Sprint 3).
+ *   - Confluence "Backlog Refinement Summary" prioritised the catalogue
+ *     (SS-17/SS-18) ahead of receiving (SS-40) for Sprint 2.
+ *   - Confluence System Architecture (2026-09-11) lists: Product
+ *     Management -> Inventory -> Stock-In -> Stock-Out (POS) -> Low Stock
+ *     -> Supplier -> Reports, with User Management as admin tooling.
  */
 const ADMIN_NAV = [
-    { to: '/stock-in', label: 'Stock-In', icon: 'inbox' },
     { to: '/products', label: 'Products', icon: 'box' },
+    { to: '/stock-in', label: 'Stock-In', icon: 'inbox' },
     { to: '/transactions', label: 'Transactions', icon: 'receipt' },
     { to: '/order-suggestions', label: 'Order Suggestions', icon: 'clipboard' },
     { to: '/suppliers', label: 'Suppliers', icon: 'truck' },

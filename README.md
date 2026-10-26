@@ -37,7 +37,6 @@ Smart-Stock/
 │       ├── components/       Modal, Pagination, guards, feedback
 │       ├── layouts/          sidebar + topbar shell
 │       └── pages/            Home, Login, admin/* (7), cashier/Pos
-├── docs/                  legacy notes, diagrams, BRD extracts
 ├── Dockerfile             multi-stage: composer + SPA build + runtime
 ├── render.yaml            Render Blueprint (deploy: Supabase PostgreSQL)
 └── README.md
@@ -75,4 +74,4 @@ php artisan migrate --force                 # run new migrations (sa backend/)
 ## Documentation
 
 - [`backend/DEPLOYMENT.md`](backend/DEPLOYMENT.md) — production deploy (Render + Supabase)
-- [`docs/`](docs/) — workflow diagrams at reference material
+- Team docs: Jira board 34 + Confluence SMARTSTOCK space (workflow, architecture, refinement summaries)

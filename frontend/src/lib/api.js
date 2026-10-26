@@ -67,11 +67,11 @@ export async function api(path, { method = 'GET', body, headers = {}, signal } =
 
 /** Landing page for each role after signing in.
  *
- * Per the BRD inventory cycle, the Admin lands on Stock-In (receiving is
- * the first step of the cycle) and the Cashier lands on the POS.
+ * Per the Jira board (SS-17 catalogue = first admin feature, Sprint 2) and
+ * the old post-login rule, the Admin lands on Products; the Cashier on POS.
  */
 export function homeFor(user) {
-    return user?.role === 'admin' ? '/stock-in' : '/pos';
+    return user?.role === 'admin' ? '/products' : '/pos';
 }
 
 /* --------------------------------------------------------------------------
