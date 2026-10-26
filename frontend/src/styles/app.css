@@ -829,6 +829,45 @@ h1, h2, h3, h4 {
 
 .text-right { text-align: right; }
 
+/* Breadcrumb navigation */
+.breadcrumb {
+    padding: 4px 0;
+}
+
+.breadcrumb-list {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+}
+
+.breadcrumb-item a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.breadcrumb-item a:hover { text-decoration: underline; }
+
+.breadcrumb-separator {
+    color: var(--muted);
+    font-weight: 400;
+}
+
+.breadcrumb-current {
+    color: var(--text);
+    font-weight: 600;
+}
+
 .notice {
     border: 1px dashed rgba(245, 158, 11, 0.5);
     background: rgba(245, 158, 11, 0.08);

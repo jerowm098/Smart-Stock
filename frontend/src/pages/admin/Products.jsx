@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Modal from '../../components/Modal.jsx';
 import Alert, { FieldError, Loading } from '../../components/Feedback.jsx';
 import { del, get, post, put, validationMessages } from '../../lib/api.js';
@@ -266,10 +266,19 @@ export default function Products() {
     return (
         <div className="page">
             <header className="page-head">
-                <div>
-                    <h2>Products</h2>
-                    <p>Shared store catalogue. Add items, fix counts, and set reorder thresholds.</p>
-                </div>
+                <nav className="breadcrumb" aria-label="Breadcrumb">
+                    <ol className="breadcrumb-list">
+                        <li className="breadcrumb-item">
+                            <Link to="/">Home</Link>
+                        </li>
+                        <li className="breadcrumb-item">
+                            <span className="breadcrumb-separator">/</span>
+                        </li>
+                        <li className="breadcrumb-item">
+                            <span className="breadcrumb-current">Products</span>
+                        </li>
+                    </ol>
+                </nav>
                 <div className="head-actions">
                     <input
                         type="search"
