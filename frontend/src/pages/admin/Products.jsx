@@ -42,6 +42,8 @@ export default function Products() {
     const [message, setMessage] = useState(null);
     const [search, setSearch] = useState('');
     const [busyId, setBusyId] = useState(null);
+    const [sortBy, setSortBy] = useState('current_stock');
+    const [sortDir, setSortDir] = useState('asc');
 
     const [addOpen, setAddOpen] = useState(false);
     const [addForm, setAddForm] = useState(EMPTY_PRODUCT);
@@ -90,6 +92,28 @@ export default function Products() {
                 .some((value) => String(value).toLowerCase().includes(needle)),
         );
     }, [products, search]);
+
+    const sorted = useMemo(() => {
+        const dir = sortDir === 'asc' ? 1 : -1;
+        return [...filtered].sort((a, b) => {
+            let av = a[sortBy];
+            let bv = b[sortBy];
+
+            // Numeric comparison for stock, price, reorder_threshold
+            if (sortBy === 'current_stock' || sortBy === 'price' || sortBy === 'reorder_threshold') {
+                av = Number(av ?? 0);
+                bv = Number(bv ?? 0);
+                return (av - bv) * dir;
+            }
+
+            // String comparison for name, sku, category
+            av = String(av ?? '').toLowerCase();
+            bv = String(bv ?? '').toLowerCase();
+            if (av < bv) return -1 * dir;
+            if (av > bv) return 1 * dir;
+            return 0;
+        });
+    }, [filtered, sortBy, sortDir]);
 
     const stats = useMemo(() => {
         const active = products.filter((product) => product.is_active);
@@ -166,6 +190,15 @@ export default function Products() {
             setEditError(validationMessages(err)[0] ?? err.message);
         } finally {
             setEditSaving(false);
+        }
+    }
+
+    function toggleSort(field) {
+        if (sortBy === field) {
+            setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortBy(field);
+            setSortDir('asc');
         }
     }
 
@@ -265,17 +298,42 @@ export default function Products() {
                         <table className="table">
                             <thead>
                                 <tr>
-                                    <th>Product</th>
-                                    <th>SKU</th>
-                                    <th>Category</th>
-                                    <th className="text-right">Price</th>
-                                    <th className="text-right">Stock</th>
+                                    <th
+                                        className="sort-header"
+                                        onClick={() => toggleSort('name')}
+                                    >
+                                        Product{sortBy === 'name' && sortDir === 'asc' ? ' ▲' : sortBy === 'name' ? ' ▼' : ''}
+                                    </th>
+                                    <th
+                                        className="sort-header"
+                                        onClick={() => toggleSort('sku')}
+                                    >
+                                        SKU{sortBy === 'sku' && sortDir === 'asc' ? ' ▲' : sortBy === 'sku' ? ' ▼' : ''}
+                                    </th>
+                                    <th
+                                        className="sort-header"
+                                        onClick={() => toggleSort('category')}
+                                    >
+                                        Category{sortBy === 'category' && sortDir === 'asc' ? ' ▲' : sortBy === 'category' ? ' ▼' : ''}
+                                    </th>
+                                    <th
+                                        className="sort-header text-right"
+                                        onClick={() => toggleSort('price')}
+                                    >
+                                        Price{sortBy === 'price' && sortDir === 'asc' ? ' ▲' : sortBy === 'price' ? ' ▼' : ''}
+                                    </th>
+                                    <th
+                                        className="sort-header text-right"
+                                        onClick={() => toggleSort('current_stock')}
+                                    >
+                                        Stock{sortBy === 'current_stock' && sortDir === 'asc' ? ' ▲' : sortBy === 'current_stock' ? ' ▼' : ''}
+                                    </th>
                                     <th>Status</th>
                                     <th className="text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtered.map((product) => {
+                                {sorted.map((product) => {
                                     const state = stockState(product);
 
                                     return (
