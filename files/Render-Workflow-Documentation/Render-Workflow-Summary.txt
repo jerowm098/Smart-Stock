@@ -1,0 +1,103 @@
+RENDER DEPLOYMENT WORKFLOW
+=========================
+
+Smart-Stock uses Render Blueprint for automatic deployment. Every push to the main branch triggers Render to build a Docker image and deploy it as a web service on the free tier. The container runs nginx + php-fpm managed by supervisor, connecting to Supabase PostgreSQL via the pooler on port 6543. Environment variables (DB credentials, APP_KEY) are stored as secrets in Render and injected at runtime via the entrypoint script.
+
+
+DEPLOYMENT PIPELINE STEPS
+-------------------------
+
+1. Developer pushes code to GitHub main branch
+2. Render detects change via webhook -> reads render.yaml
+3. Docker build runs 3 stages:
+   - Stage 1: Composer installs PHP dependencies
+   - Stage 2: Node compiles Vite/Tailwind assets
+   - Stage 3: Final image with nginx + php-fpm + supervisor
+4. Entrypoint script sets up runtime:
+   - Sets PORT (default: 80)
+   - Creates writable directories
+   - Generates APP_KEY if missing
+   - Runs Laravel config cache
+   - Generates nginx config with envsubst
+5. Supervisor starts nginx (web server) + php-fpm (PHP processor)
+6. Application serves requests and connects to Supabase database
+
+
+KEY FILES
+---------
+
+render.yaml          - Render Blueprint configuration
+Dockerfile           - Multi-stage Docker build definition
+docker/entrypoint.sh - Runtime setup script
+docker/supervisor/   - Process management config
+docker/php/www.conf  - PHP-FPM pool configuration
+docker/nginx/        - Nginx config template
+
+
+ENVIRONMENT VARIABLES
+---------------------
+
+Category        | Variables
+----------------|------------------------------------------
+Laravel         | APP_ENV=production, APP_DEBUG=false, LOG_CHANNEL=stderr
+Database        | DB_CONNECTION=pgsql, DB_HOST, DB_PORT=5432, DB_DATABASE=postgres, DB_USERNAME, DB_PASSWORD, DB_SSLMODE=require
+Session/Cache   | SESSION_DRIVER=file, CACHE_STORE=file
+Queue           | QUEUE_CONNECTION=null (disabled on free tier)
+Security        | SESSION_SECURE_COOKIE=true, SESSION_HTTP_ONLY=true, SESSION_SAME_SITE=lax
+Secrets         | APP_KEY (sync: false), DB_PASSWORD (sync: false)
+Application     | APP_URL=https://smart-stock-4lav.onrender.com
+
+
+COLD START BEHAVIOR (FREE TIER)
+--------------------------------
+
+State      | Condition                    | What Happens                    | User Impact
+-----------|------------------------------|---------------------------------|--------------------------
+AWAKE      | Request in last 15 minutes   | Container serves requests        | Fast response
+ASLEEP     | No traffic for 15 minutes    | Render stops container          | -
+WAKING     | User visits the URL          | Container restarts, entrypoint  | 30-60s cold start
+                                         runs again                     
+
+- Container sleeps after 15 minutes of inactivity
+- First request after sleep triggers cold start (~30-60 seconds)
+- Subsequent requests are fast (container stays warm)
+- SESSION_DRIVER=file is safe because only one container runs at a time
+
+
+LIVE APP URL AND DNS / TLS
+--------------------------
+
+Item              | Value
+------------------|---------------------------------------------------------------
+Test/Production   | https://smart-stock-4lav.onrender.com
+Protocol          | HTTPS (TLS terminated at Render edge)
+Certificate       | Provider-managed, auto-renewing - nothing to configure
+DNS               | Provider-managed subdomain, no custom domain yet
+Health check path | / - Render calls it and expects a 200
+Assigned in       | render.yaml -> APP_URL env var
+
+Note: The URL is derived from the Render service name. If the service is
+renamed, the hostname changes and APP_URL must be updated to match, otherwise
+Laravel generates links against the wrong domain.
+
+
+WHY THIS SETUP?
+---------------
+
+- No GitHub Actions needed - Render handles deployment via Blueprint
+- Single container - simpler to manage, cheaper on free tier
+- Multi-stage build - smaller image size, faster builds
+- Supervisor - runs nginx + php-fpm as separate processes in one container
+- Unix socket - faster communication between nginx and php-fpm
+- Entrypoint script - handles runtime setup (APP_KEY generation, config caching)
+
+
+IMPORTANT NOTES
+---------------
+
+1. DB_PORT=5432 for migrations (not 6543 transaction pooler)
+2. QUEUE_CONNECTION=null prevents job queue hanging on free tier
+3. SESSION_DRIVER=file is safe because Render spins up ONE container
+4. route:cache is intentionally SKIPPED to allow APP_URL override
+5. Logs go to stdout/stderr - visible in Render dashboard
+6. Health check: GET / returns 200 OK

@@ -34,6 +34,14 @@ return new class extends Migration
             $indexes = $this->indexNames('products');
 
             if (in_array('products_user_id_sku_unique', $indexes, true)) {
+                // MySQL/MariaDB refuse to drop an index that still backs the
+                // products.user_id foreign key ("Cannot drop index ... needed
+                // in a foreign key constraint"). Give the FK a plain index to
+                // fall back on before removing the composite unique.
+                if ($this->foreignKeyNeedsOwnIndex($indexes)) {
+                    $table->index('user_id');
+                }
+
                 $table->dropUnique(['user_id', 'sku']);
             }
 
@@ -120,6 +128,21 @@ return new class extends Migration
                 }
             }
         }
+    }
+
+    /**
+     * Does the products.user_id foreign key need a replacement index?
+     *
+     * PostgreSQL lets the composite (user_id, sku) unique index disappear
+     * without complaint, but InnoDB ties the FK to a concrete index. On
+     * MySQL/MariaDB we therefore create a plain user_id index first.
+     */
+    private function foreignKeyNeedsOwnIndex(array $indexes): bool
+    {
+        $driver = DB::connection()->getDriverName();
+
+        return in_array($driver, ['mysql', 'mariadb'], true)
+            && ! in_array('products_user_id_index', $indexes, true);
     }
 
     /**

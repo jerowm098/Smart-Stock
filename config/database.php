@@ -10,9 +10,12 @@ return [
     | Default Database Connection Name
     |--------------------------------------------------------------------------
     |
-    | Smart-Stock primary database is Supabase PostgreSQL (pgsql).
-    | Set via .env: DB_CONNECTION=pgsql + DB_HOST/DB_PORT/DB_DATABASE/
-    | DB_USERNAME/DB_PASSWORD/DB_SSLMODE=require
+    | Local development runs on XAMPP MariaDB (DB_CONNECTION=mysql,
+    | DB_DATABASE=smartstock_db). Production still targets Supabase
+    | PostgreSQL (DB_CONNECTION=pgsql).
+    |
+    | Supabase mode: set DB_CONNECTION=pgsql + DB_HOST/DB_PORT/
+    | DB_DATABASE/DB_USERNAME/DB_PASSWORD/DB_SSLMODE=require
     | Kunin sa Supabase Dashboard > Settings > Database > Connection string.
     | Hindi ito SUPABASE_URL + ANON_KEY (pang-JS client lang yun).
     |
@@ -61,6 +64,28 @@ return [
             'options' => extension_loaded('pdo_pgsql') ? array_filter([
                 PDO::ATTR_EMULATE_PREPARES => true,
                 PDO::ATTR_TIMEOUT => 10,
+            ]) : [],
+        ],
+
+        'supabase' => [
+            // Read-only source used by `php artisan db:copy-from-supabase`.
+            // Local development runs on XAMPP MariaDB (see the mysql block);
+            // this connection keeps a handle on the hosted PostgreSQL data so
+            // it can be copied down without touching the original rows.
+            'driver' => 'pgsql',
+            'host' => env('SUPABASE_DB_HOST', ''),
+            'port' => env('SUPABASE_DB_PORT', '5432'),
+            'database' => env('SUPABASE_DB_DATABASE', 'postgres'),
+            'username' => env('SUPABASE_DB_USERNAME', 'postgres'),
+            'password' => env('SUPABASE_DB_PASSWORD', ''),
+            'charset' => 'utf8',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'search_path' => 'public',
+            'sslmode' => env('SUPABASE_DB_SSLMODE', 'require'),
+            'options' => extension_loaded('pdo_pgsql') ? array_filter([
+                PDO::ATTR_EMULATE_PREPARES => true,
+                PDO::ATTR_TIMEOUT => 30,
             ]) : [],
         ],
 

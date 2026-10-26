@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -39,7 +40,8 @@ class AuthController extends Controller
      *
      * On success the user is routed by role:
      *   - Staff  -> the simplified POS sales interface
-     *   - Admin  -> the Products page (inventory management)
+     *   - Admin  -> the Stock-In (receiving) page, the first step of the
+     *               inventory cycle
      */
     public function login(Request $request): RedirectResponse
     {
@@ -76,12 +78,13 @@ class AuthController extends Controller
      *
      * BRD: "The system shall automatically redirect Staff accounts strictly to the
      * simplified POS sales interface upon successful login." Admins go to the
-     * Products page instead (the Overview page was removed).
+     * Stock-In page instead — that is where the inventory cycle starts
+     * (receive delivery -> stock goes up in Products -> customers buy via POS).
      */
     private function redirectForRole(User $user): RedirectResponse
     {
         if ($user->isAdmin()) {
-            return redirect()->route('products');
+            return redirect()->route('stock-in');
         }
 
         return redirect()->route('pos');
@@ -108,6 +111,28 @@ class AuthController extends Controller
      * /register routes. Accounts are created by an Admin via
      * App\Http\Controllers\UserController (POST /api/users).
      */
+
+    /**
+     * Who is signed in? Used by the React SPA on boot.
+     *
+     * Public on purpose: the SPA asks this before it knows whether a session
+     * exists, and the response also carries the XSRF-TOKEN cookie the SPA
+     * needs before its first POST.
+     */
+    public function apiUser(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        return response()->json([
+            'user' => $user ? [
+                'id'       => $user->id,
+                'name'     => $user->name,
+                'username' => $user->username,
+                'email'    => $user->email,
+                'role'     => $user->role,
+            ] : null,
+        ]);
+    }
 
     /**
      * Handle logout.
@@ -154,7 +179,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Login successful.',
-            'redirect' => $user->isAdmin() ? route('products') : route('pos'),
+            'redirect' => $user->isAdmin() ? route('stock-in') : route('pos'),
             'user'    => [
                 'id'       => $user->id,
                 'name'     => $user->name,

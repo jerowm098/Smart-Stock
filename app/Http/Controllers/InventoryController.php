@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\StockAdjustment;
 use App\Models\StockIn;
+use App\Services\HardwareTerms;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,7 +32,10 @@ class InventoryController extends Controller
             ->pluck('category')
             ->values();
 
-        return view('admin.admin-products', compact('categories'));
+        return view('admin.admin-products', [
+            'categories' => $categories,
+            ...HardwareTerms::toViewData(),
+        ]);
     }
 
     /**
@@ -39,7 +43,27 @@ class InventoryController extends Controller
      */
     public function stockIn()
     {
-        return view('admin.admin-stock-in');
+        return view('admin.admin-stock-in', HardwareTerms::toViewData());
+    }
+
+    /**
+     * Generate a unique SKU for a product created on the fly from the
+     * Receive Stock modal: a short alphanumeric prefix from the name plus a
+     * random suffix (e.g. "Trigon Paint 1L" -> "TRI-8F3A21"). The full name
+     * stays editable on the Products page.
+     *
+     * The prefix comes from the ENGLISH form of the name, so a Filipino entry
+     * still yields a readable code: "Pako" -> "NAI-8F3A21", not "PAK-...".
+     */
+    protected function generateSku(string $name): string
+    {
+        $prefix = HardwareTerms::skuPrefix($name);
+
+        do {
+            $sku = $prefix.'-'.strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
+        } while (Product::where('sku', $sku)->exists());
+
+        return $sku;
     }
 
     /**
@@ -55,42 +79,93 @@ class InventoryController extends Controller
         }
 
         $validated = $request->validate([
-            'product_id' => ['required', 'integer', 'exists:products,id'],
+            'product_id' => ['nullable', 'integer', 'min:1'],
+            'new_product_name' => ['nullable', 'string', 'max:255'],
+            // Optional override for the auto-generated SKU of a NEW product.
+            'custom_sku' => ['nullable', 'string', 'max:50'],
+            // Optional category for a NEW product; defaults to Uncategorized.
+            'custom_category' => ['nullable', 'string', 'max:100'],
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'quantity_received' => ['required', 'integer', 'min:1'],
-            'unit_of_measure' => ['required', 'string', 'max:20'],
+            // The Receiving Unit dropdown pre-selects the product's configured
+            // unit, so this is normally automatic. An override is a deliberate
+            // choice by the admin and is recorded on the transaction as-is;
+            // when absent the server derives it from the product.
+            'unit_of_measure' => ['nullable', 'string', 'max:20'],
             'note' => ['nullable', 'string', 'max:255'],
         ]);
         $validated['supplier_id'] = $validated['supplier_id'] ?? null;
         $validated['note'] = $validated['note'] ?? null;
- 
+
+        $newProductName = trim((string) ($validated['new_product_name'] ?? ''));
+        $hasProductId = ! empty($validated['product_id']);
+        if (! $hasProductId && $newProductName === '') {
+            return response()->json([
+                'message' => 'Select an existing product or specify a new product name.',
+            ], 422);
+        }
+
+        // A hand-typed SKU must be free before we start the transaction;
+        // otherwise the unique constraint would abort the whole receive.
+        $customSku = strtoupper(trim((string) ($validated['custom_sku'] ?? '')));
+        if (! $hasProductId && $customSku !== '' && Product::where('sku', $customSku)->exists()) {
+            return response()->json([
+                'message' => "SKU \"{$customSku}\" is already in use. Please choose another.",
+            ], 422);
+        }
+
         $transactionProduct = null;
-        $unitMismatch = false;
+        $newProductCreated = false;
+        $unitOfMeasure = 'piece';
         $piecesPerReceivingUnit = 0;
         $pieceDelta = 0;
         $stockBefore = 0;
         $stockAfter = 0;
 
-        DB::transaction(function () use ($user, $validated, &$transactionProduct, &$unitMismatch, &$piecesPerReceivingUnit, &$pieceDelta, &$stockBefore, &$stockAfter) {
-            $query = Product::where('id', $validated['product_id']);
+        DB::transaction(function () use ($user, $validated, $newProductName, $hasProductId, $customSku, &$transactionProduct, &$newProductCreated, &$unitOfMeasure, &$piecesPerReceivingUnit, &$pieceDelta, &$stockBefore, &$stockAfter) {
+            if ($hasProductId) {
+                $query = Product::where('id', $validated['product_id']);
 
-            // SQLite does not support lockForUpdate; the transaction plus
-            // incremental update still serializes stock mutations safely.
-            if (DB::connection()->getDriverName() !== 'sqlite') {
-                $query = $query->lockForUpdate();
-            }
+                // SQLite does not support lockForUpdate; the transaction plus
+                // incremental update still serializes stock mutations safely.
+                if (DB::connection()->getDriverName() !== 'sqlite') {
+                    $query = $query->lockForUpdate();
+                }
 
-            $product = $query->first();
-            if (! $product) {
-                return;
+                $product = $query->first();
+                if (! $product) {
+                    return;
+                }
+            } else {
+                // "Other…" path: the admin is receiving stock for a brand-new
+                // item, so create its catalog record first. It starts at price
+                // 0 with a single-piece conversion; both are editable on the
+                // Products page afterwards. The chosen Receiving Unit becomes
+                // the new product's configured receiving unit.
+                $product = Product::create([
+                    'name' => $newProductName,
+                    'sku' => $customSku !== '' ? $customSku : $this->generateSku($newProductName),
+                    'category' => trim((string) ($validated['custom_category'] ?? '')) ?: 'Uncategorized',
+                    'price' => 0,
+                    'current_stock' => 0,
+                    'reorder_threshold' => 0,
+                    'user_id' => $user->id,
+                    'is_active' => true,
+                    'receiving_unit' => trim((string) ($validated['unit_of_measure'] ?? '')) ?: 'piece',
+                    'pieces_per_receiving_unit' => 1,
+                ]);
+                $newProductCreated = true;
             }
 
             $transactionProduct = $product;
 
-            if ($validated['unit_of_measure'] !== $product->receiving_unit) {
-                $unitMismatch = true;
-                return;
-            }
+            $productUnit = trim((string) ($product->receiving_unit ?: '')) ?: 'piece';
+
+            // Record the unit the admin actually selected for this delivery
+            // ("per kilo", "box", …); fall back to the product's configured
+            // receiving unit when the client did not send one.
+            $requestedUnit = trim((string) ($validated['unit_of_measure'] ?? ''));
+            $unitOfMeasure = $requestedUnit !== '' ? $requestedUnit : $productUnit;
 
             $piecesPerReceivingUnit = (int) $product->pieces_per_receiving_unit;
             $pieceDelta = (int) $validated['quantity_received'] * $piecesPerReceivingUnit;
@@ -109,7 +184,7 @@ class InventoryController extends Controller
                 'user_id' => $user->id,
                 'supplier_id' => $validated['supplier_id'],
                 'quantity_received' => $validated['quantity_received'],
-                'unit_of_measure' => $validated['unit_of_measure'],
+                'unit_of_measure' => $unitOfMeasure,
                 'unit_conversion' => $piecesPerReceivingUnit,
                 'piece_delta' => $pieceDelta,
                 'stock_before' => $stockBefore,
@@ -122,22 +197,17 @@ class InventoryController extends Controller
             return response()->json(['message' => 'Product not found or access denied.'], 404);
         }
 
-        if ($unitMismatch) {
-            return response()->json([
-                'message' => 'Unit of measure must match the product\'s receiving unit (' . $transactionProduct->receiving_unit . ')',
-                'unit_of_measure' => ['The unit of measure must match the product\'s configured receiving unit.']
-            ], 422);
-        }
-
         $updatedProduct = Product::where('id', $transactionProduct->id)->first();
 
         return response()->json([
-            'message' => 'Stock received successfully',
+            'message' => $newProductCreated
+                ? 'New product created and stock received successfully'
+                : 'Stock received successfully',
             'stock_in' => [
                 'product_id' => $transactionProduct->id,
                 'product_name' => $transactionProduct->name,
                 'quantity_received' => $validated['quantity_received'],
-                'unit_of_measure' => $validated['unit_of_measure'],
+                'unit_of_measure' => $unitOfMeasure,
                 'unit_conversion' => $piecesPerReceivingUnit,
                 'piece_delta' => $pieceDelta,
                 'stock_before' => $stockBefore,
@@ -323,6 +393,18 @@ public function getProducts(Request $request): JsonResponse
         // Products and Stock-In tables. updated_at is bumped by every flow:
         // add, edit, price change, stock adjustment and stock-in receive.
         ->latest('updated_at')->get();
+
+    // The last_received_at subselect returns a naive "YYYY-MM-DD HH:MM:SS"
+    // string straight from Postgres. Without a timezone marker the browser's
+    // Date() parses it as LOCAL time, shifting every "Latest Received" label
+    // by the UTC offset (e.g. +8 hrs in Manila). Normalize to ISO-8601 UTC.
+    $products->each(function ($product) {
+        if (! empty($product->last_received_at)) {
+            $product->last_received_at = \Carbon\Carbon::parse($product->last_received_at)
+                ->timezone('UTC')
+                ->toISOString();
+        }
+    });
 
     return response()->json($products);
 }

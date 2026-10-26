@@ -1,11 +1,22 @@
-@import 'tailwindcss';
+/*
+ |--------------------------------------------------------------------------
+ | Global stylesheet
+ |--------------------------------------------------------------------------
+ |
+ | Loaded on every page through `@vite(['resources/css/app.css', ...])` in
+ | the Blade layouts.
+ |
+ |   Development : `npm run dev`  -> Vite serves this file with HMR on :5173
+ |   Production  : `npm run build` -> compiled into public/build/
+ |
+ | The existing Blade views ship their own inline <style> blocks, so this
+ | file is intentionally small. Put shared/global rules here instead of
+ | copy-pasting them into every view.
+ |
+ | Tailwind is installed but disabled on purpose: its preflight reset would
+ | fight the hand-written CSS inside the views. To opt in, uncomment the
+ | import below and move the page styles over gradually.
+ */
+/* @import 'tailwindcss'; */
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
-@source '../**/*.blade.php';
-@source '../**/*.js';
-
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
-}
+/* Shared rules go here. */

@@ -132,17 +132,25 @@
                     <h2 class="section-card-title">Stock Receiving</h2>
                     <p class="section-card-desc">Overview of all products and their receiving status</p>
                 </div>
+                <div class="view-toggle">
+                    <button class="view-toggle-btn active" id="tableViewBtn" onclick="switchView('table')" title="Table View">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                    </button>
+                    <button class="view-toggle-btn" id="gridViewBtn" onclick="switchView('grid')" title="Grid View">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    </button>
+                </div>
             </div>
         </div>
         <div class="section-card-toolbar">
-            <div class="view-toggle">
-                <button class="view-toggle-btn active" id="tableViewBtn" onclick="switchView('table')" title="Table View">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
-                </button>
-                <button class="view-toggle-btn" id="gridViewBtn" onclick="switchView('grid')" title="Grid View">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-                </button>
-            </div>
+            @if(Auth::user()->isAdmin())
+            {{-- Swapped with the view toggle: the Receive Stock entry point now
+                 sits below the header, above the table/grid it acts on. --}}
+            <button class="btn-add" onclick="openReceiveModal()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                <span>Receive Stock</span>
+            </button>
+            @endif
         </div>
         <div class="table-wrapper" id="tableView">
             <table>
@@ -173,40 +181,119 @@
             <h2>Receive Stock</h2>
             <form onsubmit="handleReceiveStock(event)" autocomplete="off" class="receive-form-grid">
                 <div class="form-group">
-                    <label>Product *</label>
-                    <select name="product_id" id="rProductId" required>
+                    {{-- LEFT: the main choice field. Two ways in: the main
+                         "Receive Stock" button shows this dropdown so any
+                         product can be picked (or "Other…" to create a new
+                         one); the per-row "Receive" button locks the product
+                         read-only instead. --}}
+                    <label>Product</label>
+                    <div class="form-static" id="rProductName" style="display:none">—</div>
+                    <select id="rProductSelect" style="display:none">
                         <option value="">Select a product...</option>
                     </select>
+                    <input type="hidden" name="product_id" id="rProductId" required>
+                </div>
+                <div class="form-group">
+                    {{-- RIGHT: reserved partner slot, connected to the Product
+                         dropdown. Locked until "Other…" is chosen — then it
+                         unlocks for typing a brand-new product name, which the
+                         server creates before receiving the stock. --}}
+                    <label>Specify New Product</label>
+                    <input type="text" id="rProductCustom" placeholder="e.g. Copper Wire" maxlength="255" disabled>
+                    <input type="hidden" name="new_product_name" id="rNewProductName" value="">
+                </div>
+                <div class="form-group">
+                    {{-- LEFT: a choice field like Product / Receiving Unit.
+                         "Given" uses the product's existing SKU (or the
+                         auto-generated one for a new item); "Other…" opens the
+                         editable custom field on the right. --}}
+                    <label>SKU / CODE</label>
+                    <select id="rSkuSelect">
+                        {{-- The first option's LABEL is rewritten live to show
+                             the actual code (product SKU or the auto-generated
+                             suggestion), so the dropdown reads like the code
+                             itself instead of the word "Given". --}}
+                        <option value="given">—</option>
+                        <option value="__other__">Other…</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    {{-- RIGHT: shows the given SKU while locked; unlocks for
+                         typing only when "Other…" is chosen. The hidden input
+                         sends the custom SKU to the API (new products only). --}}
+                    <label>Specify Custom SKU</label>
+                    <input type="text" id="rSkuCustom" placeholder="Auto-generated, or type your own" maxlength="50" disabled>
+                    <input type="hidden" name="custom_sku" id="rCustomSku" value="">
+                </div>
+                <div class="form-group">
+                    {{-- LEFT: same choice pattern as SKU / CODE. "Given" uses
+                         the product's existing category (or the "Uncategorized"
+                         default for a new item); "Other…" opens the editable
+                         custom field on the right. --}}
+                    <label>Category</label>
+                    <select id="rCategorySelect">
+                        <option value="given">—</option>
+                        <option value="__other__">Other…</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    {{-- RIGHT: shows the given category while locked; unlocks
+                         for typing only when "Other…" is chosen and a new
+                         product is being created. --}}
+                    <label>Specify Custom Category</label>
+                    <input type="text" id="rCategoryCustom" placeholder="e.g. Paints, Electrical" maxlength="100" disabled>
+                    <input type="hidden" name="custom_category" id="rCustomCategory" value="">
                 </div>
                 <div class="form-group">
                     <label>Current Stock</label>
                     <div class="form-static" id="rCurrentStock">—</div>
                 </div>
                 <div class="form-group">
-                    <label>Receiving Unit</label>
-                    <div class="form-static" id="rReceivingUnit">—</div>
-                </div>
-                <div class="form-group">
                     <label>Pieces per Unit</label>
                     <div class="form-static" id="rPiecesPerUnit">—</div>
+                </div>
+                <div class="form-group">
+                    {{-- LEFT: the main choice field. Pre-selects the product's
+                         configured receiving unit. --}}
+                    <label>Receiving Unit <span class="required-star">*</span></label>
+                    <select id="rUnitSelect">
+                        <option value="piece">piece</option>
+                        <option value="box">box</option>
+                        <option value="bag">bag</option>
+                        <option value="roll">roll</option>
+                        <option value="per kilo">per kilo</option>
+                        <option value="__other__">Other…</option>
+                    </select>
+                    <input type="hidden" name="unit_of_measure" id="rUnitMeasure" value="piece">
+                </div>
+                <div class="form-group">
+                    {{-- RIGHT: reserved partner slot, connected to the Receiving
+                         Unit. Locked until "Other…" is chosen — then it unlocks
+                         for typing the shop's custom unit. --}}
+                    <label>Specify Custom Unit</label>
+                    <input type="text" id="rUnitOther" placeholder="e.g. sack, bundle" maxlength="20" disabled>
+                </div>
+                <div class="form-group">
+                    <label>Quantity Received <span class="required-star">*</span></label>
+                    <input type="number" name="quantity_received" id="rQuantity" placeholder="e.g. 5" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Effective Piece Delta</label>
+                    <div class="form-static" id="rPieceDelta">0</div>
+                </div>
+                <div class="form-group">
+                    {{-- The MIRROR field: Unit of Measure always syncs to the
+                         selected Receiving Unit — never typed, never out of
+                         sync. The hidden input (on the Receiving Unit group)
+                         carries that value to the API. --}}
+                    <label>Unit of Measure</label>
+                    <div class="form-static" id="rUnitMeasureDisplay">—</div>
                 </div>
                 <div class="form-group">
                     <label>Supplier</label>
                     <select name="supplier_id" id="rSupplierId">
                         <option value="">No supplier (optional)</option>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label>Effective Piece Delta (auto-calculated)</label>
-                    <div class="form-static" id="rPieceDelta">0</div>
-                </div>
-                <div class="form-group">
-                    <label>Quantity Received *</label>
-                    <input type="number" name="quantity_received" id="rQuantity" placeholder="e.g. 5" min="1" required>
-                </div>
-                <div class="form-group">
-                    <label>Unit of Measure *</label>
-                    <input type="text" name="unit_of_measure" id="rUnitMeasure" placeholder="e.g. box, bag, roll, piece" required>
                 </div>
                 <div class="form-group full-width">
                     <label>Note / Reference</label>
@@ -258,10 +345,10 @@
             background: #ffffff;
             border-color: rgba(15,23,42,0.08);
         }
-        .section-card-header { padding: 18px 20px 16px 20px; }
+        .section-card-header { padding: 18px 20px 10px 20px; }
         .section-card-header-row {
             display: flex;
-            align-items: flex-start;
+            align-items: center;
             justify-content: space-between;
             gap: 12px;
         }
@@ -454,7 +541,7 @@
             transition: all 0.15s; white-space: nowrap; flex-shrink: 0;
         }
         .btn-add:hover { opacity: 0.9; transform: translateY(-1px); }
-        .section-card-toolbar { display: flex; justify-content: flex-end; padding: 6px 20px 10px 20px; }
+        .section-card-toolbar { display: flex; justify-content: flex-end; padding: 0 20px 12px 20px; }
         .view-toggle {
             display: flex; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
             border-radius: 8px; overflow: hidden;
@@ -549,16 +636,20 @@
         .receive-form-grid .form-group.full-width { grid-column: 1 / -1; }
         .modal .form-group { margin-bottom: 14px; }
         .modal .form-group label { display: block; color: #cbd5e1; font-size: 13px; font-weight: 500; margin-bottom: 5px; }
-        .modal .form-group input { width: 100%; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+        .modal .form-group input { width: 100%; padding: 9px 12px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+        .modal .form-group input:disabled { opacity: 0.55; cursor: default; background: rgba(255,255,255,0.02); }
+        .modal .form-group input:disabled::placeholder { color: #64748b; }
+        .required-star { color: #ef4444; }
+        .modal .form-group select:disabled { opacity: 0.55; cursor: default; background-color: rgba(255,255,255,0.02); }
         .modal .form-group input:focus { border-color: #3b82f6; }
         .modal .form-group input::placeholder { color: #64748b; }
-        .modal .form-group select { width: 100%; padding: 9px 32px 9px 12px; background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 12px; box-sizing: border-box; }
+        .modal .form-group select { width: 100%; padding: 9px 32px 9px 12px; background-color: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; cursor: pointer; appearance: none; -webkit-appearance: none; -moz-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 12px; box-sizing: border-box; }
         .modal .form-group select:focus { border-color: #3b82f6; }
         .modal .form-group select option { background: #1e293b; color: #e2e8f0; }
         .modal .form-group textarea { width: 100%; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; outline: none; transition: border-color 0.2s; resize: vertical; box-sizing: border-box; }
         .modal .form-group textarea:focus { border-color: #3b82f6; }
         .modal .form-group textarea::placeholder { color: #64748b; }
-        .modal .form-group .form-static { color: #f8fafc; font-size: 13px; font-family: 'Inter', sans-serif; padding: 9px 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 7px; box-sizing: border-box; }
+        .modal .form-group .form-static { color: #94a3b8; font-size: 13px; font-family: 'Inter', sans-serif; padding: 9px 12px; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 7px; box-sizing: border-box; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
         .modal-actions .btn { padding: 9px 18px; border: none; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Inter', sans-serif; transition: opacity 0.15s; }
         .modal-actions .btn:hover { opacity: 0.9; }
@@ -576,13 +667,16 @@
         body.light-theme .modal { background: #ffffff; border-color: rgba(15,23,42,0.1); }
         body.light-theme .modal h2 { color: #0f172a; }
         body.light-theme .modal .form-group label { color: #475569; }
-        body.light-theme .modal .form-group input { background: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a; }
+        body.light-theme .modal .form-group input { background: #ffffff; border-color: rgba(15,23,42,0.14); color: #0f172a; }
+        body.light-theme .modal .form-group input:disabled { background: #f1f5f9; color: #94a3b8; }
+        body.light-theme .modal .form-group input:disabled::placeholder { color: #94a3b8; }
+        body.light-theme .modal .form-group select:disabled { background-color: #f1f5f9; color: #94a3b8; }
         body.light-theme .modal .form-group input::placeholder { color: #94a3b8; }
         body.light-theme .modal .form-group select { background-color: #ffffff; border-color: rgba(15,23,42,0.14); color: #0f172a; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; background-size: 12px; }
         body.light-theme .modal .form-group select option { background: #ffffff; color: #0f172a; }
         body.light-theme .modal .form-group textarea { background-color: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a; }
         body.light-theme .modal .form-group textarea::placeholder { color: #94a3b8; }
-        body.light-theme .modal .form-group .form-static { background-color: #f8fafc; border-color: rgba(15,23,42,0.14); color: #0f172a; }
+        body.light-theme .modal .form-group .form-static { background-color: #f1f5f9; border-color: rgba(15,23,42,0.1); color: #64748b; }
         body.light-theme .modal-actions .btn-cancel { background: #e2e8f0; color: #334155; }
         body.light-theme .action-link { color: #1e293b; }
         body.light-theme .action-link:hover { border-color: currentColor; background: rgba(30,41,59,0.08); color: #0f172a; }
@@ -602,7 +696,8 @@
             .si-filter-inner { grid-template-columns: minmax(0, 1fr); gap: 10px; }
             .section-card-header-row { flex-direction: column; }
             .section-card-header-row .btn-add { width: 100%; justify-content: center; }
-            .section-card-toolbar { padding: 4px 14px 8px 14px; }
+            .section-card-toolbar { padding: 0 14px 10px 14px; }
+            .section-card-toolbar .btn-add { width: 100%; justify-content: center; }
             .grid-view { margin: 0 12px 12px 12px; padding: 0; }
             .product-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
             .table-wrapper { border-radius: 10px; }
@@ -620,6 +715,7 @@
 @endpush
 
 @push('scripts')
+    @include('partials.hardware-terms')
     <script>
         const canReceiveStock = {{ Auth::user()->isAdmin() ? 'true' : 'false' }};
         let allProducts = [];
@@ -922,12 +1018,16 @@
             return fmtDateTime(isoString);
         }
 
+        // Fill the dropdown used by the main "Receive Stock" button. The
+        // per-row path never sees this select — it gets the locked static
+        // display instead. "Other…" enables the Specify New Product partner
+        // field so a brand-new item can be created on the fly.
         function populateProductSelect() {
-            const select = document.getElementById('rProductId');
+            const select = document.getElementById('rProductSelect');
             select.innerHTML = '<option value="">Select a product...</option>' + 
                 allProducts.map(p => 
                     `<option value="${p.id}">${escapeHtml(p.name)} (${escapeHtml(p.sku)})</option>`
-                ).join('');
+                ).join('') + '<option value="__other__">Other (New Product)...</option>';
         }
 
         function populateSupplierSelect() {
@@ -938,17 +1038,231 @@
                 ).join('');
         }
 
+        // Generic entry point (main "Receive Stock" button): show the product
+        // dropdown so the user can pick any product to receive.
+        function openReceiveModal() {
+            document.getElementById('receiveModal').classList.add('active');
+            document.getElementById('rProductName').style.display = 'none';
+            document.getElementById('rProductSelect').style.display = '';
+            document.getElementById('rProductId').value = '';
+            document.getElementById('rProductSelect').value = '';
+            syncProductChoice();
+            refreshSkuFields();
+            refreshCategoryFields();
+            document.getElementById('rQuantity').focus();
+        }
+
+        // Row entry point: the product is fixed to the clicked row — read-only
+        // display, no dropdown and no new-product field. The partner slot stays
+        // visible but shows "—" so the form grid never has an empty hole.
         function openReceiveModalForProduct(productId) {
             document.getElementById('receiveModal').classList.add('active');
+            document.getElementById('rProductSelect').style.display = 'none';
+            document.getElementById('rProductName').style.display = '';
             document.getElementById('rProductId').value = productId;
             document.getElementById('rProductId').dispatchEvent(new Event('change'));
+            refreshSkuFields();
+            refreshCategoryFields();
+            // No syncProductChoice here (the hidden dropdown stays empty in
+            // this mode) — just fill the partner slot so it never looks blank.
+            document.getElementById('rProductCustom').value = '—';
             document.getElementById('rQuantity').focus();
         }
 
         function closeReceiveModal() {
             document.getElementById('receiveModal').classList.remove('active');
             document.getElementById('receiveModal').querySelector('form').reset();
+            // Reset both product displays; the next open decides which is shown.
+            document.getElementById('rProductName').style.display = 'none';
+            document.getElementById('rProductSelect').style.display = 'none';
+            document.getElementById('rProductCustom').style.display = '';
+            syncProductChoice();
+            refreshSkuFields();
+            refreshCategoryFields();
         }
+
+        // ===== PRODUCT CHOICE (left) + NEW PRODUCT (right) =====
+        // Mirrors the Receiving Unit pair: the dropdown is the main field and
+        // the right-side input stays locked until "Other…" is chosen. Selecting
+        // "Other…" switches the modal into create-new-product mode.
+        // Mirror of the server's generateSku(): 3-letter prefix from the ENGLISH
+        // form of the name plus a random hex suffix, so the "given" SKU matches
+        // what the API would create if the admin does not override it. Filipino
+        // entries are translated first: "Pako" -> "NAI-8F3A21".
+        function suggestSku(name) {
+            return window.SmartStockLexicon.suggestSku(name);
+        }
+
+        let skuTouched = false; // admin hand-edited the custom SKU suggestion
+
+        function refreshSkuFields() {
+            const select = document.getElementById('rProductSelect');
+            const custom = document.getElementById('rProductCustom');
+            const skuSelect = document.getElementById('rSkuSelect');
+            const skuCustom = document.getElementById('rSkuCustom');
+            const skuHidden = document.getElementById('rCustomSku');
+            const isNewProduct = select.value === '__other__';
+
+            if (!isNewProduct) {
+                // Existing product (dropdown pick or locked row): the SKU is
+                // GIVEN — the choice field locks to it and the partner field
+                // becomes a read-only display of the catalog code.
+                skuTouched = false;
+                skuSelect.disabled = true;
+                skuSelect.value = 'given';
+                skuCustom.disabled = true;
+                const pid = document.getElementById('rProductId').value;
+                const product = allProducts.find(p => p.id == pid);
+                const code = product ? (product.sku || '—') : '—';
+                // The first option's label IS the displayed code.
+                skuSelect.options[0].textContent = code;
+                skuCustom.value = code;
+                skuHidden.value = '';
+                return;
+            }
+
+            // New product: the choice field unlocks with two options.
+            skuSelect.disabled = false;
+            const suggestion = suggestSku(custom.value);
+            if (skuSelect.value === '__other__') {
+                // Other…: the custom field opens for typing. Pre-filled with
+                // the suggestion until the admin hand-edits it.
+                skuCustom.disabled = false;
+                if (!skuTouched) skuCustom.value = suggestion;
+                skuHidden.value = skuCustom.value.trim();
+            } else {
+                // Given (auto): show what the server would generate, locked.
+                skuTouched = false;
+                skuCustom.disabled = true;
+                skuCustom.value = suggestion;
+                skuSelect.options[0].textContent = suggestion;
+                skuHidden.value = '';
+            }
+        }
+
+        // ===== CATEGORY (left) + CUSTOM CATEGORY (right) =====
+        // Same choice pattern as SKU / CODE: "Given" uses the product's
+        // existing category, or a suggested one for a new item; "Other…"
+        // unlocks the editable field (new products only).
+
+        // Like the SKU suggestion, the recommended category updates while the
+        // admin types. Filipino entries are translated to English first, so
+        // "pako" is categorised as Fasteners exactly like "nail". Delegates to
+        // the shared lexicon so this page and the Products page always agree.
+        function suggestCategory(name) {
+            return window.SmartStockLexicon.categoryFor(name, allProducts);
+        }
+
+        let categoryTouched = false; // admin hand-edited the suggested category
+
+        function refreshCategoryFields() {
+            const select = document.getElementById('rProductSelect');
+            const custom = document.getElementById('rProductCustom');
+            const catSelect = document.getElementById('rCategorySelect');
+            const catCustom = document.getElementById('rCategoryCustom');
+            const catHidden = document.getElementById('rCustomCategory');
+            const isNewProduct = select.value === '__other__';
+
+            if (!isNewProduct) {
+                catSelect.disabled = true;
+                catSelect.value = 'given';
+                catCustom.disabled = true;
+                categoryTouched = false;
+                const pid = document.getElementById('rProductId').value;
+                const product = allProducts.find(p => p.id == pid);
+                const cat = product ? (product.category || 'Uncategorized') : '—';
+                catCustom.value = cat;
+                catSelect.options[0].textContent = cat;
+                catHidden.value = '';
+                return;
+            }
+
+            catSelect.disabled = false;
+            const suggestion = suggestCategory(custom.value);
+            if (catSelect.value === '__other__') {
+                catCustom.disabled = false;
+                if (!categoryTouched) catCustom.value = suggestion;
+                catHidden.value = catCustom.value.trim();
+            } else {
+                catCustom.disabled = true;
+                catCustom.value = suggestion;
+                catHidden.value = suggestion;
+            }
+            catSelect.options[0].textContent = catSelect.value === '__other__'
+                ? (catCustom.value.trim() || 'Custom')
+                : suggestion;
+        }
+
+        function syncProductChoice() {
+            const select = document.getElementById('rProductSelect');
+            const custom = document.getElementById('rProductCustom');
+            const hidden = document.getElementById('rProductId');
+            const newName = document.getElementById('rNewProductName');
+            const isOther = select.value === '__other__';
+            custom.disabled = !isOther;
+            if (!isOther) {
+                // Partner slot stays visible and reads as "not applicable":
+                // an existing product was chosen (or none yet), so there is
+                // nothing to type — never an empty white hole.
+                custom.value = '—';
+                newName.value = '';
+                hidden.value = select.value;
+                // Fill Current Stock / Pieces per Unit / Receiving Unit
+                // preselect from the chosen catalog product.
+                hidden.dispatchEvent(new Event('change'));
+            } else {
+                // Fresh typing space for the new product's name.
+                custom.value = '';
+                hidden.value = '';
+            }
+        }
+
+        document.getElementById('rProductSelect').addEventListener('change', () => {
+            syncProductChoice();
+            refreshSkuFields();
+            refreshCategoryFields();
+            // The rProductId change listener fills the statics below; for a
+            // brand-new product there is no catalog row, so show the defaults
+            // it will be created with.
+            if (document.getElementById('rProductSelect').value === '__other__') {
+                document.getElementById('rCurrentStock').textContent = '0';
+                document.getElementById('rPiecesPerUnit').textContent = '1';
+                matchUnitSelect('piece');
+                document.getElementById('rProductCustom').focus();
+            }
+            updatePieceDelta();
+        });
+        document.getElementById('rProductCustom').addEventListener('input', () => {
+            document.getElementById('rNewProductName').value = document.getElementById('rProductCustom').value.trim();
+            // The SKU and category suggestions follow the typed name until
+            // the admin hand-edits them.
+            refreshSkuFields();
+            refreshCategoryFields();
+        });
+        document.getElementById('rSkuSelect').addEventListener('change', () => {
+            refreshSkuFields();
+            // "Other…" opens the custom field for typing.
+            if (document.getElementById('rSkuSelect').value === '__other__') {
+                document.getElementById('rSkuCustom').focus();
+            }
+        });
+        document.getElementById('rSkuCustom').addEventListener('input', () => {
+            skuTouched = true;
+            document.getElementById('rCustomSku').value = document.getElementById('rSkuCustom').value.trim();
+        });
+        document.getElementById('rCategorySelect').addEventListener('change', () => {
+            refreshCategoryFields();
+            // "Other…" opens the custom category field for typing.
+            if (document.getElementById('rCategorySelect').value === '__other__') {
+                document.getElementById('rCategoryCustom').focus();
+            }
+        });
+        document.getElementById('rCategoryCustom').addEventListener('input', () => {
+            categoryTouched = true;
+            document.getElementById('rCustomCategory').value = document.getElementById('rCategoryCustom').value.trim();
+            // The given-option label mirrors a typed custom category.
+            refreshCategoryFields();
+        });
 
         document.getElementById('receiveModal').addEventListener('click', (e) => {
             if (e.target === document.getElementById('receiveModal')) closeReceiveModal();
@@ -957,20 +1271,67 @@
         document.getElementById('rProductId').addEventListener('change', function() {
             const productId = this.value;
             if (!productId) {
+                document.getElementById('rProductName').textContent = '—';
                 document.getElementById('rCurrentStock').textContent = '—';
-                document.getElementById('rReceivingUnit').textContent = '—';
                 document.getElementById('rPiecesPerUnit').textContent = '—';
+                matchUnitSelect('piece');
                 updatePieceDelta();
                 return;
             }
             const product = allProducts.find(p => p.id == productId);
             if (product) {
+                document.getElementById('rProductName').textContent = product.name + (product.sku ? ' (' + product.sku + ')' : '');
                 document.getElementById('rCurrentStock').textContent = product.current_stock;
-                document.getElementById('rReceivingUnit').textContent = product.receiving_unit || 'piece';
                 document.getElementById('rPiecesPerUnit').textContent = product.pieces_per_receiving_unit || 1;
+                // Pre-select this product's receiving unit in the dropdown; the
+                // Unit of Measure display mirrors it automatically.
+                matchUnitSelect(product.receiving_unit || 'piece');
                 updatePieceDelta();
             }
         });
+
+        // ===== RECEIVING UNIT (left) + CUSTOM UNIT (right) =====
+        // Receiving Unit is the main choice field. The Custom Unit input on
+        // its right is the reserved partner slot: locked until "Other…" is
+        // chosen, then it unlocks for typing a shop-specific unit. Unit of
+        // Measure mirrors the final value, and the hidden input carries it to
+        // the API (which still validates it against the product).
+        function syncUnitOfMeasure() {
+            const select = document.getElementById('rUnitSelect');
+            const other = document.getElementById('rUnitOther');
+            const hidden = document.getElementById('rUnitMeasure');
+            const display = document.getElementById('rUnitMeasureDisplay');
+            const isOther = select.value === '__other__';
+            other.disabled = !isOther;
+            if (!isOther) other.value = '';
+            hidden.value = isOther ? other.value.trim() : select.value;
+            display.textContent = hidden.value || '—';
+        }
+
+        // Select the dropdown option matching `unit`; when the product uses a
+        // unit outside the common list, fall back to "Other…" prefilled with it.
+        function matchUnitSelect(unit) {
+            const select = document.getElementById('rUnitSelect');
+            const other = document.getElementById('rUnitOther');
+            const target = String(unit || 'piece').trim().toLowerCase();
+            const match = [...select.options].find(o => o.value !== '__other__' && o.value.toLowerCase() === target);
+            if (match) {
+                select.value = match.value;
+            } else {
+                select.value = '__other__';
+                other.value = String(unit || 'piece').trim();
+            }
+            syncUnitOfMeasure();
+        }
+
+        document.getElementById('rUnitSelect').addEventListener('change', () => {
+            syncUnitOfMeasure();
+            // "Pop up" the custom field: unlock and focus it for typing.
+            if (document.getElementById('rUnitSelect').value === '__other__') {
+                document.getElementById('rUnitOther').focus();
+            }
+        });
+        document.getElementById('rUnitOther').addEventListener('input', syncUnitOfMeasure);
 
         function updatePieceDelta() {
             const quantity = parseInt(document.getElementById('rQuantity').value) || 0;
@@ -988,19 +1349,29 @@
             e.preventDefault();
             const productId = document.getElementById('rProductId').value;
             const quantity = document.getElementById('rQuantity').value;
-            const unitMeasure = document.getElementById('rUnitMeasure').value.trim();
+            const isNewProduct = document.getElementById('rProductSelect').value === '__other__';
+            const newProductName = document.getElementById('rNewProductName').value.trim();
 
-            if (!productId) { showToast('Please select a product', 'error'); return; }
+            if (!productId && !newProductName) {
+                showToast(isNewProduct ? 'Please type the new product name' : 'Please select a product', 'error');
+                return;
+            }
+            if (isNewProduct && !newProductName) { showToast('Please type the new product name', 'error'); return; }
             if (!quantity || quantity < 1) { showToast('Please enter a valid quantity', 'error'); return; }
-            if (!unitMeasure) { showToast('Please enter unit of measure', 'error'); return; }
+            const unitMeasure = document.getElementById('rUnitMeasure').value.trim();
+            if (!unitMeasure) { showToast('Please enter a receiving unit', 'error'); return; }
 
             try {
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
                 const formData = new FormData(e.target);
                 const data = Object.fromEntries(formData);
-                data.product_id = parseInt(data.product_id);
+                // Empty product_id + a new_product_name = create-on-the-fly;
+                // JSON.stringify turns NaN into null which the API accepts as
+                // "no existing product".
+                data.product_id = data.product_id ? parseInt(data.product_id) : null;
                 data.quantity_received = parseInt(data.quantity_received);
                 data.supplier_id = data.supplier_id ? parseInt(data.supplier_id) : null;
+                if (!data.new_product_name) delete data.new_product_name;
 
                 const res = await fetch('/api/inventory/stock-in', {
                     method: 'POST',

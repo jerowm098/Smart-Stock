@@ -138,11 +138,26 @@
                 <!-- Table View -->
                 <div class="table-wrapper pos-table-wrapper" id="tableView">
                     <table>
+                        {{-- Explicit widths: with eight columns the fixed layout
+                             would otherwise split the row evenly and squeeze the
+                             product name. The Unit column is intentionally narrow
+                             — it only holds the full unit word ("piece", "kilogram"). --}}
+                        <colgroup>
+                            <col style="width: 21%">
+                            <col style="width: 11%">
+                            <col style="width: 11%">
+                            <col style="width: 10%">
+                            <col style="width: 12%">
+                            <col style="width: 9%">
+                            <col style="width: 12%">
+                            <col style="width: 14%">
+                        </colgroup>
                         <thead>
                             <tr>
                                 <th>Product Name</th>
                                 <th>SKU / CODE<br><span style="font-size:0.85em;text-transform:none;white-space:nowrap;">(stock keeping unit)</span></th>
                                 <th>Category</th>
+                                <th title="Unit of measure being sold">Unit</th>
                                 <th>Price</th>
                                 <th>Stock</th>
                                 <th>Updated</th>
@@ -482,6 +497,45 @@
     body.light-theme .stock-low { color: #ca8a04; }
     body.light-theme .stock-critical { color: #dc2626; }
 
+    /* ===== UNIT OF MEASURE ===== */
+    /* The POS sells base units, so every price/stock figure is labelled with
+       the unit it refers to. Plain text only — no coloured pill/badge, just a
+       muted label that does not compete with the product name. */
+    .unit-badge {
+        font-size: 12px; font-weight: 600; color: #cbd5e1;
+        letter-spacing: 0; line-height: 1.4; overflow-wrap: anywhere;
+    }
+    body.light-theme .unit-badge { color: #475569; }
+    .unit-inline { font-size: 11px; font-weight: 600; color: #64748b; white-space: nowrap; }
+    body.light-theme .unit-inline { color: #94a3b8; }
+    .cart-qty-unit { font-size: 11px; font-weight: 600; color: #64748b; margin-left: -3px; }
+    body.light-theme .cart-qty-unit { color: #94a3b8; }
+
+    /* ===== STOCK CHANGE FLASH ===== */
+    /* After a sale, the stock cell briefly shows a floating "-2" style badge so
+       the deduction is visible at a glance. Pure CSS animation; the badge is
+       removed from the data after it plays so re-renders stay clean. */
+    .stock-cell { position: relative; }
+    .stock-delta {
+        position: absolute; top: -12px; right: -20px;
+        padding: 1px 6px; border-radius: 999px;
+        font-size: 10px; font-weight: 700; line-height: 1.4;
+        color: #f87171; background: rgba(248,113,113,0.14);
+        pointer-events: none; white-space: nowrap;
+        animation: stockDeltaFloat 1.9s ease-out forwards;
+    }
+    .stock-delta.delta-up { color: #4ade80; background: rgba(74,222,128,0.14); }
+    body.light-theme .stock-delta { color: #dc2626; background: rgba(220,38,38,0.1); }
+    body.light-theme .stock-delta.delta-up { color: #16a34a; background: rgba(22,163,74,0.1); }
+    @keyframes stockDeltaFloat {
+        0%   { opacity: 0; transform: translateY(5px) scale(0.85); }
+        18%  { opacity: 1; transform: translateY(0) scale(1); }
+        70%  { opacity: 1; transform: translateY(-9px); }
+        100% { opacity: 0; transform: translateY(-15px); }
+    }
+    .product-card-stock { position: relative; }
+    .product-card-stock .stock-delta { top: -14px; right: -10px; }
+
     /* ===== GRID VIEW ===== */
     .grid-view { padding: 0 16px 16px 16px; }
     .product-grid {
@@ -696,6 +750,22 @@
     .pos-modal-close:hover { background: rgba(15,23,42,0.06); color: #0f172a; }
     .pos-modal-body { padding: 20px; }
     .pos-modal-body p { margin: 0 0 16px; color: #475569; font-size: 14px; }
+    /* Itemised breakdown: name, the quantity *with its unit of measure*, and
+       the line total — so the cashier signs off on what is actually handed
+       over, not just an amount. */
+    .pos-modal-items {
+        border: 1px solid rgba(15,23,42,0.08); border-radius: 8px;
+        margin-bottom: 14px; max-height: 210px; overflow-y: auto;
+    }
+    .pos-modal-item {
+        display: flex; align-items: center; gap: 12px;
+        padding: 9px 14px; font-size: 13px; color: #334155;
+        border-bottom: 1px solid rgba(15,23,42,0.06);
+    }
+    .pos-modal-item:last-child { border-bottom: none; }
+    .pos-modal-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pos-modal-item-qty { color: #64748b; white-space: nowrap; }
+    .pos-modal-item-total { font-weight: 600; color: #0f172a; white-space: nowrap; }
     .pos-modal-summary { background: #f8fafc; border-radius: 8px; padding: 14px 16px; }
     .pos-modal-row {
         display: flex; justify-content: space-between; align-items: center; padding: 7px 0;
@@ -854,12 +924,15 @@
         document.getElementById('gridView').classList.toggle('hidden', view !== 'grid');
     }
 
-    // Load products for POS
-    async function loadPosProducts() {
+    // Load products for POS.
+    // silent=true refreshes the catalog in the background (e.g. right after a
+    // sale) without the loading shimmer or error toasts — the UI is already
+    // showing data, we just re-sync it.
+    async function loadPosProducts(silent = false) {
         const tbody = document.getElementById('posProductTableBody');
         const grid = document.getElementById('posProductGridBody');
         const tableView = document.getElementById('tableView');
-        tableView.classList.add('loading');
+        if (!silent) tableView.classList.add('loading');
         try {
             // Cashier-safe catalog: excludes deactivated products and Admin-only fields.
             const res = await fetch('/api/pos/products');
@@ -868,11 +941,12 @@
             populateCategoryFilter();
             filterPosProducts();
         } catch (e) {
-            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Unable to load products. Please try again.</td></tr>';
+            if (silent) return; // keep whatever is on screen; next action retries
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Unable to load products. Please try again.</td></tr>';
             grid.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;">Unable to load products. Please try again.</div>';
             showToast('Failed to load products', 'error');
         } finally {
-            tableView.classList.remove('loading');
+            if (!silent) tableView.classList.remove('loading');
         }
     }
 
@@ -937,13 +1011,17 @@
     function renderPosTable(products) {
         const tbody = document.getElementById('posProductTableBody');
         if (products.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="empty-state">No products found</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No products found</td></tr>';
             return;
         }
         tbody.innerHTML = products.map(p => {
             const s = getStockStatus(p.current_stock, p.reorder_threshold);
             const isInCart = cart.find(item => item.product_id === p.id);
             const outOfStock = p.current_stock <= 0;
+            // What the cashier physically hands over. Every row states it, so a
+            // bare quantity can never be mistaken for a box, kilo or metre.
+            const unit = escapeHtml(unitBase(p.sell_unit));
+            const stockUnit = escapeHtml(unitText(p.sell_unit, p.current_stock));
             const actionBtn = outOfStock
                 ? `<button class="action-link" disabled style="color:#f87171;border-color:#f87171;cursor:not-allowed;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Out of Stock</button>`
                 : `<button class="action-link" onclick="addToCart(${p.id})" ${isInCart ? '' : ''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add</button>`;
@@ -951,8 +1029,9 @@
                 <td><strong>${escapeHtml(p.name)}</strong></td>
                 <td>${escapeHtml(p.sku || '—')}</td>
                 <td>${escapeHtml(p.category || '—')}</td>
+                <td><span class="unit-badge" title="Unit of measure: ${unit}">${unit}</span></td>
                 <td>₱${parseFloat(p.price).toFixed(2)}</td>
-                <td><span class="stock-cell stock-${s.class}">${p.current_stock}</span></td>
+                <td><span class="stock-cell stock-${s.class}">${p.current_stock}${stockDeltaBadge(p)}</span> <span class="unit-inline">${stockUnit}</span></td>
                 <td>${fmtDateTime(p.updated_at)}</td>
                 <td>${actionBtn}</td>
             </tr>`;
@@ -969,6 +1048,8 @@
             const s = getStockStatus(p.current_stock, p.reorder_threshold);
             const img = getProductImage(p);
             const outOfStock = p.current_stock <= 0;
+            const unit = escapeHtml(unitBase(p.sell_unit));
+            const stockUnit = escapeHtml(unitText(p.sell_unit, p.current_stock));
             const addBtn = outOfStock
                 ? `<button class="action-link" disabled style="color:#f87171;border-color:#f87171;cursor:not-allowed;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>Out of Stock</button>`
                 : `<button class="action-link" onclick="addToCart(${p.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>Add</button>`;
@@ -980,8 +1061,8 @@
                     <p class="product-card-sku">${escapeHtml(p.sku || '')}</p>
                     <p class="product-card-time">Updated ${fmtDateTime(p.updated_at)}</p>
                     <div class="product-card-meta">
-                        <span class="product-card-price">₱${parseFloat(p.price).toFixed(2)}</span>
-                        <span class="product-card-stock stock-${s.class}">${s.label} · ${p.current_stock}</span>
+                        <span class="product-card-price">₱${parseFloat(p.price).toFixed(2)} <span class="unit-inline">/ ${unit}</span></span>
+                        <span class="product-card-stock stock-${s.class}">${s.label} · ${p.current_stock} ${stockUnit}${stockDeltaBadge(p)}</span>
                     </div>
                     <div class="product-card-actions">${addBtn}</div>
                 </div>
@@ -1007,6 +1088,9 @@
                 sku: product.sku || '',
                 price: parseFloat(product.price),
                 quantity: 1,
+                // Carried into the cart and the checkout confirmation so the
+                // quantity is always read as "3 pieces", never a bare number.
+                unit: product.sell_unit || 'piece',
             });
         }
         updateCartUI();
@@ -1053,11 +1137,12 @@
                 div.innerHTML = `
                     <div class="cart-item-info">
                         <div class="cart-item-name">${escapeHtml(item.name)}</div>
-                        <div class="cart-item-price">₱${item.price.toFixed(2)} each</div>
+                        <div class="cart-item-price">₱${item.price.toFixed(2)} / ${escapeHtml(unitBase(item.unit))}</div>
                     </div>
                     <div class="cart-item-controls">
                         <button type="button" class="cart-qty-btn" onclick="updateCartQuantity(${item.product_id}, -1)">−</button>
                         <span class="cart-qty-value">${item.quantity}</span>
+                        <span class="cart-qty-unit">${escapeHtml(unitText(item.unit, item.quantity))}</span>
                         <button type="button" class="cart-qty-btn" onclick="updateCartQuantity(${item.product_id}, 1)">+</button>
                     </div>
                     <div class="cart-item-subtotal">₱${subtotal.toFixed(2)}</div>
@@ -1068,6 +1153,12 @@
         }
         updateSummary();
         filterPosProducts();
+        // The Complete Sale button mirrors the cart: disabled while the cart is
+        // empty (including right after a sale clears it) and re-enabled as soon
+        // as an item is added. Keeping this in ONE place guarantees a finished
+        // sale can never leave the button stuck disabled for the next customer.
+        const checkoutBtn = document.getElementById('checkoutBtn');
+        if (checkoutBtn) checkoutBtn.disabled = cart.length === 0;
     }
 
     function updateSummary() {
@@ -1128,15 +1219,47 @@
                 const data = await res.json();
                 showToast('Checkout completed! Change: ₱' + (data.change || 0).toFixed(2), 'success');
                 posSessionRevenue += total;
-                updatePosStatCards(0, 0); // cart cleared, but update today's revenue
-                document.getElementById('posStatRevenue').textContent = '₱' + posSessionRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                // BRD (POS): the sold items were just deducted from inventory, so
+                // the stock cells must show the new quantities the moment the
+                // sale completes — no page reload. The checkout response carries
+                // the post-sale catalog rows; splice them in and re-render.
+                if (Array.isArray(data.products) && data.products.length) {
+                    const updatedById = new Map(data.products.map(p => [p.id, p]));
+                    posProducts = posProducts.map(p => {
+                        const upd = updatedById.get(p.id);
+                        if (!upd) return p;
+                        // Remember how much this sale changed the stock so the
+                        // table/grid can flash a small "-2" badge on the cell.
+                        const delta = (Number(upd.current_stock) || 0) - (Number(p.current_stock) || 0);
+                        return delta !== 0 ? { ...upd, _stockDelta: delta } : upd;
+                    });
+                    populateCategoryFilter();
+                    // Once the animation has played, drop the flags so later
+                    // re-renders (search, filter, refresh) stay clean.
+                    setTimeout(() => {
+                        posProducts = posProducts.map(p => {
+                            if (!p._stockDelta) return p;
+                            const { _stockDelta, ...rest } = p;
+                            return rest;
+                        });
+                    }, 2200);
+                }
                 // BRD (POS) Constraint: "The system shall clear the cart and reset
                 // the POS interface to a blank state immediately after a sale is
-                // finalized." clearCart() re-enables the button for the next customer.
+                // finalized." clearCart() re-renders the table/grid with the
+                // updated stock and re-enables the button for the next customer.
                 clearCart();
+                updatePosStatCards(0, 0); // cart cleared, but update today's revenue
+                document.getElementById('posStatRevenue').textContent = '₱' + posSessionRevenue.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                // Silent background re-sync for anything the snapshot cannot carry
+                // (e.g. re-ordering by updated_at, an item another admin deactivated).
+                loadPosProducts(true);
             } else {
                 const data = await res.json().catch(() => null);
                 showToast(data?.message || 'Checkout failed.', 'error');
+                // A failed sale often means stock moved (insufficient stock, item
+                // deactivated) — silently re-sync so the cashier sees reality.
+                loadPosProducts(true);
                 // Failed sale — allow a retry, but only when the cart still has items.
                 btn.disabled = cart.length === 0;
             }
@@ -1158,6 +1281,14 @@
                 </div>
                 <div class="pos-modal-body">
                     <p>Are you sure you want to complete this transaction?</p>
+                    <div class="pos-modal-items">
+                        ${cart.map(item => `
+                            <div class="pos-modal-item">
+                                <span class="pos-modal-item-name">${escapeHtml(item.name)}</span>
+                                <span class="pos-modal-item-qty">${item.quantity} ${escapeHtml(unitText(item.unit, item.quantity))} × ₱${item.price.toFixed(2)}</span>
+                                <span class="pos-modal-item-total">₱${(item.price * item.quantity).toFixed(2)}</span>
+                            </div>`).join('')}
+                    </div>
                     <div class="pos-modal-summary">
                         <div class="pos-modal-row"><span>Total</span><span>₱${total.toFixed(2)}</span></div>
                         <div class="pos-modal-row"><span>Payment</span><span>₱${payment.toFixed(2)}</span></div>
@@ -1190,6 +1321,66 @@
         setTimeout(() => { toast.classList.remove('show'); }, 3000);
     }
 
+    // ===== UNIT OF MEASURE LABELS =====
+    // POS labels must never use abbreviations ("pc"), so any stored short form
+    // is expanded to a complete English word before it reaches the screen.
+    const UNIT_ALIASES = {
+        pc: 'piece', pcs: 'piece', pce: 'piece', pces: 'piece', piece: 'piece', pieces: 'piece',
+        kg: 'kilogram', kgs: 'kilogram', kilo: 'kilogram', kilos: 'kilogram',
+        kilogram: 'kilogram', kilograms: 'kilogram',
+        g: 'gram', gr: 'gram', gram: 'gram', grams: 'gram',
+        mg: 'milligram', milligram: 'milligram', milligrams: 'milligram',
+        l: 'liter', lt: 'liter', ltr: 'liter', liter: 'liter', liters: 'liter',
+        litre: 'liter', litres: 'liter',
+        ml: 'milliliter', milliliter: 'milliliter', milliliters: 'milliliter',
+        m: 'meter', mtr: 'meter', meter: 'meter', meters: 'meter',
+        metre: 'meter', metres: 'meter',
+        cm: 'centimeter', centimeter: 'centimeter', centimeters: 'centimeter',
+        mm: 'millimeter', millimeter: 'millimeter', millimeters: 'millimeter',
+        ft: 'foot', foot: 'foot', feet: 'foot',
+        in: 'inch', inch: 'inch', inches: 'inch',
+        bx: 'box', box: 'box', boxes: 'box',
+        sck: 'sack', sack: 'sack', sacks: 'sack',
+        bag: 'bag', bags: 'bag', roll: 'roll', rolls: 'roll',
+        set: 'set', sets: 'set', pack: 'pack', packs: 'pack',
+        bundle: 'bundle', bundles: 'bundle', can: 'can', cans: 'can',
+        bottle: 'bottle', bottles: 'bottle', tube: 'tube', tubes: 'tube',
+        sheet: 'sheet', sheets: 'sheet', board: 'board', boards: 'board',
+        gallon: 'gallon', gallons: 'gallon', length: 'length', lengths: 'length',
+    };
+
+    // Irregular plurals; everything else follows the default suffix rules.
+    const UNIT_PLURALS = {
+        piece: 'pieces', foot: 'feet', inch: 'inches', box: 'boxes',
+        kilogram: 'kilograms', gram: 'grams', milligram: 'milligrams',
+        liter: 'liters', milliliter: 'milliliters', meter: 'meters',
+        centimeter: 'centimeters', millimeter: 'millimeters',
+    };
+
+    // Always the singular form: used for "per <unit>" price labels and the
+    // dedicated Unit column.
+    function unitBase(unit) {
+        const key = String(unit == null ? '' : unit).trim().toLowerCase();
+        return UNIT_ALIASES[key] || key || 'piece';
+    }
+
+    // Singular for exactly one unit ("1 piece"), plural otherwise
+    // ("2 pieces", "0 pieces").
+    function unitText(unit, quantity) {
+        const base = unitBase(unit);
+        if (Number(quantity) === 1) return base;
+        return UNIT_PLURALS[base] || (/(s|x|z|ch|sh)$/.test(base) ? base + 'es' : base + 's');
+    }
+
+    // Small floating "-2" / "+3" badge shown right after a sale changes a
+    // product's stock, so the deduction is visible without reading numbers.
+    function stockDeltaBadge(product) {
+        const delta = product && product._stockDelta;
+        if (!delta) return '';
+        const text = delta > 0 ? '+' + delta : String(delta);
+        return `<span class="stock-delta${delta > 0 ? ' delta-up' : ''}">${text}</span>`;
+    }
+
     // Escape HTML utility
     function escapeHtml(text) {
         const map = { '&': '&', '<': '<', '>': '>', '"': '"', "'": '&#039;' };
@@ -1199,7 +1390,7 @@
     // Initialize
     // Show loading message initially
     document.getElementById('tableView').classList.add('loading');
-    document.getElementById('posProductTableBody').innerHTML = '<tr><td colspan="7" class="empty-state">Loading products...</td></tr>';
+    document.getElementById('posProductTableBody').innerHTML = '<tr><td colspan="8" class="empty-state">Loading products...</td></tr>';
     loadPosProducts();
     updatePosStatCards(0, 0);
 </script>

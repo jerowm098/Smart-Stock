@@ -1,0 +1,176 @@
+Detailed BRD: Demand Forecasting & Order Suggestions
+Overview
+The Demand Forecasting & Order Suggestions module is the intelligent core of SMART-STOCK,
+designed to eliminate the guesswork from hardware store inventory management. By automatically
+analyzing historical sales data processed through the POS, this module predicts future product demand.
+It alerts the Admin before items run out and provides mathematically backed recommendations on
+exactly what to restock and in what quantities, ensuring capital is not tied up in slow-moving stock while
+preventing stockouts of highly requested products.
+Scope
+Continuous background analysis of daily sales velocity per item
+Calculation of reorder points based on historical demand
+Generation of a "Suggested Orders" dashboard for the Admin
+Displaying recommended restock quantities to return inventory to optimal levels
+Ability for the Admin to dismiss a suggestion or mark it as "Ordered"
+Exporting the suggested order list (e.g., to CSV/PDF) to facilitate physical purchasing
+Out-of-Scope
+Direct integration with external hardware supplier APIs
+Automated creation and emailing of Purchase Orders (POs) to vendors
+Tracking supplier lead times or delivery transit times dynamically
+Predicting seasonal spikes based on external factors (e.g., weather data or market trends)
+Functional Requirements
+Requirement Actor Priority Rationale
+
+The system shall
+calculate the
+Average Daily
+Sales (velocity)
+for every item
+based on the
+preceding 30
+days of
+transaction data.
+System Must Establishes the
+baseline metric
+for how fast a
+product is
+moving.
+The system shall
+automatically
+flag an item for
+reorder when its
+Current Stock
+falls below its
+calculated 7-day
+demand
+threshold.
+System Should Ensures the
+Admin is notified
+before the item
+physically runs
+out.
+The system shall
+calculate and
+display a specific
+"Suggested
+Order Quantity"
+designed to
+restore the
+item's stock to a
+30-day supply.
+System Should Tells the store
+owner exactly
+how many units
+to buy,
+preventing over-
+stocking.
+
+The system shall
+provide a
+dedicated
+"Order
+Suggestions"
+dashboard
+displaying the
+flagged items,
+their current
+stock, velocity,
+and suggested
+order quantity.
+Admin Must Centralizes all
+purchasing
+decisions in one
+easy-to-read
+interface.
+The system shall
+allow the user to
+mark a
+suggestion as
+"Ordered" or
+"Dismissed" to
+remove it from
+the active
+dashboard.
+Admin Must Prevents the
+dashboard from
+becoming
+cluttered with
+items the owner
+has already
+addressed.
+The system shall
+entirely hide this
+module and its
+underlying data
+from Staff-level
+accounts.
+System Must Maintains role-
+based security
+boundaries for
+business
+intelligence data.
+The system shall
+allow the user to
+export the active
+Order
+Suggestions list
+as a printable
+format or
+spreadsheet.
+Admin Should Allows the owner
+to take the list
+offline when
+calling suppliers
+or visiting
+wholesale
+warehouses.
+
+Non-Functional Requirements
+Constraints
+The accuracy of the forecast is strictly bound by the accuracy of the POS data; if staff fail to ring up
+items correctly, the suggestions will be skewed.
+Forecasts rely purely on linear historical data and cannot natively predict sudden, unprecedented
+spikes in demand.
+Limitations
+Because the system does not track supplier lead times, the 7-day safety threshold is a static
+assumption that may not be sufficient for hard-to-source materials.
+Performance Forecasting calculations shall run
+asynchronously (e.g., via a
+scheduled nightly job) to prevent UI
+lag during regular business hours.
+Usability The dashboard must clearly
+differentiate critically low items
+(e.g., under 3 days of supply) using
+distinct visual indicators (like red
+text/icons).
+Reliability If an item has less than 7 days of
+sales history, the system shall
+bypass the forecasting algorithm
+and rely on a static minimum
+threshold (e.g., 10 units).
+Security Any attempt to access the
+suggestion export endpoint without
+a valid Admin session token shall
+result in a 403 Forbidden response.
+Category Requirement
+
+Assumptions
+The store owner reviews the dashboard regularly (e.g., weekly) to place orders before the 7-day
+safety stock depletes.
+The business prefers to maintain approximately one month (30 days) of stock on hand for standard
+items to balance storage space and availability.
+Requirements Model
+Use Case Diagram
+Business rules
+Daily Velocity = Total Units Sold / 30 days.
+Reorder Point (Threshold) = Daily Velocity * 7 days.
+Suggested Order Quantity = (Daily Velocity * 30 days) - Current Stock.
+If Current Stock <= Reorder Point ➔  Add to Suggestions List.
+Activity Diagram
+Nightly Forecasting Job Workflow
+
+
+State model
+Suggestion Record Lifecycle
+
+

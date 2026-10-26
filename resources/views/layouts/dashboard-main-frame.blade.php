@@ -1,9 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
     <title>@yield('title', 'Smart-Stock')</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -117,92 +118,6 @@
         .user-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
         .user-name { font-size: 13px; font-weight: 600; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
         .user-email { font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
-        /* ALERT WRAPPER - anchors alert dropdown */
-        .header-alert-wrapper { position: relative; }
-        /* ALERT BUTTON - TAB STYLE */
-        .header-btn-icon { padding: 8px !important; min-width: 40px; justify-content: center; }
-        .alert-dropdown {
-            position: absolute; top: calc(100% + 10px); right: 0;
-            background: #1e293b; border: 1px solid rgba(255,255,255,0.1);
-            border-radius: 14px; width: 388px; max-height: 440px; z-index: 150;
-            display: none; flex-direction: column; padding: 10px;
-            box-shadow: 0 18px 40px rgba(2,6,23,0.45);
-        }
-        .alert-dropdown.active { display: flex; }
-        .alert-dropdown-header {
-            flex: 0 0 auto; padding: 6px 8px 12px; margin-bottom: 2px;
-            font-size: 13px; font-weight: 600; color: #f8fafc;
-            border-bottom: 1px solid rgba(255,255,255,0.07);
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .alert-dropdown-clear { font-size: 11px; color: #64748b; cursor: pointer; font-weight: 500; transition: color 0.15s; }
-        .alert-dropdown-clear:hover { color: #f8fafc; }
-        /* Only the list scrolls, so the header and "Clear all" stay reachable. */
-        #headerAlertList {
-            flex: 1 1 auto; min-height: 0; overflow-y: auto;
-            display: flex; flex-direction: column; gap: 8px;
-            padding: 2px; margin: 0 -2px;
-        }
-        #headerAlertList::-webkit-scrollbar { width: 6px; }
-        #headerAlertList::-webkit-scrollbar-track { background: transparent; }
-        #headerAlertList::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.25); border-radius: 3px; }
-        #headerAlertList::-webkit-scrollbar-thumb:hover { background: rgba(148,163,184,0.4); }
-        .alert-empty {
-            padding: 30px 16px; text-align: center; color: #475569; font-size: 13px;
-            border: 1px dashed rgba(255,255,255,0.1); border-radius: 10px; margin: 2px;
-        }
-        /* Each alert is its own bordered card. Severity drives the border tint,
-           so a card reads as a state rather than just carrying a coloured dot. */
-        .alert-card {
-            flex: 0 0 auto; padding: 12px 13px; display: flex; gap: 10px;
-            position: relative; border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 10px; background: rgba(255,255,255,0.02);
-            transition: border-color 0.15s, background 0.15s;
-        }
-        .alert-card.critical { border-color: rgba(248,113,113,0.28); background: rgba(248,113,113,0.05); }
-        .alert-card.low { border-color: rgba(251,191,36,0.26); background: rgba(251,191,36,0.045); }
-        .alert-card:hover { border-color: rgba(255,255,255,0.2); background: rgba(255,255,255,0.06); }
-        .alert-card.critical:hover { border-color: rgba(248,113,113,0.5); background: rgba(248,113,113,0.10); }
-        .alert-card.low:hover { border-color: rgba(251,191,36,0.48); background: rgba(251,191,36,0.09); }
-        .alert-card-severity { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
-        .alert-card-severity.critical { background: #f87171; }
-        .alert-card-severity.low { background: #fbbf24; }
-        .alert-card-body { flex: 1; min-width: 0; }
-        .alert-card-top-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 3px; }
-        .alert-card-name { font-size: 13px; font-weight: 600; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .alert-card-sku { font-size: 10px; color: #64748b; font-family: monospace; white-space: nowrap; }
-        .alert-card-stock { font-size: 11px; color: #94a3b8; margin-bottom: 5px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
-        .alert-stock-pill { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; }
-        .alert-stock-pill.critical { background: rgba(248,113,113,0.12); color: #f87171; }
-        .alert-stock-pill.low { background: rgba(251,191,36,0.12); color: #fbbf24; }
-        .alert-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .alert-date-tag { font-size: 10px; color: #475569; }
-        .alert-dismiss-btn { position: absolute; top: 8px; right: 8px; background: none; border: none; color: #475569; cursor: pointer; font-size: 14px; line-height: 1; padding: 2px 5px; border-radius: 4px; transition: all 0.15s; }
-        .alert-dismiss-btn:hover { color: #f87171; background: rgba(248,113,113,0.1); }
-        .alert-card { animation: alertSlideIn 0.2s ease; }
-        @keyframes alertSlideIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
-        .alert-card.removing { animation: alertSlideOut 0.2s ease forwards; }
-        @keyframes alertSlideOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(12px); } }
-        body.light-theme .alert-dropdown { background: #ffffff; border-color: rgba(15,23,42,0.1); }
-        body.light-theme .alert-dropdown-header { background: #f8fafc; color: #0f172a; border-bottom-color: rgba(15,23,42,0.08); }
-        body.light-theme .alert-dropdown-clear { color: #64748b; }
-        body.light-theme .alert-dropdown-clear:hover { color: #0f172a; }
-        body.light-theme .alert-empty { color: #94a3b8; }
-        body.light-theme #headerAlertList::-webkit-scrollbar-thumb { background: rgba(15,23,42,0.18); }
-        body.light-theme #headerAlertList::-webkit-scrollbar-thumb:hover { background: rgba(15,23,42,0.3); }
-        body.light-theme .alert-empty { border-color: rgba(15,23,42,0.12); }
-        body.light-theme .alert-card { background: rgba(15,23,42,0.015); border-color: rgba(15,23,42,0.08); }
-        body.light-theme .alert-card:hover { background: rgba(15,23,42,0.04); border-color: rgba(15,23,42,0.16); }
-        body.light-theme .alert-card.critical { border-color: rgba(220,38,38,0.22); background: rgba(239,68,68,0.035); }
-        body.light-theme .alert-card.low { border-color: rgba(202,138,4,0.24); background: rgba(251,191,36,0.05); }
-        body.light-theme .alert-card.critical:hover { border-color: rgba(220,38,38,0.42); background: rgba(239,68,68,0.07); }
-        body.light-theme .alert-card.low:hover { border-color: rgba(202,138,4,0.44); background: rgba(251,191,36,0.1); }
-        body.light-theme .alert-card-name { color: #0f172a; }
-        body.light-theme .alert-card-sku { color: #94a3b8; }
-        body.light-theme .alert-card-stock { color: #64748b; }
-        body.light-theme .alert-date-tag { color: #94a3b8; }
-        body.light-theme .alert-dismiss-btn { color: #94a3b8; }
-        body.light-theme .alert-dismiss-btn:hover { color: #ef4444; background: rgba(239,68,68,0.08); }
 
         /* USER DROPDOWN — each action is its own bordered "form" card sitting inside
            a padded menu, with an identity header on top. Wider than the old
@@ -352,7 +267,6 @@
             /* Keep the theme toggle square — the generic padding above would
                otherwise squash it into an oval. */
             #themeToggleBtn { padding: 0; width: 36px; min-width: 36px; height: 36px; }
-            .alert-dropdown { width: min(280px, calc(100vw - 24px)); }
             .user-dropdown { width: min(258px, calc(100vw - 24px)); }
             /* Show hamburger menu button on mobile */
             .mobile-menu-button { display: flex; }
@@ -679,19 +593,8 @@
                 </svg>
             </button>
             @if($isAdmin)
-            <div class="header-alert-wrapper">
-                <button type="button" class="header-btn header-btn-icon" onclick="toggleHeaderAlerts()" title="Notifications">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
-                    <span class="header-badge" id="headerAlertBadge">0</span>
-                </button>
-                <div class="alert-dropdown" id="headerAlertDropdown">
-                    <div class="alert-dropdown-header">
-                        <span>Low Stock Alerts</span>
-                        <span class="alert-dropdown-clear" onclick="clearAlerts(event)">Clear all</span>
-                    </div>
-                    <div id="headerAlertList"></div>
-                </div>
-            </div>
+            {{-- Shared with the homepage header so both trays stay identical. --}}
+            @include('partials.notifications')
             @endif
             <div class="header-user" id="headerUserBtn" onclick="toggleUserDropdown(event)">
                 <div class="user-avatar">{{ Auth::user()->name ? mb_strtoupper(mb_substr(Auth::user()->name, 0, 1)) : 'U' }}</div>
@@ -885,18 +788,13 @@
             active?.classList.add('active');
         }
 
-        function toggleHeaderAlerts() {
-            document.getElementById('headerAlertDropdown').classList.toggle('active');
-            // Close user dropdown when opening alerts
-            document.getElementById('userDropdown')?.classList.remove('active');
-        }
-
         function toggleUserDropdown(e) {
             if (e) e.stopPropagation();
             const dropdown = document.getElementById('userDropdown');
             dropdown?.classList.toggle('active');
             // Close alerts dropdown when opening user menu
             document.getElementById('headerAlertDropdown')?.classList.remove('active');
+            document.getElementById('headerAlertBtn')?.setAttribute('aria-expanded', 'false');
         }
 
         function navigateToSettings(e) {
@@ -913,128 +811,16 @@
             // nothing to clear — login no longer stores a remembered username.
         }
 
-        // Close dropdowns when clicking outside
+        // Close the user menu when clicking outside. The notification tray
+        // installs its own outside-click handler in partials/notifications.
         document.addEventListener('click', (e) => {
-            const alertWrapper = document.querySelector('.header-alert-wrapper');
-            const alertDropdown = document.getElementById('headerAlertDropdown');
             const userWrapper = document.getElementById('headerUserBtn');
             const userDropdown = document.getElementById('userDropdown');
 
-            if (alertWrapper && alertDropdown && !alertWrapper.contains(e.target)) {
-                alertDropdown.classList.remove('active');
-            }
             if (userWrapper && userDropdown && !userWrapper.contains(e.target)) {
                 userDropdown.classList.remove('active');
             }
         });
-
-        // Dismissed alert product IDs (client-side only)
-        let dismissedAlertIds = new Set(JSON.parse(localStorage.getItem('dismissedAlertIds') || '[]'));
-
-        async function loadAlerts() {
-            try {
-                const res = await fetch('/api/inventory/alerts');
-                const alerts = await res.json();
-                const badge = document.getElementById('headerAlertBadge');
-                badge.textContent = alerts.length;
-                const list = document.getElementById('headerAlertList');
-                if (alerts.length === 0) {
-                    list.innerHTML = '<div class="alert-empty">No low-stock items</div>';
-                    return;
-                }
-                list.innerHTML = alerts.map(a => {
-                    const severity = a.current_stock <= 5 ? 'critical' : 'low';
-                    const sku = escapeHtml(a.sku || '\u2014');
-                    const name = escapeHtml(a.name);
-                    const stockLeft = a.current_stock;
-                    const threshold = a.reorder_threshold;
-                    const lastDate = getLastActivityDate(a);
-                    return `<div class="alert-card ${severity}" id="alert-card-${a.id}">
-                        <div class="alert-card-severity ${severity}"></div>
-                        <div class="alert-card-body">
-                            <div class="alert-card-top-row">
-                                <span class="alert-card-name">${name}</span>
-                                <span class="alert-card-sku">${sku}</span>
-                            </div>
-                            <div class="alert-card-stock">
-                                <span class="alert-stock-pill ${severity}">${stockLeft} left</span>
-                                <span>threshold: ${threshold}</span>
-                            </div>
-                            <div class="alert-card-meta">
-                                <span class="alert-date-tag">${lastDate}</span>
-                            </div>
-                        </div>
-                        <button class="alert-dismiss-btn" onclick="dismissAlert(${a.id}, event)" title="Dismiss">&times;</button>
-                    </div>`;
-                }).join('');
-            } catch (e) { console.error(e); }
-        }
-
-        function getLastActivityDate(alert) {
-            // Prefer last_received_at from stock_ins, fall back to last_adjusted_at, then updated_at
-            const dateStr = alert.last_received_at || alert.last_adjusted_at || alert.updated_at;
-            if (!dateStr) return 'Never';
-            const d = new Date(dateStr);
-            if (isNaN(d.getTime())) return formatRelativeDate(dateStr);
-            return formatDateShort(d);
-        }
-
-        function formatDateShort(d) {
-            const now = new Date();
-            const diffMs = now - d;
-            const diffDay = Math.floor(diffMs / 86400000);
-            if (diffDay === 0) return 'Today';
-            if (diffDay === 1) return 'Yesterday';
-            if (diffDay < 7) return diffDay + ' days ago';
-            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        }
-
-        function formatRelativeDate(isoStr) {
-            const d = new Date(isoStr);
-            if (isNaN(d.getTime())) return isoStr;
-            const now = new Date();
-            const diffMs = now - d;
-            const diffMin = Math.floor(diffMs / 60000);
-            const diffHr = Math.floor(diffMs / 3600000);
-            const diffDay = Math.floor(diffMs / 86400000);
-            if (diffMin < 1) return 'Just now';
-            if (diffMin < 60) return diffMin + ' min ago';
-            if (diffHr < 24) return diffHr + ' hr ago';
-            if (diffDay < 7) return diffDay + ' day ago';
-            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        }
-
-        function dismissAlert(productId, event) {
-            event.stopPropagation();
-            const card = document.getElementById('alert-card-' + productId);
-            if (card) {
-                card.classList.add('removing');
-                setTimeout(() => {
-                    card.remove();
-                    dismissedAlertIds.add(productId);
-                    try { localStorage.setItem('dismissedAlertIds', JSON.stringify([...dismissedAlertIds])); } catch(e) {}
-                    // Recount visible alerts after dismiss
-                    updateBadgeCount();
-                }, 200);
-            }
-        }
-
-        function updateBadgeCount() {
-            // Count currently visible alert cards
-            const count = document.querySelectorAll('.alert-card:not(.removing)').length;
-            document.getElementById('headerAlertBadge').textContent = count;
-            if (count === 0) {
-                document.getElementById('headerAlertList').innerHTML = '<div class="alert-empty">All caught up!</div>';
-            }
-        }
-
-        function clearAlerts(e) {
-            e.stopPropagation();
-            document.getElementById('headerAlertBadge').textContent = '0';
-            document.getElementById('headerAlertList').innerHTML = '<div class="alert-empty">All caught up!</div>';
-            dismissedAlertIds.clear();
-            try { localStorage.removeItem('dismissedAlertIds'); } catch(e) {}
-        }
 
         function escapeHtml(str) { if (!str) return ''; const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
@@ -1105,13 +891,6 @@
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') closeMobileMenu();
         });
-
-        // Low-stock alerts are Admin-only (BRD Inventory Security). Staff and
-        // guests must not trigger the request, so the bell is hidden for them.
-        @if($isAdmin)
-            loadAlerts();
-            setInterval(loadAlerts, 30000);
-        @endif
     </script>
     @stack('scripts')
 </body>

@@ -1,0 +1,162 @@
+Detailed BRD: Transaction Tracking
+Overview
+The Transaction Tracking module serves as the primary auditing and accountability tool for the
+hardware store owner. Every time a sale is finalized in the POS module, a permanent record is generated
+here. This allows the Admin to review daily sales performance, investigate discrepancies, and verify
+exactly which staff member processed specific transactions.
+Scope
+Automated logging of all finalized POS sales
+Displaying a chronological master list of historical transactions
+Viewing the itemized breakdown of a specific transaction (items sold, quantities, and unit prices)
+Filtering transaction history by date range and by specific cashier (Staff username)
+Calculating the total sales revenue for a filtered view
+Out-of-Scope
+Processing returns, voids, or refunds directly through the transaction log
+Printing physical paper receipts from historical records
+Direct API integration with third-party accounting software
+Tracking customer names or buyer profiles associated with the transaction
+Functional Requirements
+The system shall
+automatically
+generate a
+unique
+Transaction ID
+for every
+finalized sale.
+System Must Provides a clear
+reference
+number for
+auditing.
+Requirement Actor Priority Rationale
+
+The system shall
+record the exact
+timestamp, total
+amount, and the
+active staffʼs
+username for
+every
+transaction.
+System Must Enforces staff
+accountability
+and tracks peak
+sales hours.
+The system shall
+display a
+Transaction
+History
+dashboard listing
+all completed
+sales
+chronologically.
+Admin Must Allows the store
+owner to review
+business
+performance at a
+glance.
+The system shall
+allow the user to
+click on any
+transaction
+record to view its
+itemized
+contents (items,
+quantities, unit
+prices).
+Admin Should Essential for
+investigating
+specific sales or
+verifying
+inventory
+deductions.
+The system shall
+allow the user to
+filter the
+transaction list
+by a specific
+date or date
+range.
+Admin Must Allows the owner
+to calculate
+daily, weekly, or
+monthly
+revenue.
+
+Non-Functional Requirements
+The system shall
+allow the user to
+filter the
+transaction list
+by a specific
+cashier (Staff
+username).
+Admin Must Allows the
+Admin to audit
+the performance
+or investigate
+the shift of a
+specific
+employee.
+The system shall
+display the total
+revenue of the
+currently filtered
+transactions on
+the dashboard.
+System Should Provides an
+immediate
+financial
+summary
+without manual
+calculation.
+The system shall
+completely hide
+the Transaction
+History
+dashboard from
+Staff-level
+accounts.
+System Should Staff should only
+process current
+sales, not view
+overall store
+revenue data.
+Security All transaction records cannot be
+edited, modified, or deleted by any
+staff.
+Performance Filtering a list of up to 100
+transactions must complete and
+render within 1 second.
+Category Requirement
+
+Constraints
+Because records are strictly immutable, cashiers who make a mistake during checkout cannot "void"
+the transaction in the system afterward; the Admin must issue a manual inventory adjustment to
+correct the stock.
+Limitations
+The system relies entirely on the server's internal clock for timestamps; if the server time drifts,
+transaction logs will reflect the inaccurate time.
+Assumptions
+Hardware store staff do not need to review their own past transactions once the current customer is
+cleared.
+Revenue tracking is based purely on the gross total of items sold; tax calculations and net profit
+margins (deducting wholesale cost) are handled externally by the owner.
+Requirements Model
+Use Case Diagram
+Data Retention Transaction records must remain
+permanently linked to the Staffʼs
+username, even if that Staff account
+is later deactivated.
+Usability Date range filters shall default to the
+current day ("Today") upon initially
+loading the dashboard.
+
+Business rules
+Transaction Record Status = Read-Only.
+Revenue Total  = Sum of all Transaction Grand Totals within the applied filter parameters.
+Activity Diagram
+Transaction Auditing Workflow
+
+
+State model
+Transaction Log Lifecycle

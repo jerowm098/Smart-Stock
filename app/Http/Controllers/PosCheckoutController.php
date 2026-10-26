@@ -30,6 +30,46 @@ class PosCheckoutController extends Controller
     }
 
     /**
+     * Expand a stored unit-of-measure value into a complete English word.
+     *
+     * Inventory may store short forms ("pc", "kg"), but the POS must never show
+     * abbreviations to the cashier. Unknown values pass through unchanged so a
+     * shop-specific unit ("tray", "bundle") is never silently rewritten.
+     */
+    protected function unitWord(string $unit): string
+    {
+        $key = strtolower(trim($unit));
+
+        $aliases = [
+            'pc' => 'piece', 'pcs' => 'piece', 'pce' => 'piece',
+            'piece' => 'piece', 'pieces' => 'piece',
+            'kg' => 'kilogram', 'kgs' => 'kilogram', 'kilo' => 'kilogram',
+            'kilos' => 'kilogram', 'kilogram' => 'kilogram', 'kilograms' => 'kilogram',
+            'g' => 'gram', 'gr' => 'gram', 'gram' => 'gram', 'grams' => 'gram',
+            'mg' => 'milligram', 'milligram' => 'milligram', 'milligrams' => 'milligram',
+            'l' => 'liter', 'lt' => 'liter', 'ltr' => 'liter', 'liter' => 'liter',
+            'liters' => 'liter', 'litre' => 'liter', 'litres' => 'liter',
+            'ml' => 'milliliter', 'milliliter' => 'milliliter', 'milliliters' => 'milliliter',
+            'm' => 'meter', 'mtr' => 'meter', 'meter' => 'meter', 'meters' => 'meter',
+            'metre' => 'meter', 'metres' => 'meter',
+            'cm' => 'centimeter', 'centimeter' => 'centimeter', 'centimeters' => 'centimeter',
+            'mm' => 'millimeter', 'millimeter' => 'millimeter', 'millimeters' => 'millimeter',
+            'ft' => 'foot', 'foot' => 'foot', 'feet' => 'foot',
+            'in' => 'inch', 'inch' => 'inch', 'inches' => 'inch',
+            'bx' => 'box', 'box' => 'box', 'boxes' => 'box',
+            'sck' => 'sack', 'sack' => 'sack', 'sacks' => 'sack',
+            'bag' => 'bag', 'bags' => 'bag', 'roll' => 'roll', 'rolls' => 'roll',
+            'set' => 'set', 'sets' => 'set', 'pack' => 'pack', 'packs' => 'pack',
+            'bundle' => 'bundle', 'bundles' => 'bundle', 'can' => 'can', 'cans' => 'can',
+            'bottle' => 'bottle', 'bottles' => 'bottle', 'tube' => 'tube', 'tubes' => 'tube',
+            'sheet' => 'sheet', 'sheets' => 'sheet', 'board' => 'board', 'boards' => 'board',
+            'gallon' => 'gallon', 'gallons' => 'gallon', 'length' => 'length', 'lengths' => 'length',
+        ];
+
+        return $aliases[$key] ?? ($key !== '' ? $key : 'piece');
+    }
+
+    /**
      * Cashier-safe product catalog for the POS screen.
      *
      * BRD (POS): "The system shall allow the user to search for an item by its
@@ -52,16 +92,27 @@ class PosCheckoutController extends Controller
             ->where('is_active', true)
             // reorder_threshold is included because the POS stock badge needs it to
             // show the same low/out-of-stock styling as the Admin inventory list.
-            ->select(['id', 'name', 'sku', 'category', 'price', 'current_stock', 'reorder_threshold', 'updated_at'])
+            // The receiving-unit metadata is included so the POS can state, per
+            // row, which unit of measure is actually being sold.
+            ->select([
+                'id', 'name', 'sku', 'category', 'price', 'current_stock',
+                'reorder_threshold', 'receiving_unit', 'pieces_per_receiving_unit',
+                'updated_at',
+            ])
             // Most recently added-or-updated products first, consistent with the
             // Admin tables: a newly stocked or newly added item floats to the
             // top so cashiers immediately see what changed in the catalog.
             ->orderByDesc('updated_at');
 
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'ilike', '%'.$search.'%')
-                    ->orWhere('sku', 'ilike', '%'.$search.'%');
+            // LIKE instead of ILIKE: PostgreSQL's LIKE is already
+            // case-insensitive for ASCII, and ILIKE is a hard syntax error on
+            // MySQL/SQLite. One portable statement, no driver branching.
+            $like = '%'.$search.'%';
+
+            $query->where(function ($q) use ($search, $like) {
+                $q->where('name', 'LIKE', $like)
+                    ->orWhere('sku', 'LIKE', $like);
 
                 if (ctype_digit($search)) {
                     $q->orWhere('id', (int) $search);
@@ -69,7 +120,40 @@ class PosCheckoutController extends Controller
             });
         }
 
-        return response()->json($query->get());
+        return response()->json($query->get()->map(fn (Product $product) => $this->formatCatalogProduct($product)));
+    }
+
+    /**
+     * Shape a product row for the POS: cashier-safe fields plus the unit of
+     * measure actually being sold. Shared by the catalog endpoint and the
+     * checkout response (so the UI can update stock without a reload).
+     */
+    private function formatCatalogProduct(Product $product): array
+    {
+        $piecesPerUnit = (int) ($product->pieces_per_receiving_unit ?: 1);
+        $receivingUnit = trim((string) ($product->receiving_unit ?: '')) ?: 'piece';
+
+        // What the cashier hands over is the base stock unit, because
+        // current_stock and price are both kept per base unit. When the
+        // receiving unit packs several pieces (1 box = 10), the base unit is
+        // the piece; when it is already the base unit (1 kilo = 1), it is
+        // sold as-is. This is the "unit of measure" shown on the POS.
+        $sellUnit = $this->unitWord($piecesPerUnit > 1 ? 'piece' : $receivingUnit);
+
+        return [
+            'id' => $product->id,
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'category' => $product->category,
+            'price' => $product->price,
+            'current_stock' => $product->current_stock,
+            'reorder_threshold' => $product->reorder_threshold,
+            'updated_at' => $product->updated_at,
+            'receiving_unit' => $this->unitWord($receivingUnit),
+            'pieces_per_receiving_unit' => $piecesPerUnit,
+            // Always a complete word ("piece", "kilogram") — never "pc"/"kg".
+            'sell_unit' => $sellUnit,
+        ];
     }
 
     /**
@@ -184,6 +268,14 @@ class PosCheckoutController extends Controller
                 'payment_amount' => $paymentAmount,
                 'change_amount' => $changeAmount,
                 'change' => $changeAmount,
+                // Post-sale stock snapshot in the same shape as the catalog, so
+                // the POS can refresh its product table the instant the sale
+                // completes instead of waiting for a page reload.
+                'products' => Product::query()
+                    ->whereIn('id', array_column($saleItemsData, 'product_id'))
+                    ->get()
+                    ->map(fn (Product $product) => $this->formatCatalogProduct($product))
+                    ->all(),
             ], 200);
         });
     }

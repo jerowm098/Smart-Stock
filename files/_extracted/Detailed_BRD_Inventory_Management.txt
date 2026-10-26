@@ -1,0 +1,171 @@
+Detailed BRD: Inventory Management
+Overview
+The Inventory Monitoring module is the central command center for the hardware store owner (Admin).
+It provides real-time visibility into the current stock levels of all products, tools, and materials. Beyond
+simple tracking, this module actively works to prevent stockouts by analyzing sales velocity to generate
+automated restocking suggestions. It also provides the necessary tools to manage the product catalog,
+update pricing, and make manual adjustments for lost or damaged goods.
+Scope
+Viewing a comprehensive master list of all hardware items and current stock levels
+Adding new products to the system catalog (defining name, ID, unit price, and initial stock)
+Editing existing product details or deactivating discontinued items
+Manual stock adjustments (adding restocked deliveries or deducting damaged/lost items)
+Automated low-stock visual indicators
+Demand forecasting and automated order suggestions based on recent sales trends
+Out-of-Scope
+Automated Purchase Order (PO) generation sent directly to external suppliers
+Multi-warehouse or multi-branch inventory syncing
+Supplier database management or price comparison tools
+Barcode generation and printing
+Functional Requirements
+The system shall
+display a master
+inventory list
+detailing item
+name, current
+stock quantity,
+and unit price.
+Admin Must Core
+requirement for
+monitoring what
+is physically
+available in the
+store.
+Requirement Actor Priority Rationale
+
+The system shall
+allow the user to
+add new
+hardware items
+to the database,
+specifying a
+unique ID, name,
+price, and
+starting quantity.
+Admin Must Allows the store
+to expand its
+catalog as they
+source new
+products.
+The system shall
+allow the user to
+manually adjust
+the stock
+quantity of an
+existing item
+(e.g., logging
+new deliveries or
+deducting
+damaged
+goods).
+Admin Must Ensures the
+digital system
+can be corrected
+to match
+physical stock
+audits.
+The system shall
+display a distinct
+visual alert (e.g.,
+a red highlight)
+for any item
+whose stock
+drops below a
+predefined
+threshold (e.g., <
+10 units).
+System Must Provide
+immediate
+warning for
+critically low
+items before
+they run out.
+
+Non-Functional Requirements
+The system shall
+generate "Order
+Suggestions"
+detailing which
+items to buy and
+in what
+quantities,
+calculated by
+analyzing the
+demand for that
+item.
+System Must Satisfies the
+client's core
+requirement to
+automate
+demand
+forecasting.
+The system shall
+allow the user to
+update the
+selling price of
+existing items.
+Admin Should Prices fluctuate,
+and the Admin
+needs control
+over the catalog
+pricing.
+The system shall
+restrict all
+access to this
+module; it must
+be completely
+inaccessible to
+accounts with
+the Staff role.
+System Must Enforces the
+strict 2-tier role
+security policy.
+Security Direct URL navigation to the
+inventory dashboard by an
+unauthenticated or Staff-level user
+shall result in an immediate redirect
+to the login or POS screen.
+Category Requirement
+
+Constraints
+The Demand Forecasting formula relies strictly on historical sales data recorded within SMART-
+STOCK; it cannot pull external market trends.
+No automatic supplier purchasing; the Admin must physically place the orders based on the system's
+suggestions.
+Limitations
+The accuracy of the inventory entirely depends on the staffʼs diligence in ringing up items correctly at
+the POS and the Admin consistently logging new deliveries.
+Assumptions
+The store owner (Admin) will perform periodic physical inventory counts to ensure the physical stock
+matches the system's digital records.
+The business operates on a standard First-In-First-Out (FIFO) retail model, and individual product
+expiration dates (like paint) do not need to be rigorously tracked by the system.
+Requirements Model
+Performance The master inventory list must load
+and render within 3.0 seconds, even
+if the database contains over 1,000
+distinct hardware items.
+Usability The master list must include a
+persistent search bar and column
+sorting (e.g., sort by lowest stock
+first) without requiring page reloads.
+Reliability The Demand Forecasting algorithm
+shall run as a nightly scheduled task
+(or background process) so that
+loading the suggestions page does
+not slow down the application.
+
+Use Case Diagram
+Business rules
+Low Stock Threshold: Stock Quantity <= 10.
+Demand Suggestion Trigger: If (Sales Demand over 30 days) > (Current Stock), add to Suggested
+Order List.
+Prices must be positive numerical values.
+Activity Diagram
+Manual Stock Adjustment Workflow
+
+
+State model
+Item Stock Lifecycle
+
+

@@ -24,7 +24,7 @@ Ginagamit natin ang **3 layers** sa loob ng isang container:
 | **PHP-FPM** | Nagpapatakbo ng Laravel PHP code (may `pdo_pgsql`) | [`docker/php/www.conf`](docker/php/www.conf) |
 | **Supervisor** | Process manager — parehong pinapatakbo ang Nginx + PHP-FPM sa iisang container | [`docker/supervisor/supervisord.conf`](docker/supervisor/supervisord.conf) |
 
-> **Database:** Supabase PostgreSQL only (`DB_CONNECTION=pgsql`). Walang SQLite file sa local o prod. Ang SQLite config sa [`config/database.php`](config/database.php) ay testing only (`phpunit.xml` memory).
+> **Database:** Production ay Supabase PostgreSQL only (`DB_CONNECTION=pgsql`). Local development ay maaaring XAMPP MariaDB (`DB_CONNECTION=mysql`, `DB_DATABASE=smartstock_db`) — gamitin ang `php artisan db:copy-from-supabase` para kopyahin ang data pababa. Walang SQLite file sa local o prod. Ang SQLite config sa [`config/database.php`](config/database.php) ay testing only (`phpunit.xml` memory).
 
 ---
 

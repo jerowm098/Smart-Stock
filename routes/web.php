@@ -31,6 +31,10 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middl
 Route::post('/api/auth/login', [AuthController::class, 'apiLogin'])->name('api.auth.login')->middleware('guest');
 Route::post('/api/auth/logout', [AuthController::class, 'apiLogout'])->name('api.auth.logout')->middleware('auth');
 
+// SPA bootstrap: returns the signed-in user (or null) and sets the
+// XSRF-TOKEN cookie before the frontend's first POST.
+Route::get('/api/auth/user', [AuthController::class, 'apiUser'])->name('api.auth.user');
+
 // Public homepage (accessible to guests and authenticated users)
 Route::get('/', fn () => redirect()->route('home'));
 Route::get('/home', [HomeController::class, 'index'])->name('home');

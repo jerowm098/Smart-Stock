@@ -1,0 +1,672 @@
+<mxfile host="65bd71144e">
+    <diagram id="upd1" name="Supabase Update Log">
+        <mxGraphModel dx="1131" dy="1018" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="upd1t" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=15;fontStyle=1;fontColor=#1A1A1A;" value="SMART-STOCK - SUPABASE CONFIGURATION UPDATE LOG" vertex="1">
+                    <mxGeometry height="26" width="770" x="40" y="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1s" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#4D4D4D;" value="Every change to the Supabase project, dated and attributable" vertex="1">
+                    <mxGeometry height="18" width="770" x="40" y="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1cap" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#1A1A1A;strokeColor=none;fillColor=none;" value="SUPABASE CONFIGURATION UPDATE LOG" vertex="1">
+                    <mxGeometry height="22" width="770" x="40" y="88" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r0c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="#" vertex="1">
+                    <mxGeometry height="36" width="30" x="40" y="114" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r0c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Date" vertex="1">
+                    <mxGeometry height="36" width="96" x="70" y="114" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r0c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Change" vertex="1">
+                    <mxGeometry height="36" width="180" x="166" y="114" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r0c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Affected Environment" vertex="1">
+                    <mxGeometry height="36" width="98" x="346" y="114" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r0c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Reason" vertex="1">
+                    <mxGeometry height="36" width="242" x="444" y="114" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r0c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Verified By" vertex="1">
+                    <mxGeometry height="36" width="124" x="686" y="114" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r1c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="1" vertex="1">
+                    <mxGeometry height="36" width="30" x="40" y="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r1c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="96" x="70" y="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r1c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Project provisioned on Supabase free tier" vertex="1">
+                    <mxGeometry height="36" width="180" x="166" y="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r1c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="All" vertex="1">
+                    <mxGeometry height="36" width="98" x="346" y="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r1c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Base database created for the capstone" vertex="1">
+                    <mxGeometry height="36" width="242" x="444" y="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r1c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="124" x="686" y="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r2c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="2" vertex="1">
+                    <mxGeometry height="36" width="30" x="40" y="186" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r2c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="96" x="70" y="186" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r2c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Engine set to PostgreSQL, pgsql driver" vertex="1">
+                    <mxGeometry height="36" width="180" x="166" y="186" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r2c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="All" vertex="1">
+                    <mxGeometry height="36" width="98" x="346" y="186" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r2c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Supabase is primary; SQLite is testing-only" vertex="1">
+                    <mxGeometry height="36" width="242" x="444" y="186" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r2c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="124" x="686" y="186" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r3c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="3" vertex="1">
+                    <mxGeometry height="36" width="30" x="40" y="222" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r3c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="96" x="70" y="222" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r3c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Supavisor pooler adopted, port 6543" vertex="1">
+                    <mxGeometry height="36" width="180" x="166" y="222" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r3c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Local, Test" vertex="1">
+                    <mxGeometry height="36" width="98" x="346" y="222" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r3c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Globe PH network is IPv4-only; direct host unreachable" vertex="1">
+                    <mxGeometry height="36" width="242" x="444" y="222" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r3c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="124" x="686" y="222" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r4c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="4" vertex="1">
+                    <mxGeometry height="36" width="30" x="40" y="258" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r4c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="96" x="70" y="258" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r4c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Migration path separated to port 5432" vertex="1">
+                    <mxGeometry height="36" width="180" x="166" y="258" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r4c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Local" vertex="1">
+                    <mxGeometry height="36" width="98" x="346" y="258" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r4c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Transaction Pooler cannot execute migrations" vertex="1">
+                    <mxGeometry height="36" width="242" x="444" y="258" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r4c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="124" x="686" y="258" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r5c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="5" vertex="1">
+                    <mxGeometry height="36" width="30" x="40" y="294" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r5c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="96" x="70" y="294" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r5c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="DB_SSLMODE=require set on all environments" vertex="1">
+                    <mxGeometry height="36" width="180" x="166" y="294" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r5c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="All" vertex="1">
+                    <mxGeometry height="36" width="98" x="346" y="294" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r5c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Supabase requires TLS for pooled connections" vertex="1">
+                    <mxGeometry height="36" width="242" x="444" y="294" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r5c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="124" x="686" y="294" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r6c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="6" vertex="1">
+                    <mxGeometry height="36" width="30" x="40" y="330" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r6c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="96" x="70" y="330" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r6c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="First daily snapshot cycle observed" vertex="1">
+                    <mxGeometry height="36" width="180" x="166" y="330" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r6c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Test" vertex="1">
+                    <mxGeometry height="36" width="98" x="346" y="330" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r6c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Confirms Layer 1 backup is active" vertex="1">
+                    <mxGeometry height="36" width="242" x="444" y="330" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r6c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="124" x="686" y="330" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r7c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="7" vertex="1">
+                    <mxGeometry height="36" width="30" x="40" y="366" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r7c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="96" x="70" y="366" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r7c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="First JSON dump executed via backup:run" vertex="1">
+                    <mxGeometry height="36" width="180" x="166" y="366" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r7c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Test" vertex="1">
+                    <mxGeometry height="36" width="98" x="346" y="366" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r7c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Confirms Layer 2 backup is active" vertex="1">
+                    <mxGeometry height="36" width="242" x="444" y="366" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r7c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="36" width="124" x="686" y="366" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r8c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="8" vertex="1">
+                    <mxGeometry height="26" width="30" x="40" y="402" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r8c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="26" width="96" x="70" y="402" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r8c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="First restore test completed" vertex="1">
+                    <mxGeometry height="26" width="180" x="166" y="402" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r8c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Test" vertex="1">
+                    <mxGeometry height="26" width="98" x="346" y="402" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r8c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Snapshot proven recoverable, not assumed" vertex="1">
+                    <mxGeometry height="26" width="242" x="444" y="402" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r8c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="26" width="124" x="686" y="402" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r9c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="9" vertex="1">
+                    <mxGeometry height="26" width="30" x="40" y="428" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r9c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="26" width="96" x="70" y="428" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r9c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________________" vertex="1">
+                    <mxGeometry height="26" width="180" x="166" y="428" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r9c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="________" vertex="1">
+                    <mxGeometry height="26" width="98" x="346" y="428" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r9c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________________________" vertex="1">
+                    <mxGeometry height="26" width="242" x="444" y="428" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r9c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="26" width="124" x="686" y="428" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r10c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="10" vertex="1">
+                    <mxGeometry height="26" width="30" x="40" y="454" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r10c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="26" width="96" x="70" y="454" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r10c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________________" vertex="1">
+                    <mxGeometry height="26" width="180" x="166" y="454" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r10c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="________" vertex="1">
+                    <mxGeometry height="26" width="98" x="346" y="454" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r10c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________________________" vertex="1">
+                    <mxGeometry height="26" width="242" x="444" y="454" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r10c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="26" width="124" x="686" y="454" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r11c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="11" vertex="1">
+                    <mxGeometry height="26" width="30" x="40" y="480" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r11c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="26" width="96" x="70" y="480" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r11c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________________" vertex="1">
+                    <mxGeometry height="26" width="180" x="166" y="480" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r11c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="________" vertex="1">
+                    <mxGeometry height="26" width="98" x="346" y="480" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r11c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________________________" vertex="1">
+                    <mxGeometry height="26" width="242" x="444" y="480" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r11c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="26" width="124" x="686" y="480" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r12c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="12" vertex="1">
+                    <mxGeometry height="26" width="30" x="40" y="506" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r12c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="26" width="96" x="70" y="506" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r12c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________________" vertex="1">
+                    <mxGeometry height="26" width="180" x="166" y="506" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r12c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="________" vertex="1">
+                    <mxGeometry height="26" width="98" x="346" y="506" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r12c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________________________" vertex="1">
+                    <mxGeometry height="26" width="242" x="444" y="506" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1r12c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="26" width="124" x="686" y="506" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t1bot" parent="1" style="rounded=0;html=1;fillColor=none;strokeColor=none;" value="" vertex="1">
+                    <mxGeometry height="1" width="770" x="40" y="532" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2cap" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#1A1A1A;strokeColor=none;fillColor=none;" value="SUPABASE CONNECTION PATHS" vertex="1">
+                    <mxGeometry height="22" width="770" x="40" y="567" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r0c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Path" vertex="1">
+                    <mxGeometry height="36" width="72" x="40" y="593" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r0c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Host" vertex="1">
+                    <mxGeometry height="36" width="186" x="112" y="593" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r0c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Port" vertex="1">
+                    <mxGeometry height="36" width="40" x="298" y="593" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r0c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Protocol" vertex="1">
+                    <mxGeometry height="36" width="54" x="338" y="593" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r0c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Used By" vertex="1">
+                    <mxGeometry height="36" width="146" x="392" y="593" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r0c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Rule" vertex="1">
+                    <mxGeometry height="36" width="272" x="538" y="593" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r1c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Runtime" vertex="1">
+                    <mxGeometry height="50" width="72" x="40" y="629" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r1c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Supavisor Transaction Pooler aws-0-ap-REGION.pooler.supabase.com" vertex="1">
+                    <mxGeometry height="50" width="186" x="112" y="629" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r1c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="6543" vertex="1">
+                    <mxGeometry height="50" width="40" x="298" y="629" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r1c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="IPv4" vertex="1">
+                    <mxGeometry height="50" width="54" x="338" y="629" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r1c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Test and Production runtime on Render" vertex="1">
+                    <mxGeometry height="50" width="146" x="392" y="629" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r1c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Default path for all application traffic" vertex="1">
+                    <mxGeometry height="50" width="272" x="538" y="629" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r2c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Migration" vertex="1">
+                    <mxGeometry height="36" width="72" x="40" y="679" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r2c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Supavisor Session Pooler (same pooler host)" vertex="1">
+                    <mxGeometry height="36" width="186" x="112" y="679" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r2c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="5432" vertex="1">
+                    <mxGeometry height="36" width="40" x="298" y="679" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r2c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="IPv4" vertex="1">
+                    <mxGeometry height="36" width="54" x="338" y="679" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r2c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="php artisan migrate only" vertex="1">
+                    <mxGeometry height="36" width="146" x="392" y="679" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r2c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Port 6543 cannot execute migrations" vertex="1">
+                    <mxGeometry height="36" width="272" x="538" y="679" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r3c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Direct" vertex="1">
+                    <mxGeometry height="26" width="72" x="40" y="715" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r3c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="db.PROJECTREF.supabase.co" vertex="1">
+                    <mxGeometry height="26" width="186" x="112" y="715" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r3c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="5432" vertex="1">
+                    <mxGeometry height="26" width="40" x="298" y="715" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r3c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="IPv6" vertex="1">
+                    <mxGeometry height="26" width="54" x="338" y="715" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r3c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Not currently used" vertex="1">
+                    <mxGeometry height="26" width="146" x="392" y="715" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2r3c5" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Unreachable from Globe PH IPv4 network" vertex="1">
+                    <mxGeometry height="26" width="272" x="538" y="715" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t2bot" parent="1" style="rounded=0;html=1;fillColor=none;strokeColor=none;" value="" vertex="1">
+                    <mxGeometry height="1" width="770" x="40" y="741" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3cap" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#1A1A1A;strokeColor=none;fillColor=none;" value="DATA RESIDENCY BY ENVIRONMENT" vertex="1">
+                    <mxGeometry height="22" width="770" x="40" y="776" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r0c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Environment" vertex="1">
+                    <mxGeometry height="26" width="104" x="40" y="802" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r0c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Database" vertex="1">
+                    <mxGeometry height="26" width="168" x="144" y="802" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r0c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Data State" vertex="1">
+                    <mxGeometry height="26" width="146" x="312" y="802" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r0c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Who Writes" vertex="1">
+                    <mxGeometry height="26" width="166" x="458" y="802" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r0c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Reset Method" vertex="1">
+                    <mxGeometry height="26" width="186" x="624" y="802" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r1c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Local" vertex="1">
+                    <mxGeometry height="26" width="104" x="40" y="828" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r1c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Supabase developer project" vertex="1">
+                    <mxGeometry height="26" width="168" x="144" y="828" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r1c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Seeded, resettable" vertex="1">
+                    <mxGeometry height="26" width="146" x="312" y="828" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r1c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Developer only" vertex="1">
+                    <mxGeometry height="26" width="166" x="458" y="828" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r1c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Re-run seeders" vertex="1">
+                    <mxGeometry height="26" width="186" x="624" y="828" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r2c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Test" vertex="1">
+                    <mxGeometry height="26" width="104" x="40" y="854" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r2c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Supabase shared project" vertex="1">
+                    <mxGeometry height="26" width="168" x="144" y="854" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r2c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Live shared data" vertex="1">
+                    <mxGeometry height="26" width="146" x="312" y="854" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r2c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Developers via auto-deploy" vertex="1">
+                    <mxGeometry height="26" width="166" x="458" y="854" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r2c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Manual reseed, coordinated" vertex="1">
+                    <mxGeometry height="26" width="186" x="624" y="854" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r3c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Staging" vertex="1">
+                    <mxGeometry height="26" width="104" x="40" y="880" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r3c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Not yet provisioned" vertex="1">
+                    <mxGeometry height="26" width="168" x="144" y="880" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r3c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Not applicable" vertex="1">
+                    <mxGeometry height="26" width="146" x="312" y="880" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r3c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Not applicable" vertex="1">
+                    <mxGeometry height="26" width="166" x="458" y="880" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r3c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Not applicable" vertex="1">
+                    <mxGeometry height="26" width="186" x="624" y="880" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r4c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Production" vertex="1">
+                    <mxGeometry height="26" width="104" x="40" y="906" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r4c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Supabase shared project" vertex="1">
+                    <mxGeometry height="26" width="168" x="144" y="906" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r4c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Live shared data" vertex="1">
+                    <mxGeometry height="26" width="146" x="312" y="906" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r4c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Team via approved deploy" vertex="1">
+                    <mxGeometry height="26" width="166" x="458" y="906" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3r4c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Snapshot restore only" vertex="1">
+                    <mxGeometry height="26" width="186" x="624" y="906" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1_t3bot" parent="1" style="rounded=0;html=1;fillColor=none;strokeColor=none;" value="" vertex="1">
+                    <mxGeometry height="1" width="770" x="40" y="932" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd1n" parent="1" style="rounded=1;arcSize=6;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#4D4D4D;strokeWidth=1;dashed=1;fontSize=9;fontColor=#1A1A1A;spacingLeft=8;spacingRight=8;" value="&lt;b&gt;Rule:&lt;/b&gt; no row in the Update Log is left blank. If a Supabase value changed and it is not listed there, it was an undocumented change and must be corrected here. A configuration change that nobody announced looks exactly like a bug." vertex="1">
+                    <mxGeometry height="46" width="770" x="40" y="973" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram id="upd2" name="Supabase Connections and Data">
+        <mxGraphModel dx="1131" dy="1018" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="upd2t" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=15;fontStyle=1;fontColor=#1A1A1A;" value="SMART-STOCK - SUPABASE REFERENCE TABLES" vertex="1">
+                    <mxGeometry height="26" width="770" x="40" y="20" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2s" parent="1" style="text;html=1;align=center;verticalAlign=middle;fontSize=10;fontColor=#4D4D4D;" value="Connections, data residency, limits, backups, and access" vertex="1">
+                    <mxGeometry height="18" width="770" x="40" y="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4cap" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#1A1A1A;strokeColor=none;fillColor=none;" value="FREE-TIER LIMITS WORTH KNOWING" vertex="1">
+                    <mxGeometry height="22" width="770" x="40" y="88" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r0c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Limit" vertex="1">
+                    <mxGeometry height="26" width="142" x="40" y="114" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r0c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Value" vertex="1">
+                    <mxGeometry height="26" width="124" x="182" y="114" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r0c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="What Happens at the Limit" vertex="1">
+                    <mxGeometry height="26" width="214" x="306" y="114" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r0c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Mitigation in Smart-Stock" vertex="1">
+                    <mxGeometry height="26" width="290" x="520" y="114" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r1c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Database storage" vertex="1">
+                    <mxGeometry height="36" width="142" x="40" y="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r1c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="1 GB" vertex="1">
+                    <mxGeometry height="36" width="124" x="182" y="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r1c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Transaction history and inserts begin failing" vertex="1">
+                    <mxGeometry height="36" width="214" x="306" y="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r1c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="No file uploads stored in the database; dumps pruned" vertex="1">
+                    <mxGeometry height="36" width="290" x="520" y="140" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r2c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Connection cap" vertex="1">
+                    <mxGeometry height="36" width="142" x="40" y="176" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r2c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Provider-defined, low" vertex="1">
+                    <mxGeometry height="36" width="124" x="182" y="176" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r2c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Requests queue or time out" vertex="1">
+                    <mxGeometry height="36" width="214" x="306" y="176" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r2c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Supavisor pooler on 6543; no connection opened per request" vertex="1">
+                    <mxGeometry height="36" width="290" x="520" y="176" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r3c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Transaction Pooler" vertex="1">
+                    <mxGeometry height="50" width="142" x="40" y="212" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r3c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="No prepared-statement session state" vertex="1">
+                    <mxGeometry height="50" width="124" x="182" y="212" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r3c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="php artisan migrate fails partway through" vertex="1">
+                    <mxGeometry height="50" width="214" x="306" y="212" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r3c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Migrations use Session Pooler 5432" vertex="1">
+                    <mxGeometry height="50" width="290" x="520" y="212" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r4c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Backup retention" vertex="1">
+                    <mxGeometry height="36" width="142" x="40" y="262" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r4c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="7 days" vertex="1">
+                    <mxGeometry height="36" width="124" x="182" y="262" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r4c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Data older than 7 days recoverable only from Layer 2" vertex="1">
+                    <mxGeometry height="36" width="214" x="306" y="262" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r4c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="JSON dump run per milestone" vertex="1">
+                    <mxGeometry height="36" width="290" x="520" y="262" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r5c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Monthly cost" vertex="1">
+                    <mxGeometry height="26" width="142" x="40" y="298" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r5c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="0 USD" vertex="1">
+                    <mxGeometry height="26" width="124" x="182" y="298" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r5c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Not applicable" vertex="1">
+                    <mxGeometry height="26" width="214" x="306" y="298" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4r5c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="All environments on free tiers" vertex="1">
+                    <mxGeometry height="26" width="290" x="520" y="298" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t4bot" parent="1" style="rounded=0;html=1;fillColor=none;strokeColor=none;" value="" vertex="1">
+                    <mxGeometry height="1" width="770" x="40" y="324" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5cap" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#1A1A1A;strokeColor=none;fillColor=none;" value="BACKUP AND RESTORE COVERAGE" vertex="1">
+                    <mxGeometry height="22" width="770" x="40" y="359" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r0c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Attribute" vertex="1">
+                    <mxGeometry height="26" width="162" x="40" y="385" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r0c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Value" vertex="1">
+                    <mxGeometry height="26" width="608" x="202" y="385" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r1c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Layer 1 - What" vertex="1">
+                    <mxGeometry height="26" width="162" x="40" y="411" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r1c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Supabase managed daily snapshot of the full PostgreSQL database" vertex="1">
+                    <mxGeometry height="26" width="608" x="202" y="411" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r2c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Layer 1 - Retention" vertex="1">
+                    <mxGeometry height="26" width="162" x="40" y="437" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r2c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="7 days" vertex="1">
+                    <mxGeometry height="26" width="608" x="202" y="437" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r3c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Layer 1 - Scope" vertex="1">
+                    <mxGeometry height="36" width="162" x="40" y="463" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r3c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="All tables: users, products, suppliers, sales, sale items, stock ins, stock adjustments, alerts, order suggestions" vertex="1">
+                    <mxGeometry height="36" width="608" x="202" y="463" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r4c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Layer 2 - What" vertex="1">
+                    <mxGeometry height="26" width="162" x="40" y="499" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r4c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Application-level JSON dump via php artisan backup:run" vertex="1">
+                    <mxGeometry height="26" width="608" x="202" y="499" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r5c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Layer 2 - Location" vertex="1">
+                    <mxGeometry height="26" width="162" x="40" y="525" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r5c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="storage/app/private/backups - outside the public web root" vertex="1">
+                    <mxGeometry height="26" width="608" x="202" y="525" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r6c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Layer 2 - Access" vertex="1">
+                    <mxGeometry height="26" width="162" x="40" y="551" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r6c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Admin &gt; Backups page, authenticated roles only" vertex="1">
+                    <mxGeometry height="26" width="608" x="202" y="551" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r7c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Restore procedure" vertex="1">
+                    <mxGeometry height="26" width="162" x="40" y="577" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r7c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Restore the snapshot into a scratch database, then verify a seeded account and its related records are intact" vertex="1">
+                    <mxGeometry height="26" width="608" x="202" y="577" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r8c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Restore tested" vertex="1">
+                    <mxGeometry height="26" width="162" x="40" y="603" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r8c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Once per milestone, before the sprint review" vertex="1">
+                    <mxGeometry height="26" width="608" x="202" y="603" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r9c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Restore duration" vertex="1">
+                    <mxGeometry height="26" width="162" x="40" y="629" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r9c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____ minutes (record the actual time taken)" vertex="1">
+                    <mxGeometry height="26" width="608" x="202" y="629" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r10c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Restore result" vertex="1">
+                    <mxGeometry height="26" width="162" x="40" y="655" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r10c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Passed / Failed" vertex="1">
+                    <mxGeometry height="26" width="608" x="202" y="655" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r11c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Witnessed by" vertex="1">
+                    <mxGeometry height="26" width="162" x="40" y="681" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5r11c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="____________" vertex="1">
+                    <mxGeometry height="26" width="608" x="202" y="681" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t5bot" parent="1" style="rounded=0;html=1;fillColor=none;strokeColor=none;" value="" vertex="1">
+                    <mxGeometry height="1" width="770" x="40" y="707" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6cap" parent="1" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#1A1A1A;strokeColor=none;fillColor=none;" value="SUPABASE ACCESS AND OWNERSHIP" vertex="1">
+                    <mxGeometry height="22" width="770" x="40" y="742" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r0c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Role" vertex="1">
+                    <mxGeometry height="26" width="124" x="40" y="768" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r0c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Dashboard Access" vertex="1">
+                    <mxGeometry height="26" width="176" x="164" y="768" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r0c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="SQL Access" vertex="1">
+                    <mxGeometry height="26" width="166" x="340" y="768" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r0c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Backup Restore" vertex="1">
+                    <mxGeometry height="26" width="138" x="506" y="768" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r0c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=11;fontStyle=1;fontColor=#FFFFFF;fillColor=#4D4D4D;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Can Run Migrations" vertex="1">
+                    <mxGeometry height="26" width="166" x="644" y="768" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r1c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Developer" vertex="1">
+                    <mxGeometry height="36" width="124" x="40" y="794" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r1c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Read/write on developer project" vertex="1">
+                    <mxGeometry height="36" width="176" x="164" y="794" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r1c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Yes, developer project only" vertex="1">
+                    <mxGeometry height="36" width="166" x="340" y="794" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r1c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Developer project only" vertex="1">
+                    <mxGeometry height="36" width="138" x="506" y="794" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r1c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Yes" vertex="1">
+                    <mxGeometry height="36" width="166" x="644" y="794" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r2c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Developer / QA" vertex="1">
+                    <mxGeometry height="26" width="124" x="40" y="830" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r2c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Read on Test project" vertex="1">
+                    <mxGeometry height="26" width="176" x="164" y="830" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r2c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Read-only" vertex="1">
+                    <mxGeometry height="26" width="166" x="340" y="830" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r2c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="No" vertex="1">
+                    <mxGeometry height="26" width="138" x="506" y="830" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r2c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="No" vertex="1">
+                    <mxGeometry height="26" width="166" x="644" y="830" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r3c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Project Manager" vertex="1">
+                    <mxGeometry height="36" width="124" x="40" y="856" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r3c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Read-only, through the application UI" vertex="1">
+                    <mxGeometry height="36" width="176" x="164" y="856" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r3c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="No" vertex="1">
+                    <mxGeometry height="36" width="166" x="340" y="856" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r3c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="No" vertex="1">
+                    <mxGeometry height="36" width="138" x="506" y="856" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r3c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#FFFFFF;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="No" vertex="1">
+                    <mxGeometry height="36" width="166" x="644" y="856" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r4c0" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="System Analyst" vertex="1">
+                    <mxGeometry height="36" width="124" x="40" y="892" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r4c1" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="Read-only, through the application UI" vertex="1">
+                    <mxGeometry height="36" width="176" x="164" y="892" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r4c2" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="No" vertex="1">
+                    <mxGeometry height="36" width="166" x="340" y="892" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r4c3" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="No" vertex="1">
+                    <mxGeometry height="36" width="138" x="506" y="892" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6r4c4" parent="1" style="rounded=0;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fontSize=10;fontColor=#1A1A1A;fillColor=#F7F9FB;strokeColor=#C8C8C8;strokeWidth=1;spacingLeft=6;spacingRight=4;spacingTop=1;spacingBottom=1;" value="No" vertex="1">
+                    <mxGeometry height="36" width="166" x="644" y="892" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2_t6bot" parent="1" style="rounded=0;html=1;fillColor=none;strokeColor=none;" value="" vertex="1">
+                    <mxGeometry height="1" width="770" x="40" y="928" as="geometry"/>
+                </mxCell>
+                <mxCell id="upd2n" parent="1" style="rounded=1;arcSize=6;html=1;whiteSpace=wrap;align=left;verticalAlign=middle;fillColor=#FFFFFF;strokeColor=#4D4D4D;strokeWidth=1;dashed=1;fontSize=9;fontColor=#1A1A1A;spacingLeft=8;spacingRight=8;" value="&lt;b&gt;Rule:&lt;/b&gt; no row in the Update Log is left blank. If a Supabase value changed and it is not listed there, it was an undocumented change and must be corrected here. A configuration change that nobody announced looks exactly like a bug." vertex="1">
+                    <mxGeometry height="46" width="770" x="40" y="969" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

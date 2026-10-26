@@ -190,42 +190,74 @@
             <h2>Add New Product</h2>
             <form onsubmit="handleAddProduct(event)" autocomplete="off" novalidate>
                 <div class="form-grid">
+                <!-- Product Name: dropdown of existing + "Other…" to type new -->
                 <div class="form-group">
                     <label class="field-label"><span>Product Name <span class="req">*</span></span></label>
-                    <input type="text" name="name" id="pNameM" placeholder="e.g. Adjustable Wrench" maxlength="255" autocomplete="off">
+                    <select id="pNameSelectM">
+                        <option value="">Select a product...</option>
+                    </select>
+                    <input type="hidden" name="name" id="pNameM">
                     <span class="field-error" data-error-for="pNameM"></span>
                 </div>
                 <div class="form-group">
-                    <label class="field-label"><span>SKU <span class="req">*</span></span></label>
-                    <input type="text" name="sku" id="pSkuM" placeholder="e.g. AW-001" maxlength="50" autocomplete="off">
+                    <label class="field-label" style="margin-bottom:5px">Specify New Product Name</label>
+                    <input type="text" id="pNameCustomM" placeholder="e.g. Adjustable Wrench" maxlength="255" disabled>
+                </div>
+                <!-- SKU: "Given" (auto-generate) / "Other…" to specify.
+                     Same pattern as the stock-in page's SKU / CODE field: the
+                     first option's LABEL is rewritten live to show the actual
+                     code, so the dropdown never renders as an empty box. -->
+                <div class="form-group">
+                    <label class="field-label"><span>SKU / CODE <span class="req">*</span></span></label>
+                    <select id="pSkuSelectM">
+                        <option value="given">—</option>
+                        <option value="__other__">Other…</option>
+                    </select>
+                    <input type="hidden" name="sku" id="pSkuM">
                     <span class="field-error" data-error-for="pSkuM"></span>
                 </div>
-                <div class="form-group form-group-full">
+                <div class="form-group">
+                    <label class="field-label" style="margin-bottom:5px">Specify Custom SKU</label>
+                    <input type="text" id="pSkuCustomM" placeholder="Auto-generated, or type your own" maxlength="50" disabled>
+                </div>
+                <!-- Category: existing + "Other…" to specify (side by side) -->
+                <div class="form-group">
                     <label class="field-label"><span>Category</span></label>
-                    <select name="category_select" id="pCategorySelectM" onchange="toggleCustomCategory('add', this.value)">
+                    <select id="pCategorySelectM" onchange="toggleCustomCategory('add', this.value)">
                         <option value="">Select a category</option>
                     </select>
-                    <div class="custom-category hidden" id="pCategoryCustom">
-                        <label class="custom-category-label" for="pCategoryM">Specify:</label>
-                        <input type="text" name="category" id="pCategoryM" placeholder="e.g. Hand Tools" maxlength="255" autocomplete="off">
-                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="field-label" style="margin-bottom:5px">Specify New Category</label>
+                    <input type="text" name="category" id="pCategoryM" placeholder="e.g. Hand Tools" maxlength="255" disabled>
                     <span class="field-error" data-error-for="pCategoryM"></span>
                 </div>
+                <!-- Price: "Automatic" / "Other…" to specify (side by side) -->
                 <div class="form-group">
                     <label class="field-label"><span>Price (₱) <span class="req">*</span></span></label>
-                    <input type="number" name="price" id="pPriceM" placeholder="0.00" step="0.01" min="0" inputmode="decimal" autocomplete="off">
+                    <select id="pPriceSelectM">
+                        <option value="automatic">Automatic (₱0.00)</option>
+                        <option value="__other__">Other…</option>
+                    </select>
                     <span class="form-hint">Selling price per piece, in pesos. Cannot be negative.</span>
-                    <span class="field-error" data-error-for="pPriceM"></span>
                 </div>
                 <div class="form-group">
+                    <label class="field-label" style="margin-bottom:5px">Specify Custom Price</label>
+                    <input type="number" id="pPriceCustomM" placeholder="0.00" step="0.01" min="0" disabled>
+                    <input type="hidden" name="price" id="pPriceM" value="0">
+                    <span class="field-error" data-error-for="pPriceM"></span>
+                </div>
+                <!-- Current Stock: manual input only -->
+                <div class="form-group">
                     <label class="field-label"><span>Current Stock <span class="req">*</span></span><span class="unit-tag">in pieces</span></label>
-                    <input type="number" name="current_stock" id="pStockM" placeholder="0" min="0" step="1" inputmode="numeric" autocomplete="off">
+                    <input type="number" name="current_stock" id="pStockM" placeholder="0" min="0" step="1" inputmode="numeric">
                     <span class="form-hint">How many pieces you have right now (pcs). Use 0 if out of stock.</span>
                     <span class="field-error" data-error-for="pStockM"></span>
                 </div>
-                <div class="form-group form-group-full">
+                <!-- Reorder Threshold: manual input only -->
+                <div class="form-group">
                     <label class="field-label"><span>Reorder Threshold <span class="req">*</span></span><span class="unit-tag">in pieces</span></label>
-                    <input type="number" name="reorder_threshold" id="pThresholdM" placeholder="0" min="0" step="1" inputmode="numeric" autocomplete="off">
+                    <input type="number" name="reorder_threshold" id="pThresholdM" placeholder="0" min="0" step="1" inputmode="numeric">
                     <span class="form-hint">Alert when stock drops to this number. Suggested: 20% of Current Stock.</span>
                     <span class="field-error" data-error-for="pThresholdM"></span>
                 </div>
@@ -858,6 +890,70 @@
             padding-right: 34px;
             cursor: pointer;
         }
+        /* Specify custom fields (side-by-side with their dropdowns, like stock-in page) */
+        #pNameCustomM, #pSkuCustomM, #pCategoryM, #pPriceCustomM {
+            width: 100%;
+            padding: 9px 12px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 7px;
+            color: #f8fafc;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+        #pNameCustomM:disabled, #pSkuCustomM:disabled, #pCategoryM:disabled, #pPriceCustomM:disabled {
+            opacity: 0.55;
+            cursor: default;
+            background: rgba(255,255,255,0.02);
+            color: #64748b;
+            border-color: rgba(255,255,255,0.12);
+        }
+        #pNameCustomM:disabled::placeholder, #pSkuCustomM:disabled::placeholder,
+        #pCategoryM:disabled::placeholder, #pPriceCustomM:disabled::placeholder {
+            color: #94a3b8;
+        }
+        #pNameCustomM:focus:not(:disabled), #pSkuCustomM:focus:not(:disabled),
+        #pCategoryM:focus:not(:disabled), #pPriceCustomM:focus:not(:disabled) {
+            border-color: #3b82f6;
+        }
+        body.light-theme #pNameCustomM, body.light-theme #pSkuCustomM,
+        body.light-theme #pCategoryM, body.light-theme #pPriceCustomM {
+            color: #0f172a;
+            background: #ffffff;
+            border: 1px solid rgba(15,23,42,0.14);
+        }
+        body.light-theme #pNameCustomM:disabled, body.light-theme #pSkuCustomM:disabled,
+        body.light-theme #pCategoryM:disabled, body.light-theme #pPriceCustomM:disabled {
+            color: #94a3b8;
+            background: #f1f5f9;
+            border-color: rgba(15,23,42,0.12);
+        }
+        /* The SKU / CODE display shows the exact code that will be saved, so
+           it must stay readable while locked — same look as the stock-in
+           page's locked SKU field, but without the 55% opacity wash-out. */
+        #pSkuCustomM:disabled {
+            opacity: 1;
+            cursor: default;
+            background: rgba(255,255,255,0.06);
+            border-color: rgba(255,255,255,0.14);
+            color: #e2e8f0;
+            -webkit-text-fill-color: #e2e8f0;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.02em;
+        }
+        #pSkuCustomM:disabled::placeholder {
+            color: #94a3b8;
+            -webkit-text-fill-color: #94a3b8;
+        }
+        body.light-theme #pSkuCustomM:disabled {
+            background: #f8fafc;
+            border-color: rgba(15,23,42,0.14);
+            color: #334155;
+            -webkit-text-fill-color: #334155;
+        }
         /* Open dropdown list must follow the active theme, not the OS default. */
         .modal .form-group select option { background: #1e293b; color: #e2e8f0; }
         body.light-theme .modal .form-group select option { background: #ffffff; color: #0f172a; }
@@ -988,6 +1084,7 @@
 @endpush
 
 @push('scripts')
+    @include('partials.hardware-terms')
     <script>
         // Categories resolved on the server so the modal dropdowns are complete
         // on first paint — no client fetch required to show them.
@@ -1329,13 +1426,198 @@
             return sorted;
         }
 
+        /* ===== Add Product modal =====
+           Listeners are bound once; openModal() only resets the values. They
+           used to be re-bound on every open, stacking duplicate handlers. */
+        let addFormWired = false;
+
+        // Cached "given" SKU so the code shown in the field doesn't change on
+        // every keystroke while the product name is being typed.
+        let addSkuSuggestion = { name: null, prefix: '', value: '' };
+
+        function givenSkuFor(name) {
+            const key = String(name || '').trim();
+            // Keep the code stable while the admin types: only regenerate when
+            // the 3-letter prefix would actually change (otherwise every
+            // keystroke would shuffle the code mid-typing). An empty name still
+            // yields a code (NEW-XXXXXX), exactly like the server's generateSku.
+            const prefix = (key.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 3) || 'NEW');
+            const currentPrefix = addSkuSuggestion.prefix;
+            if (addSkuSuggestion.name === key || (currentPrefix === prefix && addSkuSuggestion.value)) {
+                addSkuSuggestion.name = key;
+                return addSkuSuggestion.value;
+            }
+            addSkuSuggestion = { name: key, prefix, value: suggestSkuFromName(key) };
+            return addSkuSuggestion.value;
+        }
+
+        /** The code the product would be saved with when SKU is "Given". */
+        function currentAddSkuBase() {
+            const selectedName = document.getElementById('pNameSelectM').value;
+            const sourceName = (selectedName && selectedName !== '__other__')
+                ? selectedName
+                : document.getElementById('pNameCustomM').value;
+            return givenSkuFor(sourceName);
+        }
+
+        /**
+         * Mirrors the stock-in page's SKU / CODE pair: the first option's
+         * LABEL is rewritten live to show the actual code, and the partner
+         * input displays it locked until "Other…" is chosen for typing.
+         */
+        function refreshAddSkuField() {
+            const select = document.getElementById('pSkuSelectM');
+            const custom = document.getElementById('pSkuCustomM');
+            const hidden = document.getElementById('pSkuM');
+            if (!select || !custom || !hidden) return;
+
+            if (select.value === '__other__') {
+                // Typing mode: the field unlocks. Keep whatever was typed;
+                // pre-fill with the suggested code until it is hand-edited.
+                custom.disabled = false;
+                if (!skuTouched) custom.value = currentAddSkuBase();
+                hidden.value = custom.value.trim();
+                // The collapsed option still shows the code "Given" would use.
+                select.options[0].textContent = currentAddSkuBase() || 'Auto-generated';
+                return;
+            }
+
+            // "Given": show the code that will be used, locked for editing.
+            skuTouched = false;
+            const code = currentAddSkuBase();
+            custom.disabled = true;
+            custom.value = code;
+            hidden.value = code;
+            select.options[0].textContent = code || 'Auto-generated';
+        }
+
         function openModal() {
+            populateProductNameSelect();
             populateCategorySelects();
-            document.getElementById('pCategoryCustom').classList.add('hidden');
+            resetDropdownPair('pNameSelectM', 'pNameCustomM', 'pNameM');
+            resetDropdownPair('pSkuSelectM', 'pSkuCustomM', 'pSkuM');
+            resetDropdownPair('pPriceSelectM', 'pPriceCustomM', 'pPriceM');
+            // Price defaults to the "Automatic (₱0.00)" choice.
+            document.getElementById('pPriceSelectM').value = 'automatic';
+            document.getElementById('pPriceM').value = '0';
+            // Category specify field sits beside its dropdown: locked until
+            // "Other (create new)" is selected.
             document.getElementById('pCategoryM').value = '';
+            document.getElementById('pCategoryM').disabled = true;
             document.getElementById('pCategorySelectM').value = '';
+            // Reset auto-suggestion tracking flags.
+            skuTouched = false;
+            categoryTouched = false;
+            priceTouched = false;
+            addSkuSuggestion = { name: null, prefix: '', value: '' };
+            refreshAddSkuField();
+
+            if (!addFormWired) {
+                addFormWired = true;
+                wireAddProductForm();
+            }
+
             document.getElementById('addModal').classList.add('active');
-            document.getElementById('pNameM').focus();
+            document.getElementById('pNameSelectM').focus();
+        }
+
+        function wireAddProductForm() {
+            wireDropdownPair('pNameSelectM', 'pNameCustomM', 'pNameM');
+            wireDropdownPair('pPriceSelectM', 'pPriceCustomM', 'pPriceM', () => '0');
+
+            // SKU / CODE: "Given" shows the auto-generated (or inherited) code;
+            // "Other…" unlocks the field for a hand-typed code.
+            document.getElementById('pSkuSelectM').addEventListener('change', () => {
+                refreshAddSkuField();
+                if (document.getElementById('pSkuSelectM').value === '__other__') {
+                    document.getElementById('pSkuCustomM').focus();
+                    document.getElementById('pSkuCustomM').select();
+                }
+            });
+            document.getElementById('pSkuCustomM').addEventListener('input', () => {
+                skuTouched = true;
+                refreshAddSkuField();
+            });
+
+            // ---- Auto-suggest Category / Price from the typed product name ----
+            const pNameCustom = document.getElementById('pNameCustomM');
+            pNameCustom.addEventListener('input', () => {
+                // The "given" SKU follows the typed name.
+                refreshAddSkuField();
+
+                const name = pNameCustom.value.trim();
+                if (!name) return;
+
+                // Auto-suggest Category (skip if user hand-edited it).
+                if (!categoryTouched) {
+                    const catSuggestion = suggestCategory(name);
+                    const catInput = document.getElementById('pCategoryM');
+                    catInput.value = catSuggestion;
+                    catInput.disabled = false;
+                    const catSelect = document.getElementById('pCategorySelectM');
+                    const match = [...catSelect.options].find(o =>
+                        o.value.toLowerCase() === catSuggestion.toLowerCase());
+                    if (match) catSelect.value = catSuggestion;
+                    else catSelect.value = OTHER_CATEGORY;
+                }
+
+                // Auto-suggest Price (default to 0.00 for a new product).
+                if (!priceTouched) {
+                    const priceCustom = document.getElementById('pPriceCustomM');
+                    const priceHidden = document.getElementById('pPriceM');
+                    priceCustom.value = '0.00';
+                    priceHidden.value = '0';
+                    priceCustom.disabled = false;
+                    document.getElementById('pPriceSelectM').value = '__other__';
+                }
+            });
+
+            // Track hand-edits so auto-suggestion doesn't overwrite them.
+            document.getElementById('pCategoryM').addEventListener('input', () => {
+                categoryTouched = true;
+            });
+            document.getElementById('pPriceCustomM').addEventListener('input', () => {
+                priceTouched = true;
+            });
+
+            // When an existing product is chosen from the name dropdown,
+            // pre-fill SKU, Category, and Price from that product's data.
+            document.getElementById('pNameSelectM').addEventListener('change', () => {
+                const selectedName = document.getElementById('pNameSelectM').value;
+                if (!selectedName || selectedName === '__other__') {
+                    if (selectedName === '__other__') {
+                        skuTouched = false;
+                        categoryTouched = false;
+                        priceTouched = false;
+                    }
+                    refreshAddSkuField();
+                    return;
+                }
+                const product = allProducts.find(p => p.name === selectedName);
+                if (!product) return;
+
+                if (!skuTouched) {
+                    // Its catalog SKU becomes the "given" code.
+                    document.getElementById('pSkuSelectM').value = 'given';
+                    refreshAddSkuField();
+                }
+                if (!categoryTouched && product.category) {
+                    document.getElementById('pCategoryM').value = product.category;
+                    document.getElementById('pCategoryM').disabled = false;
+                    const catSelect = document.getElementById('pCategorySelectM');
+                    const match = [...catSelect.options].find(o =>
+                        o.value.toLowerCase() === product.category.toLowerCase());
+                    if (match) catSelect.value = product.category;
+                    else catSelect.value = OTHER_CATEGORY;
+                }
+                if (!priceTouched) {
+                    document.getElementById('pPriceCustomM').value =
+                        parseFloat(product.price || 0).toFixed(2);
+                    document.getElementById('pPriceM').value = product.price || '0';
+                    document.getElementById('pPriceCustomM').disabled = false;
+                    document.getElementById('pPriceSelectM').value = '__other__';
+                }
+            });
         }
 
         function closeModal() {
@@ -1438,8 +1720,15 @@
             if (firstInvalid) {
                 const node = document.getElementById(firstInvalid);
                 if (node) {
-                    node.focus();
-                    node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    // Hidden inputs of a dropdown+specify pair can't take focus;
+                    // send the cursor to the visible control that owns them.
+                    const focusTarget = node.type === 'hidden'
+                        ? (document.querySelector(`#${modalId} select[data-pair="${firstInvalid}"]`) ||
+                           node.closest('.form-group')?.querySelector('select, input:not([type="hidden"]):not(:disabled)') ||
+                           node)
+                        : node;
+                    focusTarget.focus?.();
+                    (focusTarget === node ? node : focusTarget).scrollIntoView({ block: 'center', behavior: 'smooth' });
                 }
                 return false;
             }
@@ -1451,6 +1740,97 @@
         const EDIT_FORM_FIELDS = { name: 'eName', sku: 'eSku', category: 'eCategory', price: 'ePrice', stock: 'eStock', threshold: 'eThreshold' };
 
         const OTHER_CATEGORY = '__other__';
+
+        /* ===== Dropdown + Specify pair helpers (Add Product modal) ===== */
+
+        /** Populate the Product Name dropdown with existing products + "Other…". */
+        function populateProductNameSelect() {
+            const select = document.getElementById('pNameSelectM');
+            if (!select) return;
+            select.innerHTML = '<option value="">Select a product...</option>' +
+                allProducts.map(p =>
+                    `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)}</option>`
+                ).join('') +
+                '<option value="__other__">Other…</option>';
+        }
+
+        /** Reset a dropdown + custom input pair to a clean state. */
+        function resetDropdownPair(selectId, customId, hiddenId) {
+            const select = document.getElementById(selectId);
+            const custom = document.getElementById(customId);
+            const hidden = document.getElementById(hiddenId);
+            if (!select || !custom || !hidden) return;
+            // Reset to the FIRST option, never to ''. Assigning '' when no
+            // option carries that value leaves selectedIndex = -1, which
+            // renders the select completely blank (the transparent field bug).
+            select.selectedIndex = 0;
+            custom.value = '';
+            custom.disabled = true;
+            hidden.value = '';
+        }
+
+        /** Wire up a dropdown + custom input pair: choosing "Other…" unlocks the input. */
+        function wireDropdownPair(selectId, customId, hiddenId, autoValue) {
+            const select = document.getElementById(selectId);
+            const custom = document.getElementById(customId);
+            const hidden = document.getElementById(hiddenId);
+            if (!select || !custom || !hidden) return;
+
+            select.addEventListener('change', () => {
+                const isOther = select.value === '__other__';
+                custom.disabled = !isOther;
+                if (!isOther) {
+                    custom.value = '';
+                    hidden.value = autoValue ? autoValue(select.value) : select.value;
+                } else {
+                    hidden.value = '';
+                    custom.focus();
+                }
+            });
+
+            custom.addEventListener('input', () => {
+                hidden.value = custom.value.trim();
+            });
+        }
+
+        /** Resolve the final value for a dropdown + specify pair. */
+        function resolveDropdownPair(selectId, customId, hiddenId, autoValue) {
+            const select = document.getElementById(selectId);
+            const custom = document.getElementById(customId);
+            const hidden = document.getElementById(hiddenId);
+            if (!select || !custom || !hidden) return '';
+
+            if (select.value === '__other__') {
+                return custom.value.trim();
+            }
+            return autoValue ? autoValue(select.value) : select.value;
+        }
+
+        /**
+         * Auto-generate a SKU from a product name (mirrors the server's
+         * generateSku). The prefix comes from the ENGLISH meaning of the name,
+         * so "Pako" yields "NAI-…" rather than "PAK-…".
+         */
+        function suggestSkuFromName(name) {
+            return window.SmartStockLexicon.suggestSku(name);
+        }
+
+        // Track whether the admin hand-edited the auto-suggested SKU / Category / Price,
+        // so auto-suggestion never overwrites a manual entry.
+        let skuTouched = false;
+        let categoryTouched = false;
+        let priceTouched = false;
+
+        /**
+         * Recommend a category for a typed product name.
+         *
+         * Filipino entries are translated to English first, so "pako" lands in
+         * Fasteners exactly like "nail" does. Delegates to the shared lexicon
+         * used by the Stock-In page so both screens always agree.
+         */
+        function suggestCategory(name) {
+            return window.SmartStockLexicon.categoryFor(name, allProducts);
+        }
 
         /** Feeds every existing category into the add/edit category selects. */
         function populateCategorySelects() {
@@ -1469,11 +1849,14 @@
                 .map(category => `<option value="${escapeHtml(category)}">${escapeHtml(category)}</option>`)
                 .join('');
 
-            [['pCategorySelectM', 'pCategoryM', 'pCategoryCustom'], ['pCategorySelectE', 'eCategory', 'eCategoryCustom']].forEach(([selectId, inputId, wrapId]) => {
+            // Add modal: the specify field sits beside the dropdown and is
+            // locked until "Other (create new)" is picked. Edit modal still
+            // uses a collapsible wrapper under the select.
+            [['pCategorySelectM', 'pCategoryM', null], ['pCategorySelectE', 'eCategory', 'eCategoryCustom']].forEach(([selectId, inputId, wrapId]) => {
                 const select = document.getElementById(selectId);
                 const input = document.getElementById(inputId);
-                const wrap = document.getElementById(wrapId);
-                if (!select || !input || !wrap) return;
+                const wrap = wrapId ? document.getElementById(wrapId) : null;
+                if (!select || !input) return;
 
                 // Preserve what the user already had selected.
                 const existing = input.value.trim();
@@ -1490,7 +1873,12 @@
                         input.value = existing;
                     }
                 }
-                wrap.classList.toggle('hidden', select.value !== OTHER_CATEGORY);
+
+                if (wrap) {
+                    wrap.classList.toggle('hidden', select.value !== OTHER_CATEGORY);
+                } else {
+                    input.disabled = select.value !== OTHER_CATEGORY;
+                }
             });
         }
 
@@ -1500,12 +1888,28 @@
          */
         function toggleCustomCategory(mode, value) {
             const inputId = mode === 'add' ? 'pCategoryM' : 'eCategory';
-            const wrapId = mode === 'add' ? 'pCategoryCustom' : 'eCategoryCustom';
             const input = document.getElementById(inputId);
-            const wrap = document.getElementById(wrapId);
-            if (!input || !wrap) return;
+            if (!input) return;
 
-            if (value === OTHER_CATEGORY) {
+            const isOther = value === OTHER_CATEGORY;
+
+            if (mode === 'add') {
+                // Add modal: the specify input sits beside the dropdown and is
+                // simply locked/unlocked instead of being shown/hidden.
+                input.disabled = !isOther;
+                if (isOther) {
+                    input.focus();
+                } else {
+                    input.value = value;
+                    setFieldError(inputId, '');
+                }
+                return;
+            }
+
+            const wrap = document.getElementById('eCategoryCustom');
+            if (!wrap) return;
+
+            if (isOther) {
                 wrap.classList.remove('hidden');
                 input.focus();
             } else {
@@ -1534,9 +1938,19 @@
 
             const fd = new FormData(e.target);
             const data = Object.fromEntries(fd);
-            data.price = parseFloat(data.price);
+
+            // Resolve dropdown + specify pairs into the hidden inputs.
+            data.name = resolveDropdownPair('pNameSelectM', 'pNameCustomM', 'pNameM');
+            // SKU / CODE: "Given" keeps the code already shown in the field;
+            // "Other…" uses the hand-typed value.
+            data.sku = document.getElementById('pSkuSelectM').value === '__other__'
+                ? document.getElementById('pSkuCustomM').value.trim()
+                : (document.getElementById('pSkuM').value.trim() || currentAddSkuBase());
+            // "Automatic" means ₱0.00 — map it to 0 so parseFloat never yields NaN.
+            data.price = parseFloat(resolveDropdownPair('pPriceSelectM', 'pPriceCustomM', 'pPriceM', () => '0')) || 0;
             data.current_stock = parseInt(data.current_stock);
             data.reorder_threshold = parseInt(data.reorder_threshold);
+
             const category = resolveCategory('add');
             delete data.category_select;
             if (category) {
