@@ -1,1 +1,0 @@
--- my priority database currently using is postgreSQL or supabase.

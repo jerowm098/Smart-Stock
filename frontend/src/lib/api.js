@@ -65,9 +65,13 @@ export async function api(path, { method = 'GET', body, headers = {}, signal } =
     return data;
 }
 
-/** Landing page for each role after signing in. */
+/** Landing page for each role after signing in.
+ *
+ * Per the BRD inventory cycle, the Admin lands on Stock-In (receiving is
+ * the first step of the cycle) and the Cashier lands on the POS.
+ */
 export function homeFor(user) {
-    return user?.role === 'admin' ? '/products' : '/pos';
+    return user?.role === 'admin' ? '/stock-in' : '/pos';
 }
 
 /* --------------------------------------------------------------------------

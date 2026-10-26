@@ -3,9 +3,20 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 
+/**
+ * Sidebar navigation — order follows the SMART-STOCK inventory cycle sa BRD:
+ *
+ *   receive delivery (Stock-In) -> stock up (Products) -> sell (POS) ->
+ *   track (Transactions) -> forecast (Order Suggestions)
+ *
+ * Sources: Detailed_BRD_Inventory_Management + AuthController post-login
+ * rule (Admin -> Stock-In, the first step of the cycle) + Jira board 34
+ * (sprints 2-4) para sa module grouping. Suppliers sumusuporta sa
+ * receiving; Users at Backups ay admin tooling.
+ */
 const ADMIN_NAV = [
-    { to: '/products', label: 'Products', icon: 'box' },
     { to: '/stock-in', label: 'Stock-In', icon: 'inbox' },
+    { to: '/products', label: 'Products', icon: 'box' },
     { to: '/transactions', label: 'Transactions', icon: 'receipt' },
     { to: '/order-suggestions', label: 'Order Suggestions', icon: 'clipboard' },
     { to: '/suppliers', label: 'Suppliers', icon: 'truck' },
