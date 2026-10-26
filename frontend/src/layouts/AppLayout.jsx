@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 
 const ADMIN_NAV = [
@@ -106,6 +107,7 @@ export default function AppLayout() {
                     <span className="topbar-meta">
                         {user?.role === 'admin' ? 'All store data' : 'Checkout counter'}
                     </span>
+                    <ThemeToggle />
                 </header>
 
                 <main className="content">

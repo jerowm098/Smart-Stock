@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import { homeFor } from '../lib/api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
 
@@ -63,11 +64,14 @@ export default function Login() {
 
             <main className="auth-main">
                 <div className="auth-card">
-                    <header>
-                        <span className="eyebrow">Welcome back</span>
-                        <h1>Sign in</h1>
-                        <p>Use the username (or email) assigned by the store admin.</p>
-                    </header>
+                    <div className="auth-card-head">
+                        <header>
+                            <span className="eyebrow">Welcome back</span>
+                            <h1>Sign in</h1>
+                            <p>Use the username (or email) assigned by the store admin.</p>
+                        </header>
+                        <ThemeToggle />
+                    </div>
 
                     <form onSubmit={handleSubmit} className="form" noValidate>
                         <label className="field">
