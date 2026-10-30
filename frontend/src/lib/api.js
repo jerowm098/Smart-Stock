@@ -67,11 +67,12 @@ export async function api(path, { method = 'GET', body, headers = {}, signal } =
 
 /** Landing page for each role after signing in.
  *
- * Per the Jira board (SS-17 catalogue = first admin feature, Sprint 2) and
- * the old post-login rule, the Admin lands on Products; the Cashier on POS.
+ * The Admin lands on Stock Inventory — the topmost sidebar group's first
+ * page and the daily entry point (receiving deliveries). The Cashier lands
+ * on POS, their only surface.
  */
 export function homeFor(user) {
-    return user?.role === 'admin' ? '/products' : '/pos';
+    return user?.role === 'admin' ? '/stock-in' : '/pos';
 }
 
 /* --------------------------------------------------------------------------

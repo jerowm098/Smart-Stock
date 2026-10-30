@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import NotificationBell from '../components/NotificationBell.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
@@ -93,6 +93,7 @@ export default function AppLayout() {
     const { user } = useAuth();
     const location = useLocation();
     const [menuOpen, setMenuOpen] = useState(false);
+    const scrollRef = useRef(null);
 
     const nav = user?.role === 'admin' ? ADMIN_NAV : CASHIER_NAV;
     const navItems = nav.flatMap((section) => section.items);
@@ -102,6 +103,12 @@ export default function AppLayout() {
     // Close the mobile drawer whenever the route changes.
     useEffect(() => {
         setMenuOpen(false);
+    }, [location.pathname]);
+
+    // Always land at the top of the page on navigation (an SPA keeps the
+    // old scroll position by default, e.g. after login -> Stock Inventory).
+    useEffect(() => {
+        scrollRef.current?.scrollTo({ top: 0, left: 0 });
     }, [location.pathname]);
 
     return (
@@ -166,7 +173,7 @@ export default function AppLayout() {
                     </div>
                 </header>
 
-                <div className="content-scroll">
+                <div className="content-scroll" ref={scrollRef}>
                     <main className="content">
                         <Outlet />
                     </main>
