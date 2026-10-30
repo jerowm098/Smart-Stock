@@ -7,6 +7,15 @@
 #
 #     render.com -> New + -> Blueprint -> Connect your repo
 #
+#  !!! PAALALA (nangyari na ito): ang Blueprint ay LAGING gumagawa ng
+#      BAGONG service na may bagong random URL (e.g. smart-stock-v3wy).
+#      Hindi nito ina-update ang lumang service, at hindi rin napapalitan
+#      ng APP_URL sa ibaba ang URL ng service - ang URL ay galing sa
+#      service name sa paggawa pa lang.
+#      PARA MANATILI ANG LUMANG URL: huwag gumamit ng Blueprint ulit -
+#      sa EXISTING service lang mag-"Manual Deploy > Deploy latest commit"
+#      (Dashboard > <service> > Manual Deploy).
+#
 #  NOTE: Smart-Stock now uses Supabase PostgreSQL (no SQLite).
 #  Kailangan mong i-set sa Render Dashboard > Environment:
 #    - APP_KEY (sync false, secret)
@@ -96,6 +105,8 @@ services:
 
       # APP_URL should match the deployed domain so Laravel generates
       # fully-qualified HTTPS URLs (forms, links, redirects).
-      # Change the value below to your actual Render service name.
+      # NOTE: ito ay DITO lang sa service na ito tama kung iyon ang
+      # pinapa-deploy mo. Hindi nito kontrolado ang URL ng service -
+      # tingnan ang PAALALA sa taas. I-edit kung nagiba ang service.
       - key: APP_URL
         value: https://smart-stock-4lav.onrender.com
