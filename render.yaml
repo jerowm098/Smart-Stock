@@ -19,8 +19,9 @@
 #  NOTE: Smart-Stock now uses Supabase PostgreSQL (no SQLite).
 #  Kailangan mong i-set sa Render Dashboard > Environment:
 #    - APP_KEY (sync false, secret)
-#    - DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD, DB_SSLMODE
-#  Huwag i-commit ang DB_PASSWORD sa repo.
+#    - SUPABASE_DB_HOST, SUPABASE_DB_PORT, SUPABASE_DB_DATABASE,
+#      SUPABASE_DB_USERNAME, SUPABASE_DB_PASSWORD, SUPABASE_DB_SSLMODE
+#  Huwag i-commit ang SUPABASE_DB_PASSWORD sa repo.
 # ====================================================================
 
 services:
@@ -49,27 +50,25 @@ services:
         value: stderr
 
       # --- Supabase PostgreSQL (primary, walang SQLite) ---
-      # Kunin sa Supabase Dashboard > Connect > "Session pooler" string.
-      #   DB_HOST     = aws-0-<region>.pooler.supabase.com   (SESSION pooler!)
-      #   DB_PORT     = 5432   (Session pooler - kaya tumatakbo ang auto-migrate)
-      #   DB_DATABASE = postgres
-      #   DB_USERNAME = postgres.<project-ref>   (may prefix na "<ref>"!)
-      #   DB_PASSWORD = <Supabase DB password>
-      # Ang mga may `sync: false` ay hihingin sa Blueprint setup screen -
-      # DO NOT leave them blank, dahil dahan-dahang mag-500 ang login.
+      # ANG MGA VALUE DITO AY SUPABASE - HINDI ang local XAMPP MySQL!
+      # (Kung may nag-input ng 127.0.0.1/root/3306 dito, 500 agad ang login.)
+      # PANGALAN NG KEYS: SUPABASE_DB_* - eksaktong kapareho ng sa local
+      # .env, kaya walang kalituhan. Walang naka-commit na credentials dito -
+      # ang mga `sync: false` ay hihingin lang sa Blueprint setup screen.
+      # Port 5432 = Session pooler (kaya gumagana ang auto-migrate sa boot).
       - key: DB_CONNECTION
         value: pgsql
-      - key: DB_HOST
+      - key: SUPABASE_DB_HOST
         sync: false
-      - key: DB_PORT
+      - key: SUPABASE_DB_PORT
         value: "5432"
-      - key: DB_DATABASE
+      - key: SUPABASE_DB_DATABASE
         value: postgres
-      - key: DB_USERNAME
+      - key: SUPABASE_DB_USERNAME
         sync: false
-      - key: DB_PASSWORD
+      - key: SUPABASE_DB_PASSWORD
         sync: false
-      - key: DB_SSLMODE
+      - key: SUPABASE_DB_SSLMODE
         value: require
 
       # --- SESSION/CACHE sa file ---

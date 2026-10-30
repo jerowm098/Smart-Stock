@@ -39,15 +39,19 @@ Ginagamit natin ang **3 layers** sa loob ng isang container:
 3. Sa **Blueprint setup screen**, may hihinging env vars (`sync: false`) — **HUWAG i-blank**:
    | Key | Value |
    |---|---|
-   | `DB_HOST` | `aws-0-<region>.pooler.supabase.com` (Session pooler) |
-   | `DB_PORT` | `5432` (default na sa yaml) |
-   | `DB_USERNAME` | `postgres.<project-ref>` — may prefix! |
-   | `DB_PASSWORD` | Supabase DB password |
+   | `SUPABASE_DB_HOST` | `aws-0-<region>.pooler.supabase.com` (Session pooler) |
+   | `SUPABASE_DB_PORT` | `5432` (default na sa yaml) |
+   | `SUPABASE_DB_USERNAME` | `postgres.<project-ref>` — may prefix! |
+   | `SUPABASE_DB_PASSWORD` | Supabase DB password |
    | `APP_KEY` | pwedeng blank (auto-generate ng entrypoint) |
 4. **Apply** → hihintayin ng deploy ang build, tapos awtomatikong mag-
    `migrate --force` ang entrypoint sa boot.
 5. Kapag 500 pa rin ang login: tingnan ang **Logs** tab — laging nasa
    doon ang eksaktong exception.
+
+> **Pangalan ng keys:** pagsapit ng refactor na ito, ang Supabase connection
+> (pgsql) ay `SUPABASE_DB_*` palagi — sa local `.env` at sa Render, magkapareho.
+> Ang `DB_*` keys ay para na lang sa local XAMPP MySQL (`DB_CONNECTION=mysql`).
 
 > Bakit Session pooler (5432) at hindi Transaction pooler (6543)?
 > Gumagamit ang Laravel ng prepared statements na sumasabog sa transaction

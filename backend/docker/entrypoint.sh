@@ -45,11 +45,11 @@ fi
 # 4) Supabase check - i-verify na may DB_HOST/DB_PASSWORD.
 #    Hindi na kailangan gumawa ng database.sqlite file.
 # ---------------------------------------------------------------
-if [ -z "${DB_HOST}" ]; then
-    echo ">>> WARNING: DB_HOST not set. Siguraduhing naka-set ang Supabase vars:"
-    echo ">>> DB_CONNECTION=pgsql, DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD, DB_SSLMODE=require"
+if [ -z "${SUPABASE_DB_HOST}" ]; then
+    echo ">>> WARNING: SUPABASE_DB_HOST not set. Siguraduhing naka-set ang Supabase vars:"
+    echo ">>> DB_CONNECTION=pgsql, SUPABASE_DB_HOST, SUPABASE_DB_PORT, SUPABASE_DB_DATABASE, SUPABASE_DB_USERNAME, SUPABASE_DB_PASSWORD, SUPABASE_DB_SSLMODE=require"
 else
-    echo ">>> Using Supabase host: ${DB_HOST}"
+    echo ">>> Using Supabase host: ${SUPABASE_DB_HOST}"
 fi
 
 # ---------------------------------------------------------------

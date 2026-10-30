@@ -11,21 +11,26 @@ return [
     |--------------------------------------------------------------------------
     |
     | Local development runs on XAMPP MariaDB (DB_CONNECTION=mysql,
-    | DB_DATABASE=smartstock_db). Production still targets Supabase
+    | DB_DATABASE=smartstock_db). Production targets Supabase
     | PostgreSQL (DB_CONNECTION=pgsql).
     |
-    | Supabase mode: set DB_CONNECTION=pgsql + DB_HOST/DB_PORT/
-    | DB_DATABASE/DB_USERNAME/DB_PASSWORD/DB_SSLMODE=require
-    | Kunin sa Supabase Dashboard > Settings > Database > Connection string.
+    | Supabase mode: set DB_CONNECTION=pgsql + SUPABASE_DB_HOST/
+    | SUPABASE_DB_PORT/SUPABASE_DB_DATABASE/SUPABASE_DB_USERNAME/
+    | SUPABASE_DB_PASSWORD/SUPABASE_DB_SSLMODE=require
+    | Kunin sa Supabase Dashboard > Connect > Session pooler string.
     | Hindi ito SUPABASE_URL + ANON_KEY (pang-JS client lang yun).
+    |
+    | NAMING RULE: kapag Supabase, SUPABASE_DB_* palagi — same names sa
+    | local .env at sa Render env vars (kaya walang kalituhan kung alin
+    | ang MySQL credentials at kung alin ang Supabase).
     |
     | DALAWANG MODE (parehong Supabase, magkaibang host/user/port):
     |  1) DIRECT (pang-migrate sa IPv6-ready network):
-    |     DB_HOST=db.xxxxx.supabase.co  DB_PORT=5432  DB_USERNAME=postgres
+    |     SUPABASE_DB_HOST=db.xxxxx.supabase.co  PORT=5432  USERNAME=postgres
     |  2) POOLER (pang-Globe IPv4 / pang-prod Render):
-    |     DB_HOST=aws-0-ap-southeast-1.pooler.supabase.com
-    |     DB_PORT=6543 (Transaction) o 5432 (Session)
-    |     DB_USERNAME=postgres.xxxxx  (may tuldok + project ref!)
+    |     SUPABASE_DB_HOST=aws-0-ap-southeast-1.pooler.supabase.com
+    |     PORT=6543 (Transaction) o 5432 (Session)
+    |     USERNAME=postgres.xxxxx  (may tuldok + project ref!)
     |
     */
 
@@ -45,19 +50,21 @@ return [
 
         'pgsql' => [
             'driver' => 'pgsql',
-            // Kung may DB_URL (full postgres://... URI galing Supabase Connect modal),
-            // yun ang priority. Kung wala, gamitin ang hiwa-hiwalay na DB_HOST/PORT/etc.
-            'url' => env('DB_URL'),
-            'host' => env('DB_HOST', '127.0.0.1'),
-            'port' => env('DB_PORT', '5432'),
-            'database' => env('DB_DATABASE', 'postgres'),
-            'username' => env('DB_USERNAME', 'postgres'),
-            'password' => env('DB_PASSWORD', ''),
+            // Supabase connection. SINASADYANG SUPABASE_DB_* ang mga variable
+            // names (hindi DB_*) para pareho ang naming sa local .env at sa
+            // Render: kung Supabase, SUPABASE_DB_* palagi. Ang DB_* keys ay
+            // para lang sa local XAMPP MySQL (DB_CONNECTION=mysql).
+            'url' => env('SUPABASE_DB_URL'),
+            'host' => env('SUPABASE_DB_HOST', '127.0.0.1'),
+            'port' => env('SUPABASE_DB_PORT', '5432'),
+            'database' => env('SUPABASE_DB_DATABASE', 'postgres'),
+            'username' => env('SUPABASE_DB_USERNAME', 'postgres'),
+            'password' => env('SUPABASE_DB_PASSWORD', ''),
             'charset' => env('DB_CHARSET', 'utf8'),
             'prefix' => '',
             'prefix_indexes' => true,
             'search_path' => 'public',
-            'sslmode' => env('DB_SSLMODE', 'require'),
+            'sslmode' => env('SUPABASE_DB_SSLMODE', 'require'),
             // Supabase pooler (Supavisor) fix:
             // Transaction/Session pooler ayaw sa native PREPARE,
             // kaya emulate prepares + maikling timeout.
