@@ -169,4 +169,8 @@ git push origin main
 
 ## Data Persistence
 
-Ang data mo ay nasa **Supabase PostgreSQL**, hindi sa Render filesystem. Kahit mag-restart ang Render service, hindi mawawala ang data. Ang backup ay JSON dump sa `storage/app/private/backups` via `backup:run` (SS-39), downloadable sa Admin Backups page.
+Ang data mo ay nasa **Supabase PostgreSQL**, hindi sa Render filesystem. Kahit mag-restart ang Render service, hindi mawawala ang data. Ang backup ay JSON dump na nakaimbak sa **`backups` table** (kaya hindi ito nawawala kapag nag-redeploy ang Render) at may kopya rin sa `storage/app/private/backups` para sa local development. Downloadable at deletable sa Admin Backups page.
+
+> **Pagkatapos i-deploy ang backup changes:** kailangang mag-run ng `php artisan migrate --force` sa Render Shell para magawa ang `backups` table. Kung wala pang chance mag-migrate, gagawa mismo ang "Run backup" ng table sa unang pag-click.
+
+> **Local vs Render:** magkaibang machine at magkaibang database ang local dev at ang Render site, kaya **hindi** automatic na lumalabas sa Render ang mga backup file na ginawa sa local PC (at vice versa). Ang bawat environment ay may sariling listahan. Kung kailangan ng iisang shared listahan, kailangan ng cloud storage (hal. Supabase Storage o S3) — hindi sapat ang local folder.

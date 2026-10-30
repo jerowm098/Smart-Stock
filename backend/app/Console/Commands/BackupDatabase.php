@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\Schema;
  * BRD Should: "The system shall create backups regularly."
  *
  * - Primary: Supabase PostgreSQL (pgsql) -> portable JSON dump.
- * - Keeps only the newest --keep files (default 7).
+ * - Stored in the `backups` table so it survives Render's ephemeral
+ *   filesystem, with a convenience copy in storage/app/private/backups.
+ * - Keeps only the newest --keep dumps (default 7).
  * - Safe to run via scheduler (daily 02:00) or manually:
  *     php artisan backup:run
  *     php artisan backup:run --keep=14
@@ -21,7 +23,7 @@ class BackupDatabase extends Command
 {
     protected $signature = 'backup:run {--keep=7 : How many newest backups to keep}';
 
-    protected $description = 'Create a timestamped Supabase PostgreSQL backup in storage/app/private/backups';
+    protected $description = 'Create a timestamped database backup (stored in the database and storage/app/private/backups)';
 
     public function handle(): int
     {
@@ -54,20 +56,66 @@ class BackupDatabase extends Command
             $dump['tables'][$table] = DB::table($table)->get()->toArray();
         }
 
-        file_put_contents(
-            $dir . DIRECTORY_SEPARATOR . $filename,
-            json_encode($dump, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+        $json = json_encode($dump, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+        // 1) Database copy — Render's filesystem is ephemeral, so a file alone
+        //    would vanish on the next deploy or restart.
+        $this->ensureBackupTable();
+        DB::table('backups')->updateOrInsert(
+            ['filename' => $filename],
+            [
+                'size_bytes' => strlen($json),
+                'content' => $json,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]
         );
-        $this->info("PostgreSQL backup created: {$filename} (" . count($tables) . ' tables)');
+
+        // 2) File copy — keeps the old behaviour and is handy on local dev.
+        file_put_contents($dir . DIRECTORY_SEPARATOR . $filename, $json);
+
+        $this->info("Backup created: {$filename} (" . count($tables) . ' tables)');
 
         $this->prune((int) $this->option('keep'), $dir);
 
         return self::SUCCESS;
     }
 
+    /**
+     * Create the backups table on hosts where migrations have not run yet, so
+     * "Run backup" works immediately after a deploy.
+     */
+    protected function ensureBackupTable(): void
+    {
+        if (Schema::hasTable('backups')) {
+            return;
+        }
+
+        Schema::create('backups', function ($table) {
+            $table->id();
+            $table->string('filename')->unique();
+            $table->unsignedBigInteger('size_bytes')->default(0);
+            $table->longText('content');
+            $table->timestamps();
+        });
+    }
+
     protected function prune(int $keep, string $dir): void
     {
         $keep = max(1, $keep);
+
+        if (Schema::hasTable('backups')) {
+            $staleIds = DB::table('backups')
+                ->orderByDesc('filename')
+                ->pluck('id')
+                ->slice($keep)
+                ->all();
+
+            if ($staleIds !== []) {
+                DB::table('backups')->whereIn('id', $staleIds)->delete();
+            }
+        }
+
         $files = glob($dir . DIRECTORY_SEPARATOR . 'smart-stock-backup-*') ?: [];
         // Newest last so we can slice off the tail to keep.
         sort($files);

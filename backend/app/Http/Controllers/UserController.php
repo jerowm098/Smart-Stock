@@ -202,6 +202,9 @@ class UserController extends Controller
             'is_active'  => (bool) $user->is_active,
             'created_at' => optional($user->created_at)->diffForHumans(),
             'updated_at' => optional($user->updated_at)->diffForHumans(),
+            // Machine-readable timestamp so the table can sort by "Updated"
+            // (the relative text above is for display only).
+            'updated_at_iso' => optional($user->updated_at)->toIso8601String(),
         ];
     }
 }

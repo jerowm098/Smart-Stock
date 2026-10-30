@@ -40,7 +40,14 @@
     --aside-bg: radial-gradient(500px 320px at 10% 0%, rgba(37, 99, 235, 0.25), transparent 60%),
         linear-gradient(200deg, #10203c, #0b1424 70%);
     --inset-bg: rgba(11, 18, 32, 0.45);
-    --row-hover: rgba(22, 35, 58, 0.5);
+    /* Row / table colours: blue-tinted overlays (theme-appropriate for dark surfaces).
+       hover = light 5% blue; header/selected = a heavier ~12% blue (must read stronger). */
+    --row-hover: rgba(37, 99, 235, 0.08);
+    --activity-row-hover: rgba(37, 99, 235, 0.08);
+    --table-head-bg: rgba(37, 99, 235, 0.14);
+    /* Sidebar nav tabs: same scale — selected ~14% blue (stronger), hover ~8% blue. */
+    --nav-hover-bg: rgba(37, 99, 235, 0.08);
+    --nav-active-bg: rgba(37, 99, 235, 0.14);
     --backdrop: rgba(2, 6, 23, 0.66);
     --glow-a: rgba(37, 99, 235, 0.16);
     --glow-b: rgba(34, 197, 94, 0.08);
@@ -54,16 +61,20 @@
     --error-text: --error-text);
     --success-text-strong: --success-text-strong);
 
-    /* elevation */
-    --shadow: 0 14px 34px rgba(2, 6, 23, 0.4);
-    --shadow-lg: 0 24px 60px rgba(2, 6, 23, 0.55);
-    --shadow-primary: 0 8px 20px rgba(37, 99, 235, 0.35);
+    /* elevation (disabled — no decorative shadows) */
+    --shadow: none;
+    --shadow-lg: none;
+    --shadow-primary: none;
     --focus-ring: rgba(37, 99, 235, 0.25);
 
     --radius: 12px;
     --radius-sm: 8px;
     --sidebar-w: 250px;
     --topbar-h: 62px;
+
+    /* custom scrollbar */
+    --scroll-thumb: rgba(143, 163, 191, 0.4);
+    --scroll-thumb-hover: rgba(143, 163, 191, 0.7);
 }
 
 /* ------------------------------------------------------------------
@@ -98,8 +109,14 @@
     --aside-bg: radial-gradient(500px 320px at 10% 0%, rgba(37, 99, 235, 0.12), transparent 60%),
         linear-gradient(200deg, #ffffff, #dbe6f7 70%);
     --inset-bg: rgba(15, 26, 46, 0.045);
-    --row-hover: rgba(37, 99, 235, 0.06);
-    --backdrop: rgba(15, 23, 42, 0.4);
+    /* Row / table colours: selected & header = the actual page background colour
+       (--bg = #eef2f7); hover = a soft 4% PRIMARY-BLUE tint (light blue, never green). */
+    --row-hover: rgba(37, 99, 235, 0.04);
+    --activity-row-hover: rgba(37, 99, 235, 0.04);
+    --table-head-bg: var(--bg);
+    /* Sidebar nav tabs use the same scheme: selected = page bg, hover = 4% light blue. */
+    --nav-hover-bg: rgba(37, 99, 235, 0.04);
+    --nav-active-bg: var(--bg);
     --glow-a: rgba(37, 99, 235, 0.08);
     --glow-b: rgba(34, 197, 94, 0.06);
     --glow-hero: rgba(37, 99, 235, 0.14);
@@ -111,10 +128,14 @@
     --error-text: #b91c1c;
     --success-text-strong: #166534;
 
-    --shadow: 0 10px 26px rgba(15, 23, 42, 0.1);
-    --shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.16);
-    --shadow-primary: 0 8px 20px rgba(37, 99, 235, 0.25);
+    --shadow: none;
+    --shadow-lg: none;
+    --shadow-primary: none;
     --focus-ring: rgba(37, 99, 235, 0.18);
+
+    /* custom scrollbar */
+    --scroll-thumb: rgba(91, 107, 132, 0.35);
+    --scroll-thumb-hover: rgba(91, 107, 132, 0.6);
 }
 
 * {
@@ -203,12 +224,33 @@ h1, h2, h3, h4 {
 .btn-primary:hover { filter: brightness(1.08); }
 
 .btn-ghost {
-    background: transparent;
+    background: var(--surface);
     border-color: var(--border);
     color: var(--text);
 }
 
 .btn-ghost:hover { background: var(--surface-2); }
+
+.btn-danger {
+    background: var(--danger);
+    color: #ffffff;
+}
+
+.btn-danger:hover { filter: brightness(1.08); }
+
+.btn-warning {
+    background: var(--warning);
+    color: #ffffff;
+}
+
+.btn-warning:hover { filter: brightness(1.08); }
+
+.btn-info {
+    background: var(--primary);
+    color: var(--on-primary);
+}
+
+.btn-info:hover { filter: brightness(1.08); }
 
 .btn-block { width: 100%; }
 .btn-lg { padding: 12px 22px; font-size: 15px; }
@@ -232,6 +274,64 @@ h1, h2, h3, h4 {
 .field input:not([type='date']),
 .input[type='search'] { appearance: none; }
 
+/* Hide the native number spinner arrows on fields (they look broken/unstyled). */
+.field input[type='number'],
+.input[type='number'] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+.field input[type='number']::-webkit-outer-spin-button,
+.field input[type='number']::-webkit-inner-spin-button,
+.input[type='number']::-webkit-outer-spin-button,
+.input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* Custom drop-down: tanggalin ang native arrow, palitan ng themed chevron */
+.field select,
+select.input {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b93a1' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px 16px;
+    cursor: pointer;
+}
+
+.field select:focus,
+select.input:focus {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+
+.field select option,
+select.input option {
+    background: var(--surface, #1a1d24);
+    color: var(--text, #e5e7eb);
+}
+
+/* Ghost suggestion in a select: show the AI-suggested unit as muted placeholder
+   text until the admin actually picks a unit. */
+select.input.is-ghost { color: var(--placeholder); font-style: italic; }
+
+/* Wrapper for the auto-suggested fields: keep a clean vertical rhythm between
+   the stacked field-rows (they were collapsing together with no gap). */
+.suggest-region {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* While the AI is suggesting: just lock the target fields so the user waits for
+   the values to arrive. No color, no shimmer — keep it simple. */
+.suggest-region.is-suggesting .field input,
+.suggest-region.is-suggesting .field select {
+    cursor: progress;
+}
+
 .input:hover,
 .field input:hover,
 .field select:hover { border-color: var(--primary-soft-border); }
@@ -240,7 +340,8 @@ h1, h2, h3, h4 {
 .field input:focus,
 .field select:focus {
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px var(--focus-ring);
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 0;
 }
 
 .input::placeholder,
@@ -275,6 +376,39 @@ h1, h2, h3, h4 {
 .pill-warn { background: rgba(245, 158, 11, 0.14); color: var(--warn-text); }
 .pill-danger { background: rgba(239, 68, 68, 0.16); color: var(--danger-text); }
 .pill-neutral { background: rgba(143, 163, 191, 0.14); color: var(--muted); }
+/* Admin-vs-cashier transaction channel badge — uses the brand blue so the
+   admin's own POS sales read as the "privileged" channel. */
+.pill-info { background: var(--primary-soft-bg); color: var(--primary-soft-text); }
+
+/* Transient "+N" / "−N" stock-change badge: floats ABOVE the stock number, at
+   the top edge of the row. Absolutely positioned so it NEVER shifts the text. */
+.stock-cell-value {
+    position: relative;
+    display: inline-block;
+}
+.stock-delta {
+    position: absolute;
+    left: 100%;
+    bottom: 100%;
+    transform: translate(-2px, 2px);
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: stock-delta-pop 2.6s ease-out forwards;
+}
+.stock-delta.is-up { background: rgba(34, 197, 94, 0.18); color: var(--success-text); }
+.stock-delta.is-down { background: rgba(239, 68, 68, 0.18); color: var(--danger-text); }
+
+@keyframes stock-delta-pop {
+    0% { opacity: 0; transform: translate(-2px, 2px) translateY(4px) scale(0.8); }
+    12% { opacity: 1; transform: translate(-2px, 2px) translateY(-2px) scale(1.05); }
+    22% { transform: translate(-2px, 2px) translateY(0) scale(1); }
+    78% { opacity: 1; transform: translate(-2px, 2px) translateY(0) scale(1); }
+    100% { opacity: 0; transform: translate(-2px, 2px) translateY(-6px) scale(0.95); }
+}
 
 .tag {
     display: inline-block;
@@ -290,7 +424,7 @@ h1, h2, h3, h4 {
 }
 
 .card {
-    background: linear-gradient(180deg, var(--surface), var(--bg-soft));
+    background: var(--surface);
     border: 1px solid var(--border-soft);
     border-radius: var(--radius);
     box-shadow: var(--shadow);
@@ -301,22 +435,44 @@ h1, h2, h3, h4 {
    -------------------------------------------------------------------------- */
 
 .landing {
-    max-width: 1120px;
-    margin: 0 auto;
-    padding: 0 24px 60px;
+    width: 100%;
+    padding: 0 0 60px;
 }
 
+/* Full-bleed header, but its inner content aligns to the same 1180px column
+   as the sections below — so it no longer reads as a floating white "page". */
 .landing-nav {
-    display: flex;
+    /* 3 equal-weight columns (1fr auto 1fr): the side columns are the same
+       width, so the middle links are truly centered on the full nav width —
+       not pulled around by the brand's width vs the action buttons' width. */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
     gap: 16px;
-    padding: 18px 0;
+    padding: 18px max(24px, calc((100% - 1180px) / 2));
     position: sticky;
     top: 0;
     z-index: 5;
-    background: var(--nav-blur);
-    backdrop-filter: blur(8px);
+    /* Solid opaque header — no see-through / blur so content never shows through. */
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-soft);
+}
+
+/* Right-hand controls: theme toggle sits to the LEFT of the Sign-in button. */
+.landing-nav-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Constrain the plain content blocks to the shared centered column.
+   The header AND hero are intentionally excluded: the hero spans full-bleed so
+   its clipped glow fades at the viewport edge (no hard vertical seam). */
+.landing > .section,
+.landing > .landing-footer {
+    width: min(1180px, 100% - 48px);
+    margin-inline: auto;
 }
 
 .brand {
@@ -330,8 +486,8 @@ h1, h2, h3, h4 {
     place-items: center;
     width: 38px;
     height: 38px;
-    border-radius: 11px;
-    background: linear-gradient(160deg, var(--primary-2), #1e40af);
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--primary-2), var(--primary));
     color: var(--on-primary);
     font-weight: 800;
     font-size: 15px;
@@ -351,7 +507,7 @@ h1, h2, h3, h4 {
     grid-template-columns: 1.15fr 0.85fr;
     gap: 40px;
     align-items: center;
-    padding: 64px 0 40px;
+    padding: 64px max(24px, calc((100% - 1180px) / 2)) 40px;
     overflow: hidden;
 }
 
@@ -402,7 +558,7 @@ h1, h2, h3, h4 {
 .hero-stats dd { font-weight: 700; font-size: 15px; }
 
 .hero-panel {
-    background: linear-gradient(180deg, var(--surface), var(--bg-soft));
+    background: var(--surface);
     border: 1px solid var(--border-soft);
     border-radius: 16px;
     padding: 16px;
@@ -544,7 +700,7 @@ h1, h2, h3, h4 {
 .auth-card {
     width: min(420px, 100%);
     padding: 30px 28px;
-    background: linear-gradient(180deg, var(--surface), var(--bg-soft));
+    background: var(--surface);
     border: 1px solid var(--border-soft);
     border-radius: 16px;
     box-shadow: var(--shadow);
@@ -567,11 +723,45 @@ h1, h2, h3, h4 {
 .form { display: flex; flex-direction: column; gap: 16px; }
 
 .field { display: flex; flex-direction: column; gap: 7px; }
-.field > span { font-size: 13.5px; font-weight: 600; color: var(--label); }
+.field-label { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--label); }
+.field-info { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border); display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
+.field-info:hover, .field-info:focus-visible { color: var(--primary); border-color: var(--primary); cursor: help; outline: none; }
+
+/* Portal tooltip for the info icon — positioned by InfoTip.jsx via inline top/left. */
+.info-tip {
+    position: fixed;
+    z-index: 9999;
+    max-width: 240px;
+    padding: 7px 10px;
+    border-radius: 8px;
+    background: var(--text);
+    color: var(--surface);
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.35;
+    text-align: left;
+    box-shadow: var(--shadow);
+    pointer-events: none;
+    animation: fadeIn 0.12s ease;
+}
+.field-note { font-size: 11.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
 
 .input-with-action { position: relative; }
 
 .input-with-action input { padding-right: 58px; }
+
+/* Money input: a ₱ prefix sitting inside the field's left edge. */
+.input-prefix-wrap { position: relative; }
+.input-prefix-wrap .input-prefix {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    font-weight: 600;
+    pointer-events: none;
+}
+.input-prefix-wrap input { padding-left: 28px; }
 
 .input-action {
     position: absolute;
@@ -627,11 +817,11 @@ h1, h2, h3, h4 {
 
 .role-chip {
     margin: 0 6px;
-    padding: 5px 10px;
-    border-radius: 8px;
-    background: var(--primary-soft-bg);
-    border: 1px solid var(--primary-soft-border);
-    color: var(--primary-soft-text);
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: linear-gradient(135deg, var(--primary-2), var(--primary));
+    border: 1px solid var(--primary);
+    color: var(--on-primary);
     font-size: 11.5px;
     font-weight: 700;
     text-transform: uppercase;
@@ -647,37 +837,40 @@ h1, h2, h3, h4 {
     flex: 1;
 }
 
+/* Sidebar section: a small uppercase caption above its group of links. */
+.nav-group { display: flex; flex-direction: column; gap: 4px; }
+.nav-group + .nav-group { margin-top: 14px; }
+.nav-group-label {
+    padding: 0 12px 2px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    user-select: none;
+}
+
 .nav-link {
     display: flex;
     align-items: center;
     gap: 11px;
     padding: 10px 12px;
     border-radius: 10px;
+    background: transparent;
     color: var(--muted);
     font-size: 14px;
     font-weight: 500;
     transition: background 0.15s ease, color 0.15s ease;
 }
 
-.nav-link:hover { background: var(--surface-2); color: var(--text); }
+.nav-link:hover { background: var(--nav-hover-bg); color: var(--text); }
 
 .nav-link.is-active {
-    background: linear-gradient(90deg, rgba(37, 99, 235, 0.22), rgba(37, 99, 235, 0.06));
+    background: var(--nav-active-bg);
     color: var(--active-nav-text);
-    box-shadow: inset 2px 0 0 var(--primary-2);
 }
 
 .nav-icon { width: 19px; height: 19px; flex-shrink: 0; }
-
-.sidebar-footer {
-    border-top: 1px solid var(--border-soft);
-    padding-top: 14px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.sidebar-user { display: flex; align-items: center; gap: 10px; padding: 0 4px; }
 
 .avatar {
     display: inline-grid;
@@ -685,15 +878,15 @@ h1, h2, h3, h4 {
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    background: linear-gradient(160deg, var(--primary-2), #1e40af);
+    background: linear-gradient(135deg, var(--primary-2), var(--primary));
     color: var(--on-primary);
     font-weight: 700;
     font-size: 14px;
 }
 
-.sidebar-user-text { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; }
-.sidebar-user-text strong { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sidebar-user-text small { color: var(--muted); font-size: 12px; }
+.user-menu-id-text { display: flex; flex-direction: column; line-height: 1.2; min-width: 0; flex: 1; }
+.user-menu-id-text strong { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-menu-id-text small { color: var(--muted); font-size: 12px; }
 
 .sidebar-backdrop {
     position: fixed;
@@ -708,23 +901,27 @@ h1, h2, h3, h4 {
     min-width: 0;
     display: flex;
     flex-direction: column;
+    height: 100vh;
+    min-height: 0;
 }
 
 .topbar {
     height: var(--topbar-h);
+    flex-shrink: 0;
     display: flex;
-    align-items: center;
+    /* Breadcrumb sits on the bottom edge; menu-btn/actions stay centered. */
+    align-items: flex-end;
     gap: 14px;
-    padding: 0 24px;
+    padding: 0 24px 8px;
     border-bottom: 1px solid var(--border-soft);
-    background: var(--panel-blur);
-    backdrop-filter: blur(8px);
-    position: sticky;
-    top: 0;
+    background: var(--surface);
     z-index: 10;
 }
 
-.topbar-title { font-size: 17px; font-weight: 700; }
+.topbar .menu-btn,
+.topbar-actions {
+    align-self: center;
+}
 
 .topbar-actions {
     margin-left: auto;
@@ -746,8 +943,115 @@ h1, h2, h3, h4 {
 
 .menu-btn:hover { background: var(--surface-2); color: var(--text); }
 
-.content {
+/* ------------------------------------------------------------------
+   Topbar user menu (account + sign out) — moved out of the sidebar
+   footer. Trigger pill next to the theme toggle; dropdown panel styled
+   after the notification panel.
+   ------------------------------------------------------------------ */
+.user-menu { position: relative; flex-shrink: 0; }
+
+.user-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    height: 38px;
+    padding: 3px 10px 3px 4px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.user-menu-btn:hover { background: var(--surface-2); }
+.user-menu-btn.is-open { border-color: var(--primary); }
+
+.user-menu-btn .avatar { width: 30px; height: 30px; font-size: 13px; }
+
+.user-menu-name {
+    font-size: 13px;
+    font-weight: 600;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.user-menu-chevron { width: 15px; height: 15px; color: var(--muted); transition: transform 0.15s ease; }
+.user-menu-chevron.is-open { transform: rotate(180deg); }
+
+.user-menu-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 252px;
+    padding: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: var(--shadow-lg);
+    z-index: 150;
+    animation: notifOpen 0.14s ease;
+}
+
+.user-menu-id { display: flex; align-items: center; gap: 10px; padding: 8px; }
+
+.user-menu-sep { height: 1px; background: var(--border-soft); margin: 4px 6px 6px; }
+
+.user-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: 9px;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text);
+    text-align: left;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.user-menu-item:hover { background: var(--surface-2); }
+.user-menu-item svg { width: 17px; height: 17px; flex-shrink: 0; color: var(--muted); }
+
+.user-menu-signout:hover { background: rgba(185, 28, 28, 0.08); color: var(--danger-text); }
+.user-menu-signout:hover svg { color: var(--danger-text); }
+.user-menu-signout:disabled { opacity: 0.55; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+    .user-menu-name { display: none; }
+    .user-menu-btn { padding-right: 7px; }
+}
+
+.content-scroll {
     flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) transparent;
+}
+
+/* Custom scrollbar — WebKit/Blink */
+.content-scroll::-webkit-scrollbar {
+    width: 10px;
+}
+.content-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.content-scroll::-webkit-scrollbar-thumb {
+    background: var(--scroll-thumb);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+.content-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--scroll-thumb-hover);
+    background-clip: content-box;
+}
+
+.content {
     padding: 24px;
     max-width: 1180px;
     width: 100%;
@@ -760,6 +1064,15 @@ h1, h2, h3, h4 {
 
 .page { display: flex; flex-direction: column; gap: 18px; }
 
+/* Order Suggestions: wraps the filter row, mode tabs, and table in one form
+   container so they read as a single filtering surface. Button sizes are
+   unchanged — only the outer container is new. */
+.order-suggestions-form {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
 .page-head {
     display: flex;
     align-items: flex-end;
@@ -771,7 +1084,85 @@ h1, h2, h3, h4 {
 .page-head h2 { font-size: 21px; }
 .page-head p { color: var(--muted); font-size: 14px; margin-top: 4px; max-width: 60ch; }
 
+/* Title row: lets a badge/tooltip sit inline beside the page heading. */
+.page-title { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.page-title h2 { margin: 0; }
+
 .page-head .input.search { width: 300px; }
+
+/* ------------------------------------------------------------------
+   Page hero wrapper — the permanent header region.
+   It holds the page title and carries its OWN loading effect, so the
+   catalogue body can go through a loading phase while the header stays
+   put and never flashes an error.
+   ------------------------------------------------------------------ */
+.page-hero {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 120px;
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 40px 22px 20px;
+    overflow: hidden;
+}
+.page-hero .page-head { margin: 0; align-items: flex-end; text-align: left; }
+.page-hero .page-head h2,
+.page-hero .page-head p { text-align: left; }
+
+/* Sliding load bar (same full-width even band as the modal loadbar).
+   Pinned to the hero's bottom edge so it reads as a progress underline. */
+.page-loadbar {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+.page-hero.is-loading .page-loadbar { opacity: 1; }
+.page-loadbar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--primary-2) 100%);
+    animation: page-loadbar-run 1.4s linear infinite;
+}
+@keyframes page-loadbar-run {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .page-loadbar::before { animation-duration: 2.2s; }
+}
+
+/* Body region: its sections live in a loading phase until data arrives. */
+.page-body { display: flex; flex-direction: column; gap: 18px; }
+/* Inert: skeleton rows reuse real table/activity classes, so block hover/focus. */
+.page-loading-phase { display: flex; flex-direction: column; gap: 18px; pointer-events: none; }
+
+/* Skeleton placeholders for the loading phase (plain pulse, no gradients). */
+.skeleton-card { gap: 10px; }
+.skeleton {
+    display: block;
+    border-radius: 6px;
+    background: var(--surface-2);
+    animation: skeleton-pulse 1.2s ease-in-out infinite;
+}
+.skeleton-line { height: 12px; width: 100%; }
+.skeleton-sm { width: 40%; height: 10px; }
+.skeleton-lg { width: 55%; height: 22px; }
+@keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 1; }
+}
 
 .stat-grid {
     display: grid;
@@ -782,11 +1173,22 @@ h1, h2, h3, h4 {
 .stat { padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; }
 .stat span { color: var(--muted); font-size: 12.5px; }
 .stat strong { font-size: 24px; font-weight: 700; }
+.stat-hint { color: var(--muted); font-size: 11.5px; line-height: 1.35; margin-top: 2px; }
 
 .table-card { overflow: hidden; }
 .padded { padding: 18px; }
 
 .table-wrap { overflow-x: auto; }
+
+/* Backups table: reserve the height of a full six-row page so the pager and
+   card bottom stay put even when fewer backups exist (same six rows per page
+   as the Stock Inventory table). This is the pre-measurement fallback — the
+   page then sets the exact height from the rendered table via a layout
+   effect. Header ≈ 40px (12px padding ×2 + 12px type + border), row ≈ 51px
+   (12px padding ×2 + 27px action button). */
+.table-wrap.data-rows-6 {
+    min-height: calc(40px + 6 * 51px);
+}
 
 .table { width: 100%; border-collapse: collapse; font-size: 14px; }
 
@@ -818,6 +1220,51 @@ h1, h2, h3, h4 {
     border-radius: 4px;
 }
 
+.table thead th { background: var(--table-head-bg); }
+
+.search-highlight {
+    background: rgba(37, 99, 235, 0.15);
+    color: var(--primary);
+    font-weight: 600;
+    border-radius: 2px;
+    padding: 0 1px;
+}
+
+.table-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 48px 24px;
+    text-align: center;
+}
+
+.table-empty-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--bg-soft);
+    color: var(--muted);
+    flex-shrink: 0;
+}
+
+.table-empty-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0;
+}
+
+.table-empty-sub {
+    font-size: 13.5px;
+    color: var(--muted);
+    margin: 0;
+}
+
 .table td {
     padding: 12px 16px;
     border-bottom: 1px solid var(--border-soft);
@@ -825,9 +1272,29 @@ h1, h2, h3, h4 {
 }
 
 .table tbody tr:last-child td { border-bottom: 0; }
-.table tbody tr:hover { background: var(--row-hover); }
+.table tbody tr { background: var(--surface); }
+/* Layer the (semi-transparent) hover tint OVER the row's own --surface, instead
+   of replacing it. Otherwise the tint composites over the darker .table-shell
+   background (--bg-soft) and the row hover reads far heavier than intended.
+   Keeping --surface underneath makes the tint composite over white (light) /
+   the row surface (dark), so it stays a faint, even wash. */
+.table tbody tr:hover {
+    background-color: var(--surface);
+    background-image: linear-gradient(var(--row-hover), var(--row-hover));
+}
 
 .text-right { text-align: right; }
+
+/* All tables are left-aligned for both headers and values. The generic
+   `.text-right` utility is intentionally overridden inside tables so every
+   column (numbers, dates, actions) shares the same left edge as its header —
+   no lopsided right-aligned headers sitting above right-aligned values. */
+.table th.text-right,
+.table td.text-right { text-align: left; }
+.table .actions-cell { justify-content: flex-start; }
+
+/* Relative timestamps ("3 days ago") must stay on one line in the table. */
+.txn-date { white-space: nowrap; }
 
 /* Breadcrumb navigation */
 .breadcrumb {
@@ -864,6 +1331,45 @@ h1, h2, h3, h4 {
 }
 
 .breadcrumb-current {
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* Topbar breadcrumb */
+.topbar-breadcrumb {
+    padding: 0;
+}
+
+.topbar-breadcrumb-list {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.topbar-breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+}
+
+.topbar-breadcrumb-item a {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.topbar-breadcrumb-item a:hover { text-decoration: underline; }
+
+.topbar-breadcrumb-separator {
+    color: var(--muted);
+    font-weight: 400;
+}
+
+.topbar-breadcrumb-current {
     color: var(--text);
     font-weight: 600;
 }
@@ -982,7 +1488,7 @@ h1, h2, h3, h4 {
     width: min(520px, 100%);
     max-height: 88vh;
     overflow-y: auto;
-    background: linear-gradient(180deg, var(--surface), var(--bg-soft));
+    background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 16px;
     box-shadow: var(--shadow-lg);
@@ -990,6 +1496,59 @@ h1, h2, h3, h4 {
 }
 
 .modal-wide { width: min(760px, 100%); }
+
+/* Activity details: narrower popup — the label/value list doesn't need 520px. */
+.modal-activity { width: min(420px, 100%); }
+
+/* Adjust stock modal: slightly narrower than the default 520px. */
+.modal-adjust { width: min(440px, 100%); }
+.modal-edit   { width: min(460px, 100%); }
+
+/* Adjust modal header icon: same 44px circle pill as the ConfirmDialog info icon. */
+.adjust-header-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--primary-soft-bg);
+    color: var(--primary-soft-text);
+}
+
+/* Colored indeterminate loading bar pinned to the bottom edge of the modal */
+.modal-loadbar {
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    height: 3px;
+    width: 100%;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+.modal-loadbar.is-active { opacity: 1; }
+.modal-loadbar::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    /* Full-width, evenly-thick band that slides across */
+    width: 100%;
+    background: linear-gradient(90deg, var(--primary) 0%, var(--primary-2) 100%);
+    animation: modal-loadbar-run 1.4s linear infinite;
+}
+/* Loop: the band's tail must fully exit the right edge before the head
+   re-enters from the left, so there is no overlap — a clean seamless loop. */
+@keyframes modal-loadbar-run {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .modal-loadbar::before { animation-duration: 2.2s; }
+}
 
 @keyframes modalPop {
     from { transform: translateY(8px) scale(0.98); opacity: 0; }
@@ -1005,7 +1564,25 @@ h1, h2, h3, h4 {
     border-bottom: 1px solid var(--border-soft);
 }
 
-.modal-head h3 { font-size: 16px; }
+.modal-head h3 {
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Optional description line under the modal title (e.g. New Product form). */
+.modal-head-text { min-width: 0; }
+.modal-desc { margin: 3px 0 0; font-size: 13px; color: var(--muted); }
+
+/* Bare modal: no title header, no header underline — floating close button */
+.modal-bare { position: relative; }
+.modal-bare .modal-body { padding: 28px 22px 22px; }
+.modal-bare-close { position: absolute; top: 12px; right: 12px; }
+
+/* Compact confirmation dialog: narrower, tighter vertical rhythm */
+.modal-confirm { width: min(360px, 100%); }
+.modal-confirm .modal-body { padding: 24px 22px 20px; }
 
 .icon-btn {
     display: inline-grid;
@@ -1237,6 +1814,25 @@ h1, h2, h3, h4 {
     margin-top: 4px;
 }
 
+/* Center the action button(s) — used by info-only dialogs (e.g. Activity details). */
+.modal-actions-center {
+    justify-content: center;
+}
+
+/* Confirmation dialog: centered, auto-width button pair (not stretched) */
+.modal-confirm .modal-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 2px;
+}
+
+.modal-confirm .modal-actions .btn {
+    flex: 0 0 auto;
+    min-width: 110px;
+    padding-inline: 18px;
+}
+
 .modal-note { font-size: 13.5px; margin-bottom: 14px; }
 
 .alert {
@@ -1257,15 +1853,67 @@ h1, h2, h3, h4 {
 .alert-close { color: inherit; opacity: 0.7; font-size: 12px; }
 .alert-close:hover { opacity: 1; }
 
+/* Floating toast notification (bottom-right, auto-dismiss) */
+.toast-stack {
+    position: fixed;
+    right: 22px;
+    bottom: 22px;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+}
+
+.toast {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 240px;
+    max-width: 380px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 13.5px;
+    line-height: 1.4;
+    pointer-events: auto;
+    box-shadow: 0 8px 24px rgba(2, 6, 23, 0.18);
+    animation: toast-in 0.22s ease, toast-out 0.3s ease 2.9s forwards;
+}
+
+.toast-icon {
+    display: inline-grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 700;
+}
+.toast-success { border-color: rgba(34, 197, 94, 0.4); }
+.toast-success .toast-icon { background: rgba(34, 197, 94, 0.18); color: var(--success-text); }
+.toast-error { border-color: rgba(239, 68, 68, 0.4); }
+.toast-error .toast-icon { background: rgba(239, 68, 68, 0.18); color: var(--danger-text); }
+.toast-text { flex: 1; }
+.toast-close { color: var(--muted); font-size: 12px; }
+.toast-close:hover { color: var(--text); }
+
+@keyframes toast-in {
+    from { opacity: 0; transform: translateY(12px) scale(0.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toast-out {
+    to { opacity: 0; transform: translateY(8px); }
+}
+
 .field-errors {
     margin: 6px 0 0;
     padding-left: 18px;
     font-size: 12.5px;
 }
-
-.loading-line { display: flex; align-items: center; gap: 10px; }
-
-.spinner-sm { width: 16px; height: 16px; border-width: 2px; display: inline-block; }
 
 .mode-tabs {
     display: inline-flex;
@@ -1292,11 +1940,85 @@ h1, h2, h3, h4 {
     color: var(--on-primary);
 }
 
+/* Own card wrapper for the status tabs — slim band between the filter card
+   and the table. Tab button sizing/padding is untouched. */
+.tabs-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-block: 12px;
+}
+
 .filter-grid {
     display: grid;
     grid-template-columns: 1.4fr 1fr 1fr 1fr auto;
     gap: 12px;
     align-items: end;
+}
+
+/* Every control in a filter row (inputs, selects and the Clear button) shares
+   one box height. The button needs it explicitly: its 14px label sits in a
+   shorter line box than the 16px inputs, so with only min-height it rendered
+   a couple of pixels shorter than the fields beside it. */
+.filter-grid .field input,
+.filter-grid .field select,
+.filter-grid .btn {
+    height: 42px;
+    min-height: 42px;
+}
+
+.filter-grid-single {
+    grid-template-columns: 1fr;
+}
+
+/* Two-select variant (Stock In recent deliveries): search + 2 selects + clear */
+.filter-grid-2 {
+    grid-template-columns: 1.4fr 1fr 1fr auto;
+}
+
+/* Stock Receiving table: per-row Receive action (icon + label, even width) */
+.receive-btn { min-width: 96px; justify-content: center; }
+.receive-icon { display: block; }
+
+/* Header above a filter row (title + helper text) */
+.filter-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.filter-head h3 { font-size: 15px; }
+.filter-head p { font-size: 13px; margin-top: 3px; max-width: 60ch; }
+
+/* One nested wrapper holding the whole filter row */
+.filter-shell {
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 14px;
+}
+
+/* Nested wrapper around the table (mirrors the filter shell styling) */
+.table-shell {
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Visually hidden but accessible to screen readers */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
 .field-row {
@@ -1328,11 +2050,52 @@ h1, h2, h3, h4 {
     justify-content: center;
     gap: 16px;
     padding: 14px;
-    border-top: 1px solid var(--border-soft);
     font-size: 13px;
 }
 
+/* When the pager sits inside a `.card.padded` (Products inventory, Transactions,
+   Recent Activity), the card already contributes its 18px bottom padding. Zero
+   out the pager's bottom padding so the space BELOW the pager matches the 18px
+   space ABOVE the section title — otherwise it stacks (14 + 18 = 32px) and looks
+   lopsided. Applies to every compact chevron pager. */
+.card.padded > .pagination {
+    padding-bottom: 0;
+}
+
+/* Compact pager: ‹ 1 › with chevron arrow icons */
+.page-btn {
+    min-width: 34px;
+    padding-left: 0;
+    padding-right: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+}
+.page-chevron { display: block; }
+.page-count { min-width: 20px; text-align: center; font-weight: 600; }
+
 .head-actions { display: flex; align-items: center; gap: 10px; }
+
+/* Sectioned cards with a header title (e.g. Add-product / Search panels) */
+.panel { padding: 0; overflow: hidden; }
+.panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border-soft);
+}
+.panel-head h3 { font-size: 15px; }
+.panel-head p { font-size: 13px; margin-top: 3px; max-width: 60ch; }
+.panel-body { padding: 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.panel-body .input.search { flex: 1 1 320px; max-width: 420px; }
+@media (max-width: 560px) {
+    .panel-body { flex-direction: column; align-items: stretch; }
+    .panel-body .input.search { max-width: none; }
+    .panel-body .btn { width: 100%; }
+}
 
 .stat-grid-3 { grid-template-columns: repeat(3, 1fr); }
 .stat-sub { font-size: 15px; font-weight: 600; }
@@ -1342,13 +2105,273 @@ h1, h2, h3, h4 {
 .btn-danger-text { color: var(--danger-text); }
 .btn-danger-text:hover { border-color: rgba(239, 68, 68, 0.5); }
 
+/* Literal green (not --success-text) so it stays readable in BOTH themes. */
+.btn-success-text { color: #16a34a; }
+.btn-success-text:hover { border-color: rgba(34, 197, 94, 0.5); }
+
+/* Deactivate / Activate share one fixed width so the actions column never
+   shifts when a product flips between the two states. */
+.actions-cell .action-toggle {
+    min-width: 88px;
+    justify-content: center;
+}
+
+/* Deactivated rows: the whole row is greyed out + softly blurred so it reads as
+   "not in the active catalogue". Only the Activate button stays crisp. */
+.table tbody tr.row-inactive td:not(.actions-cell) {
+    opacity: 0.45;
+    filter: grayscale(1) blur(0.6px);
+}
+
+.table tbody tr.row-inactive td.actions-cell .btn {
+    opacity: 0.45;
+    filter: grayscale(1);
+}
+
+.table tbody tr.row-inactive td.actions-cell .action-toggle {
+    opacity: 1;
+    filter: none;
+}
+
+/* Confirmation dialog body (custom modal for destructive actions) */
+.confirm-dialog {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+}
+
+.confirm-dialog-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: rgba(239, 68, 68, 0.12);
+    color: var(--danger-text);
+}
+
+.confirm-dialog-warning .confirm-dialog-icon {
+    background: rgba(245, 158, 11, 0.14);
+    color: var(--warn-text);
+}
+
+.confirm-dialog-info .confirm-dialog-icon {
+    background: var(--primary-soft-bg);
+    color: var(--primary-soft-text);
+}
+
+.confirm-dialog-success .confirm-dialog-icon {
+    background: rgba(34, 197, 94, 0.14);
+    color: var(--success-text-strong, #16a34a);
+}
+
+.confirm-dialog-title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--text);
+}
+
+.confirm-dialog-text {
+    margin-top: 3px;
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 40ch;
+    margin-inline: auto;
+}
+
 .row-clickable { cursor: pointer; }
 .row-clickable:hover { background: var(--row-hover); }
 
-.details-row > td { background: var(--inset-bg); padding: 0; }
+/* --------------------------------------------------------------------------
+   Recent Activity (Products page) — vertical row list
+   -------------------------------------------------------------------------- */
+.recent-activity .activity-empty {
+    padding: 8px 2px 2px;
+    font-size: 13.5px;
+}
 
-.details-inner { padding: 14px 18px; }
-.details-meta { font-size: 12.5px; margin-bottom: 10px; }
+/* Nested wrapper box around the activity rows (mirrors .filter-shell / .table-shell) */
+.activity-shell {
+    background: var(--bg-soft);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.activity-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Rows mirror the product table: white surface, flush edges, a single bottom
+   separator, and the same horizontal padding as .table td (16px). No rounded
+   corners / gaps — so the activity list reads like the table of contents. */
+.activity-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+    margin: 0;
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid var(--border-soft);
+    background-color: var(--surface);
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.activity-row:hover {
+    background-color: var(--surface);
+    background-image: linear-gradient(var(--activity-row-hover), var(--activity-row-hover));
+}
+
+.activity-row:focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: -2px;
+}
+
+.activity-list > li:first-child .activity-row { border-top: none; }
+
+/* Activity detail popup */
+.activity-detail-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.activity-detail-infoicon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary-soft-bg);
+    color: var(--primary-soft-text);
+}
+
+.activity-detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0 0 20px;
+}
+
+.activity-detail-item {
+    display: flex;
+    gap: 16px;
+    align-items: baseline;
+    font-size: 13.5px;
+    line-height: 1.5;
+}
+
+/* The changes list is multi-line — keep its label aligned to the first line
+   instead of the vertical centre of the bullet list. */
+.activity-detail-item:has(.activity-detail-changes) {
+    align-items: flex-start;
+}
+
+.activity-detail-item:has(.activity-detail-changes) dt {
+    padding-top: 1px;
+}
+
+.activity-detail-item dt {
+    flex: 0 0 100px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.activity-detail-item dd {
+    flex: 1 1 auto;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.activity-detail-changes {
+    margin: 0;
+    padding-left: 18px;
+    list-style: disc;
+    line-height: 1.6;
+}
+
+.activity-detail-changes li { margin: 3px 0; }
+
+
+.activity-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 9px;
+    background: var(--surface-2);
+    color: var(--muted);
+}
+
+.activity-icon-ok { background: rgba(34, 197, 94, 0.14); color: var(--success-text); }
+.activity-icon-info { background: var(--primary-soft-bg); color: var(--primary-soft-text); }
+.activity-icon-warn { background: rgba(245, 158, 11, 0.14); color: var(--warn-text); }
+.activity-icon-danger { background: rgba(239, 68, 68, 0.14); color: var(--danger-text); }
+.activity-icon-neutral { background: var(--surface-2); color: var(--muted); }
+
+.activity-body { flex: 1 1 auto; min-width: 0; }
+
+.activity-desc {
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+.activity-meta {
+    margin-top: 2px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.activity-user { font-weight: 600; color: var(--muted); }
+
+.activity-role {
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 6px;
+    background: rgba(143, 163, 191, 0.15);
+}
+
+.activity-time {
+    flex: 0 0 auto;
+    font-size: 12px;
+    white-space: nowrap;
+    align-self: flex-start;
+    padding-top: 2px;
+}
+
+@media (max-width: 560px) {
+    .activity-row { align-items: flex-start; }
+    .activity-time { align-self: flex-start; }
+}
 
 .table-plain { border: 1px solid var(--border-soft); border-radius: 10px; overflow: hidden; }
 .table-plain th { background: var(--surface-2); }
@@ -1359,6 +2382,15 @@ h1, h2, h3, h4 {
 
 .reason-cell { max-width: 260px; font-size: 13px; }
 
+/* Keep the reason to a single truncated line (full text on hover via title). */
+.reason-text {
+    display: block;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .inline-select { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .inline-select .input { width: auto; padding: 7px 10px; }
 
@@ -1368,6 +2400,13 @@ h1, h2, h3, h4 {
     border-radius: 10px;
     background: var(--bg-soft);
     font-size: 14px;
+}
+
+/* Static read-only field — no hover highlight, default cursor. */
+.readonly-static {
+    cursor: default;
+    user-select: text;
+    pointer-events: none;
 }
 
 .section-title { font-size: 15px; margin-bottom: 12px; }
@@ -1384,15 +2423,66 @@ h1, h2, h3, h4 {
    -------------------------------------------------------------------------- */
 
 .pos-layout {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 350px;
+    display: flex;
+    flex-direction: column;
     gap: 16px;
-    align-items: start;
 }
 
 .pos-catalog-col { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 
-.pos-filters { grid-template-columns: 1.6fr 1fr; }
+/* Main POS container — uses the card surface so the whole checkout area reads
+   as one white panel instead of a nested grey box. */
+.pos-shell {
+    background: var(--surface);
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* The shell stacks header → workspace → full-width pager, so the pager is
+   centred against the whole container rather than the card column. */
+.pos-grid-shell {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Workspace row: card grid left, cart + payment right. The row stretches both
+   columns to the same height, so all card bottoms line up. */
+.pos-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 330px;
+    gap: 14px;
+    align-items: stretch;
+    min-width: 0;
+}
+
+/* Section header inside the POS shell — the shell's 14px gap replaces
+   .filter-head's own margin-bottom. */
+.pos-grid-head { margin-bottom: 0; }
+
+.pos-grid-empty { text-align: center; padding: 10px 6px 4px; }
+
+/* Let a full catalogue grid fill the stretched workspace height, distributing
+   the extra space across its rows so the last card row ends with the cart
+   panel. Short result sets keep their natural card height. */
+.pos-catalog-area {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.pos-catalog-area > .pos-grid.is-stretch {
+    flex: 1;
+    align-content: stretch;
+}
+
+/* Full-width pager: the shell's gap supplies the spacing above, its padding
+   the spacing below — so the control centres on the entire container. */
+.pos-grid-shell > .pagination {
+    padding-top: 0;
+    padding-bottom: 0;
+}
 
 /* The catalogue card doubles as a click-to-add button. */
 button.pos-card {
@@ -1423,28 +2513,57 @@ button.pos-card:disabled { cursor: not-allowed; }
     border-radius: 999px;
 }
 
+/* Cart sits statically in its layout column — no sticky/floating follow-on-scroll.
+   The column holds two separate cards (cart items, payment), so no outer card. */
 .cart-panel {
-    position: sticky;
-    top: calc(var(--topbar-h) + 16px);
     display: flex;
     flex-direction: column;
-    padding: 16px;
     gap: 12px;
-    max-height: calc(100vh - var(--topbar-h) - 32px);
 }
 
-.cart-head {
+/* Each section is its own card — no nested wrapper boxes inside them. The cart
+   card grows to fill the workspace row; payment keeps its natural height. */
+.cart-block {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+}
+.cart-panel > .cart-block:first-child {
+    flex: 1;
+    min-height: 0;
+}
+
+.cart-block-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
 }
 
-.cart-head h3 { font-size: 15px; }
+.cart-block-head h3 { font-size: 14px; }
 
-.cart-empty { font-size: 13.5px; text-align: center; padding: 18px 6px; }
+/* Inside the flat cart panel, the items list and summary drop their own box
+   lines — the row separators and block spacing do the dividing instead. */
+.cart-block .cart-lines { border: 0; background: transparent; border-radius: 0; }
+.cart-block .cart-summary { border-top: 0; padding-top: 0; margin-top: 0; }
+
+/* Four-line viewport: the items list and the empty message share one stable
+   height (4 × 56px rows), so the panel never jumps between an empty and a
+   filled cart. Extra items scroll inside the list instead of growing it. */
+.cart-empty {
+    font-size: 13.5px;
+    text-align: center;
+    min-height: 224px;
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: 0 6px;
+}
 
 .cart-lines {
     list-style: none;
+    min-height: 224px;
+    flex: 1;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -1460,6 +2579,9 @@ button.pos-card:disabled { cursor: not-allowed; }
     gap: 10px;
     padding: 9px 10px;
     border-bottom: 1px solid var(--border-soft);
+    /* Uniform row height: 3 of these exactly fill the list viewport above. */
+    height: 56px;
+    flex-shrink: 0;
 }
 
 .cart-line:last-child { border-bottom: 0; }
@@ -1472,7 +2594,14 @@ button.pos-card:disabled { cursor: not-allowed; }
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.cart-line-info small { font-size: 11.5px; }
+.cart-line-info small {
+    display: block;
+    font-size: 11.5px;
+    /* One line only, so every row keeps the same fixed height. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
 .stepper {
     display: inline-flex;
@@ -1581,8 +2710,7 @@ button.pos-card:disabled { cursor: not-allowed; }
     .stat-grid { grid-template-columns: repeat(2, 1fr); }
     .split-2 { grid-template-columns: 1fr; }
     .filter-grid { grid-template-columns: 1fr 1fr; }
-    .pos-layout { grid-template-columns: 1fr; }
-    .cart-panel { position: static; max-height: none; }
+    .pos-workspace { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 900px) {

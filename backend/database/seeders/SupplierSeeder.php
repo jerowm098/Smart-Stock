@@ -62,6 +62,13 @@ class SupplierSeeder extends Seeder
                 'email'          => 'pedro@lugawantools.com',
                 'is_active'      => true,
             ],
+            [
+                'name'           => 'Batangas Builders Supply',
+                'contact_person' => 'Ramon Dela Cruz',
+                'phone'          => '09171234568',
+                'email'          => 'ramon@batangasbuilders.com',
+                'is_active'      => true,
+            ],
         ];
 
         foreach ($suppliers as $supplier) {

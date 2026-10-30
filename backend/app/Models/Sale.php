@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property float $total_amount Total cart amount charged
  * @property float $payment_amount Amount tendered by the customer
  * @property float $change_amount Change returned to the customer
+ * @property string $channel Checkout that produced the sale: admin|cashier
  * @property \Illuminate\Support\Carbon $created_at
  * @property \Illuminate\Support\Carbon $updated_at
  */
@@ -32,6 +33,10 @@ class Sale extends Model
         'total_amount',
         'payment_amount',
         'change_amount',
+        // Checkout channel that produced the sale. Persisted (not derived from
+        // the seller's current role) so a later role change cannot rewrite
+        // historical reporting.
+        'channel',
         // BRD (Demand Forecasting): the 30-day velocity window is derived from
         // historical sales, so the transaction timestamp must be settable when
         // backfilling or testing historical data.
@@ -67,5 +72,13 @@ class Sale extends Model
     public function cashier()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Was this sale rung up from the Admin dashboard's own POS terminal?
+     */
+    public function isAdminChannel(): bool
+    {
+        return $this->channel === 'admin';
     }
 }

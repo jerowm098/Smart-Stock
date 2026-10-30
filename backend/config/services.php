@@ -35,4 +35,22 @@ return [
         ],
     ],
 
+    // Ollama (OpenAI-compatible) — used by the AI product-suggestion helper on the
+    // Add/Edit product form. The key lives ONLY on the server (never in the
+    // React bundle) so it can't be scraped from the browser.
+    //
+    // `models` is an ordered fallback chain: the first entry is the primary
+    // model, and if it errors the next one is tried in turn.
+    'ollama' => [
+        'key' => env('OLLAMA_API_KEY'),
+        'base_url' => env('OLLAMA_BASE_URL', 'https://ollama.com/v1'),
+        'models' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', env(
+                'OLLAMA_MODELS',
+                'qwen2.5:7b-instruct,gemma2:9b-instruct,llama-3.1:8b-instruct'
+            ))
+        ))),
+    ],
+
 ];

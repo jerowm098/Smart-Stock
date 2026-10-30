@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import NotificationBell from '../components/NotificationBell.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
+import UserMenu from '../components/UserMenu.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
 
 /**
- * Sidebar navigation — order per the team's Jira board + Confluence:
+ * Sidebar navigation, grouped by purpose (order per the team's Jira board +
+ * Confluence):
  *
  *   - Jira board 34 build order: Inventory Catalogue (SS-17, Sprint 2)
  *     came before Stock-In/Receiving (SS-40, Sprint 3).
@@ -14,18 +16,52 @@ import { useAuth } from '../auth/AuthContext.jsx';
  *   - Confluence System Architecture (2026-09-11) lists: Product
  *     Management -> Inventory -> Stock-In -> Stock-Out (POS) -> Low Stock
  *     -> Supplier -> Reports, with User Management as admin tooling.
+ *
+ * Each entry is a labelled section; `label` is optional (a section with no
+ * label renders as a plain list, e.g. the cashier's single POS link).
  */
 const ADMIN_NAV = [
-    { to: '/products', label: 'Products', icon: 'box' },
-    { to: '/stock-in', label: 'Stock-In', icon: 'inbox' },
-    { to: '/transactions', label: 'Transactions', icon: 'receipt' },
-    { to: '/order-suggestions', label: 'Order Suggestions', icon: 'clipboard' },
-    { to: '/suppliers', label: 'Suppliers', icon: 'truck' },
-    { to: '/users', label: 'Users', icon: 'users' },
-    { to: '/backups', label: 'Backups', icon: 'database' },
+    {
+        label: 'Management',
+        items: [
+            { to: '/stock-in', label: 'Stock Inventory', icon: 'inbox' },
+            { to: '/products', label: 'Products', icon: 'box' },
+            { to: '/checkout', label: 'POS Checkout', icon: 'cart' },
+        ],
+    },
+    {
+        label: 'Records',
+        items: [
+            { to: '/transactions', label: 'Transactions', icon: 'receipt' },
+        ],
+    },
+    {
+        label: 'Planning',
+        items: [
+            { to: '/order-suggestions', label: 'Order Suggestions', icon: 'clipboard' },
+        ],
+    },
+    {
+        label: 'Partners',
+        items: [
+            { to: '/suppliers', label: 'Suppliers', icon: 'truck' },
+        ],
+    },
+    {
+        label: 'Accounts',
+        items: [
+            { to: '/users', label: 'Users', icon: 'users' },
+        ],
+    },
+    {
+        label: 'System',
+        items: [
+            { to: '/backups', label: 'Backups', icon: 'database' },
+        ],
+    },
 ];
 
-const CASHIER_NAV = [{ to: '/pos', label: 'Point of Sale', icon: 'cart' }];
+const CASHIER_NAV = [{ items: [{ to: '/pos', label: 'Point of Sale', icon: 'cart' }] }];
 
 function Icon({ name }) {
     const paths = {
@@ -47,24 +83,19 @@ function Icon({ name }) {
 }
 
 export default function AppLayout() {
-    const { user, logout } = useAuth();
-    const navigate = useNavigate();
+    const { user } = useAuth();
     const location = useLocation();
     const [menuOpen, setMenuOpen] = useState(false);
 
     const nav = user?.role === 'admin' ? ADMIN_NAV : CASHIER_NAV;
-    const current = nav.find((item) => location.pathname.startsWith(item.to));
+    const navItems = nav.flatMap((section) => section.items);
+    const current = navItems.find((item) => location.pathname.startsWith(item.to));
     const title = current?.label ?? 'Smart-Stock';
 
     // Close the mobile drawer whenever the route changes.
     useEffect(() => {
         setMenuOpen(false);
     }, [location.pathname]);
-
-    async function handleLogout() {
-        await logout();
-        navigate('/login', { replace: true });
-    }
 
     return (
         <div className="app-shell">
@@ -82,30 +113,22 @@ export default function AppLayout() {
                 <div className="role-chip">{user?.role === 'admin' ? 'Administrator' : 'Cashier'}</div>
 
                 <nav className="nav">
-                    {nav.map((item) => (
-                        <NavLink
-                            key={item.to}
-                            to={item.to}
-                            className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}
-                        >
-                            <Icon name={item.icon} />
-                            <span>{item.label}</span>
-                        </NavLink>
+                    {nav.map((section, index) => (
+                        <div className="nav-group" key={section.label ?? index}>
+                            {section.label && <p className="nav-group-label">{section.label}</p>}
+                            {section.items.map((item) => (
+                                <NavLink
+                                    key={item.to}
+                                    to={item.to}
+                                    className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}
+                                >
+                                    <Icon name={item.icon} />
+                                    <span>{item.label}</span>
+                                </NavLink>
+                            ))}
+                        </div>
                     ))}
                 </nav>
-
-                <div className="sidebar-footer">
-                    <div className="sidebar-user">
-                        <span className="avatar">{(user?.name ?? '?').charAt(0).toUpperCase()}</span>
-                        <span className="sidebar-user-text">
-                            <strong>{user?.name}</strong>
-                            <small>@{user?.username}</small>
-                        </span>
-                    </div>
-                    <button type="button" className="btn btn-ghost btn-block" onClick={handleLogout}>
-                        Sign out
-                    </button>
-                </div>
             </aside>
 
             <div className="main">
@@ -115,16 +138,32 @@ export default function AppLayout() {
                             <path d="M4 7h16M4 12h16M4 17h16" />
                         </svg>
                     </button>
-                    <h1 className="topbar-title">{title}</h1>
+                    {/* Breadcrumb sa topbar (Home / <Page>) — pumapalit sa lumang topbar-title. */}
+                    <nav className="topbar-breadcrumb" aria-label="Breadcrumb">
+                        <ol className="topbar-breadcrumb-list">
+                            <li className="topbar-breadcrumb-item">
+                                <Link to="/">Home</Link>
+                            </li>
+                            <li className="topbar-breadcrumb-item">
+                                <span className="topbar-breadcrumb-separator">/</span>
+                            </li>
+                            <li className="topbar-breadcrumb-item">
+                                <span className="topbar-breadcrumb-current">{title}</span>
+                            </li>
+                        </ol>
+                    </nav>
                     <div className="topbar-actions">
                         {user?.role === 'admin' && <NotificationBell />}
                         <ThemeToggle />
+                        <UserMenu />
                     </div>
                 </header>
 
-                <main className="content">
-                    <Outlet />
-                </main>
+                <div className="content-scroll">
+                    <main className="content">
+                        <Outlet />
+                    </main>
+                </div>
             </div>
         </div>
     );

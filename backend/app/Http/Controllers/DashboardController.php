@@ -32,18 +32,20 @@ class DashboardController extends Controller
         // Low stock count (current_stock <= reorder_threshold)
         $lowStockCount = Product::whereColumn('current_stock', '<=', 'reorder_threshold')->count();
 
-        // Total number of transactions
+        // Critical / out of stock count
+        $criticalStockCount = Product::where('current_stock', '<=', 0)->count();
         $totalSales = Sale::count();
 
         // Active suppliers (for admin overview)
         $supplierCount = Supplier::count();
 
         return response()->json([
-            'total_products'   => $totalProducts,
-            'total_revenue'    => $totalRevenue,
-            'low_stock_count'  => $lowStockCount,
-            'total_sales'      => $totalSales,
-            'supplier_count'   => $supplierCount,
+            'total_products'     => $totalProducts,
+            'total_revenue'      => $totalRevenue,
+            'low_stock_count'    => $lowStockCount,
+            'critical_stock_count' => $criticalStockCount,
+            'total_sales'        => $totalSales,
+            'supplier_count'     => $supplierCount,
         ]);
     }
 
@@ -221,11 +223,97 @@ class DashboardController extends Controller
     }
 
     /**
+     * Attach the shared Transactions search clause (receipt / cashier / product).
+     *
+     * Receipt numbers are displayed as "SS-000190" but stored as the sale's
+     * numeric primary key, so the prefix and zero padding are stripped before
+     * comparing against `id`. A plain `ctype_digit()` check (the previous
+     * behaviour) never matched the value the Admin actually sees on screen.
+     */
+    private function applyTransactionSearch($query, string $search): void
+    {
+        if ($search === '') {
+            return;
+        }
+
+        $like = '%' . $search . '%';
+
+        $receiptId = null;
+        if (preg_match('/^(?:SS-?)?0*(\d+)$/i', $search, $matches)) {
+            $receiptId = (int) $matches[1];
+        }
+
+        $query->where(function ($q) use ($like, $receiptId) {
+            if ($receiptId !== null) {
+                $q->where('id', $receiptId);
+            }
+
+            // Cashier name — the filter header promises "receipt, product,
+            // cashier or date range".
+            $q->orWhereHas('cashier', function ($uq) use ($like) {
+                $uq->where('name', 'LIKE', $like);
+            });
+
+            // Product name / SKU on any line item of the sale.
+            $q->orWhereHas('items.product', function ($pq) use ($like) {
+                $pq->where('name', 'LIKE', $like)
+                    ->orWhere('sku', 'LIKE', $like);
+            });
+        });
+    }
+
+    /**
+     * Apply the optional column sort chosen from the table headers.
+     *
+     * Accepts: receipt | channel | cashier | items | total | date (asc|desc).
+     * Anything else falls back to the default newest-first order.
+     */
+    private function applyTransactionSort($query, ?string $sortBy, string $sortDir): void
+    {
+        $columns = ['receipt', 'channel', 'cashier', 'items', 'total', 'date'];
+
+        if (! $sortBy || ! in_array($sortBy, $columns, true)) {
+            $query->orderByDesc('created_at');
+
+            return;
+        }
+
+        switch ($sortBy) {
+            case 'receipt':
+                $query->orderBy('id', $sortDir);
+                break;
+            case 'channel':
+                $query->orderBy('channel', $sortDir);
+                break;
+            case 'cashier':
+                $query->orderBy(
+                    \App\Models\User::select('name')->whereColumn('users.id', 'sales.user_id'),
+                    $sortDir
+                );
+                break;
+            case 'items':
+                // items_count is a SUM of line-item quantities, not a column.
+                $query->withSum('items', 'quantity')->orderBy('items_sum_quantity', $sortDir);
+                break;
+            case 'total':
+                $query->orderBy('total_amount', $sortDir);
+                break;
+            case 'date':
+                $query->orderBy('created_at', $sortDir);
+                break;
+        }
+
+        // Stable tiebreaker so equal values don't shuffle between pages.
+        $query->orderByDesc('id');
+    }
+
+    /**
      * SS-24: Paginated transaction history with staff name (Admin only).
      * BRD Must: "Admins to view the transaction history and the staff
      * member who processed them."
      *
      * Supports: ?page= &per_page= &search= &cashier_id= &date_from= &date_to=
+     *           &sort_by= &sort_dir=
      * Returns each sale with receipt no, date, cashier, items, totals.
      */
     public function transactionHistory(Request $request): JsonResponse
@@ -237,23 +325,34 @@ class DashboardController extends Controller
 
         $validated = $request->validate([
             'page'       => 'sometimes|integer|min:1',
-            'per_page'   => 'sometimes|integer|min:5|max:100',
+            'per_page'   => 'sometimes|integer|min:1|max:100',
             'search'     => 'sometimes|nullable|string|max:100',
             'cashier_id' => 'sometimes|nullable|integer',
+            'channel'    => 'sometimes|nullable|in:admin,cashier',
             'date_from'  => 'sometimes|nullable|date',
             'date_to'    => 'sometimes|nullable|date',
+            'sort_by'    => 'sometimes|nullable|string|in:receipt,channel,cashier,items,total,date',
+            'sort_dir'   => 'sometimes|nullable|in:asc,desc',
         ]);
 
         $perPage = (int) ($validated['per_page'] ?? 15);
         $search = trim((string) ($validated['search'] ?? ''));
         $cashierId = $validated['cashier_id'] ?? null;
+        $channel = $validated['channel'] ?? null;
         $dateFrom = $validated['date_from'] ?? null;
         $dateTo = $validated['date_to'] ?? null;
+        $sortBy = $validated['sort_by'] ?? null;
+        $sortDir = ($validated['sort_dir'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
 
         $query = Sale::with(['cashier:id,name,email', 'items.product:id,name,sku']);
 
         if ($cashierId) {
             $query->where('user_id', (int) $cashierId);
+        }
+
+        // Admin POS vs Cashier POS transactions.
+        if ($channel === 'admin' || $channel === 'cashier') {
+            $query->where('channel', $channel);
         }
 
         if ($dateFrom) {
@@ -264,29 +363,10 @@ class DashboardController extends Controller
             $query->whereDate('created_at', '<=', $dateTo);
         }
 
-        if ($search !== '') {
-            // Match by receipt no (sale id) or product name/sku inside the sale.
-            //
-            // NOTE: this previously issued both an ILIKE and a LIKE clause as a
-            // "driver fallback". ILIKE is PostgreSQL-only and is a hard syntax
-            // error on SQLite, so the duplicate clause is removed. LIKE is
-            // case-insensitive for ASCII in PostgreSQL and behaves identically,
-            // giving one portable statement instead of two.
-            $like = '%' . $search . '%';
+        $this->applyTransactionSearch($query, $search);
+        $this->applyTransactionSort($query, $sortBy, $sortDir);
 
-            $query->where(function ($q) use ($search, $like) {
-                if (ctype_digit($search)) {
-                    $q->orWhere('id', (int) $search);
-                }
-
-                $q->orWhereHas('items.product', function ($pq) use ($like) {
-                    $pq->where('name', 'LIKE', $like)
-                        ->orWhere('sku', 'LIKE', $like);
-                });
-            });
-        }
-
-        $paginator = $query->orderByDesc('created_at')->paginate($perPage);
+        $paginator = $query->paginate($perPage);
 
         $data = $paginator->getCollection()->map(function ($sale) {
             $items = $sale->items->map(function ($it) {
@@ -308,6 +388,8 @@ class DashboardController extends Controller
                 'cashier_id'     => $sale->user_id,
                 'cashier_name'   => $sale->cashier?->name ?? '—',
                 'cashier_email'  => $sale->cashier?->email ?? '—',
+                'cashier_role'   => $sale->cashier?->role ?? '—',
+                'channel'        => $sale->channel ?? 'cashier',
                 'items_count'    => $items->sum('quantity'),
                 'lines_count'    => $items->count(),
                 'items'          => $items,
@@ -320,7 +402,7 @@ class DashboardController extends Controller
         // Cashier filter options: everyone who ever completed a sale.
         $cashiers = \App\Models\User::whereIn('id', Sale::query()->select('user_id')->distinct())
             ->orderBy('name')
-            ->get(['id', 'name', 'email']);
+            ->get(['id', 'name', 'email', 'role']);
 
         return response()->json([
             'data'         => $data,
@@ -352,19 +434,29 @@ class DashboardController extends Controller
         $validated = $request->validate([
             'search'     => 'sometimes|nullable|string|max:100',
             'cashier_id' => 'sometimes|nullable|integer',
+            'channel'    => 'sometimes|nullable|in:admin,cashier',
             'date_from'  => 'sometimes|nullable|date',
             'date_to'    => 'sometimes|nullable|date',
+            'sort_by'    => 'sometimes|nullable|string|in:receipt,channel,cashier,items,total,date',
+            'sort_dir'   => 'sometimes|nullable|in:asc,desc',
         ]);
 
         $search = trim((string) ($validated['search'] ?? ''));
         $cashierId = $validated['cashier_id'] ?? null;
+        $channel = $validated['channel'] ?? null;
         $dateFrom = $validated['date_from'] ?? null;
         $dateTo = $validated['date_to'] ?? null;
+        $sortBy = $validated['sort_by'] ?? null;
+        $sortDir = ($validated['sort_dir'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
 
         $query = Sale::with(['cashier:id,name,email', 'items.product:id,name,sku']);
 
         if ($cashierId) {
             $query->where('user_id', (int) $cashierId);
+        }
+
+        if ($channel === 'admin' || $channel === 'cashier') {
+            $query->where('channel', $channel);
         }
 
         if ($dateFrom) {
@@ -375,27 +467,12 @@ class DashboardController extends Controller
             $query->whereDate('created_at', '<=', $dateTo);
         }
 
-        if ($search !== '') {
-            $like = '%' . $search . '%';
-
-            $query->where(function ($q) use ($search, $like) {
-                if (ctype_digit($search)) {
-                    $q->orWhere('id', (int) $search);
-                }
-
-                $q->orWhereHas('items.product', function ($pq) use ($like) {
-                    // Case-insensitive match that works on both PostgreSQL and
-                    // SQLite. LIKE is already case-insensitive for ASCII in
-                    // PostgreSQL, so this behaves the same as the previous ILIKE
-                    // while remaining portable.
-                    $pq->where('name', 'LIKE', $like)
-                        ->orWhere('sku', 'LIKE', $like);
-                });
-            });
-        }
+        $this->applyTransactionSearch($query, $search);
 
         // Safety cap so one export cannot exhaust memory.
-        $sales = $query->orderByDesc('created_at')->limit(5000)->get();
+        $this->applyTransactionSort($query, $sortBy, $sortDir);
+
+        $sales = $query->limit(5000)->get();
 
         $filename = 'smart-stock-transactions-' . now()->format('Ymd-His') . '.csv';
 
@@ -404,7 +481,7 @@ class DashboardController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ];
 
-        $callback = function () use ($sales, $search, $cashierId, $dateFrom, $dateTo) {
+        $callback = function () use ($sales, $search, $cashierId, $channel, $dateFrom, $dateTo) {
             $out = fopen('php://output', 'w');
             // BOM so Excel opens UTF-8 correctly.
             fwrite($out, "\xEF\xBB\xBF");
@@ -414,6 +491,7 @@ class DashboardController extends Controller
             fputcsv($out, ['Exported at', now()->format('M d, Y g:i A')]);
             fputcsv($out, ['Filters', 'search=' . ($search !== '' ? $search : '—')
                 . ' | cashier_id=' . ($cashierId ?: 'all')
+                . ' | channel=' . ($channel ?: 'all')
                 . ' | from=' . ($dateFrom ?: '—')
                 . ' | to=' . ($dateTo ?: '—')]);
             fputcsv($out, ['Total transactions', $sales->count()]);
@@ -422,7 +500,7 @@ class DashboardController extends Controller
 
             // Detail header.
             fputcsv($out, [
-                'Receipt No', 'Date', 'Cashier Name', 'Cashier Email',
+                'Receipt No', 'Date', 'Channel', 'Cashier Name', 'Cashier Email',
                 'Product', 'SKU', 'Qty', 'Unit Price', 'Line Total',
                 'Sale Total', 'Payment', 'Change',
             ]);
@@ -430,12 +508,13 @@ class DashboardController extends Controller
             foreach ($sales as $sale) {
                 $receiptNo = 'SS-' . str_pad((string) $sale->id, 6, '0', STR_PAD_LEFT);
                 $date = $sale->created_at->format('Y-m-d H:i:s');
+                $channelLabel = ($sale->channel ?? 'cashier') === 'admin' ? 'Admin POS' : 'Cashier POS';
                 $cashierName = $sale->cashier?->name ?? '—';
                 $cashierEmail = $sale->cashier?->email ?? '—';
 
                 if ($sale->items->isEmpty()) {
                     fputcsv($out, [
-                        $receiptNo, $date, $cashierName, $cashierEmail,
+                        $receiptNo, $date, $channelLabel, $cashierName, $cashierEmail,
                         '—', '—', 0, '0.00', '0.00',
                         number_format((float) $sale->total_amount, 2, '.', ''),
                         number_format((float) $sale->payment_amount, 2, '.', ''),
@@ -448,6 +527,7 @@ class DashboardController extends Controller
                     fputcsv($out, [
                         $receiptNo,
                         $date,
+                        $channelLabel,
                         $cashierName,
                         $cashierEmail,
                         $it->product?->name ?? '—',
@@ -508,3 +588,4 @@ class DashboardController extends Controller
         return response()->json($sales);
     }
 }
+

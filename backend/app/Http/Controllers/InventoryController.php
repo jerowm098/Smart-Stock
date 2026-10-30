@@ -5,7 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\StockAdjustment;
 use App\Models\StockIn;
-use App\Services\HardwareTerms;
+use App\Services\ActivityLogger;
+use App\Services\SkuGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -17,22 +18,16 @@ class InventoryController extends Controller
 {
     /**
      * Generate a unique SKU for a product created on the fly from the
-     * Receive Stock modal: a short alphanumeric prefix from the name plus a
-     * random suffix (e.g. "Trigon Paint 1L" -> "TRI-8F3A21"). The full name
+     * Receive Stock modal: a short English-derived prefix plus a sequential
+     * zero-padded number (e.g. "Trigon Paint 1L" -> "TRI-001"). The full name
      * stays editable on the Products page.
      *
      * The prefix comes from the ENGLISH form of the name, so a Filipino entry
-     * still yields a readable code: "Pako" -> "NAI-8F3A21", not "PAK-...".
+     * still yields a readable code: "Pako" -> "NAI-001", not "PAK-...".
      */
     protected function generateSku(string $name): string
     {
-        $prefix = HardwareTerms::skuPrefix($name);
-
-        do {
-            $sku = $prefix.'-'.strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
-        } while (Product::where('sku', $sku)->exists());
-
-        return $sku;
+        return SkuGenerator::next($name);
     }
 
     /**
@@ -90,8 +85,9 @@ class InventoryController extends Controller
         $pieceDelta = 0;
         $stockBefore = 0;
         $stockAfter = 0;
+        $stockIn = null;
 
-        DB::transaction(function () use ($user, $validated, $newProductName, $hasProductId, $customSku, &$transactionProduct, &$newProductCreated, &$unitOfMeasure, &$piecesPerReceivingUnit, &$pieceDelta, &$stockBefore, &$stockAfter) {
+        DB::transaction(function () use ($user, $validated, $newProductName, $hasProductId, $customSku, &$transactionProduct, &$newProductCreated, &$unitOfMeasure, &$piecesPerReceivingUnit, &$pieceDelta, &$stockBefore, &$stockAfter, &$stockIn) {
             if ($hasProductId) {
                 $query = Product::where('id', $validated['product_id']);
 
@@ -148,7 +144,7 @@ class InventoryController extends Controller
                 throw new \RuntimeException('Unable to update product stock.');
             }
 
-            StockIn::create([
+            $stockIn = StockIn::create([
                 'product_id' => $product->id,
                 'user_id' => $user->id,
                 'supplier_id' => $validated['supplier_id'],
@@ -165,6 +161,16 @@ class InventoryController extends Controller
         if (! $transactionProduct) {
             return response()->json(['message' => 'Product not found or access denied.'], 404);
         }
+
+        // Audit feed: log the receive (and the brand-new product, if any).
+        ActivityLogger::safe(function () use ($user, $stockIn, $transactionProduct, $newProductCreated) {
+            if ($newProductCreated) {
+                ActivityLogger::productCreated($user, $transactionProduct);
+            }
+            if ($stockIn) {
+                ActivityLogger::stockReceived($user, $stockIn, $transactionProduct);
+            }
+        });
 
         $updatedProduct = Product::where('id', $transactionProduct->id)->first();
 
@@ -208,17 +214,26 @@ class InventoryController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'sku' => ['required', 'string', 'max:50', Rule::unique('products', 'sku')],
+            'sku' => ['nullable', 'string', 'max:50', Rule::unique('products', 'sku')],
             'category' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'current_stock' => 'required|integer|min:0',
             'reorder_threshold' => 'required|integer|min:0',
+            'receiving_unit' => 'nullable|string|max:20',
         ]);
+
+        // A blank SKU gets a document-style code (e.g. "EXA-001") so items never
+        // land in the catalogue without a proper item number.
+        $validated['sku'] = trim((string) ($validated['sku'] ?? '')) !== ''
+            ? strtoupper(trim($validated['sku']))
+            : $this->generateSku($validated['name']);
 
         // user_id is kept purely as a "created by" audit trail; the catalogue
         // itself is shared store-wide across every account.
         $validated['user_id'] = $user->id;
         $product = Product::create($validated);
+
+        ActivityLogger::safe(fn () => ActivityLogger::productCreated($user, $product));
 
         return response()->json(['message' => 'Product added successfully', 'product' => $product], 201);
     }
@@ -239,6 +254,7 @@ class InventoryController extends Controller
             'price' => 'sometimes|numeric|min:0',
             'current_stock' => 'sometimes|integer|min:0',
             'reorder_threshold' => 'sometimes|integer|min:0',
+            'receiving_unit' => 'sometimes|nullable|string|max:20',
         ]);
 
         $product->update($validated);
@@ -267,6 +283,7 @@ class InventoryController extends Controller
             'price' => 'required|numeric|min:0',
             'current_stock' => 'required|integer|min:0',
             'reorder_threshold' => 'required|integer|min:0',
+            'receiving_unit' => 'nullable|string|max:20',
         ]);
 
         $product = Product::find($validated['id']);
@@ -281,13 +298,41 @@ class InventoryController extends Controller
             ->filter(fn ($value) => $value !== null)
             ->toArray();
 
+        // Snapshot the editable fields BEFORE the update so the activity feed
+        // can describe exactly what changed (e.g. a rename or price change).
+        $before = $product->only([
+            'name', 'sku', 'category', 'price', 'receiving_unit', 'reorder_threshold',
+        ]);
+
         $updatedRows = Product::where('id', $product->id)->update($updateData);
+
+        $fresh = $product->fresh();
+        ActivityLogger::safe(fn () => ActivityLogger::productUpdated($user, $fresh, $before));
 
         return response()->json([
             'message' => 'Product updated successfully',
-            'product' => $product->fresh(),
+            'product' => $fresh,
             'updated_rows' => $updatedRows,
         ]);
+    }
+
+    /**
+     * Defect Items: number of damaged stock adjustments recorded.
+     *
+     * A "defect item" is any stock_adjustments row logged with reason
+     * 'damaged' (see adjustStock). Surfaced as a summary stat on the
+     * Products page alongside the stock counts.
+     */
+    public function defectCount(): JsonResponse
+    {
+        $user = $this->currentUser();
+        if (! $user) {
+            return response()->json(['message' => 'Authentication required.'], 401);
+        }
+
+        $count = StockAdjustment::where('reason', 'damaged')->count();
+
+        return response()->json(['defect_count' => $count]);
     }
 
     /**
@@ -391,13 +436,15 @@ public function getProducts(Request $request): JsonResponse
      */
     public function destroy(Request $request, Product $product): JsonResponse
     {
-        if (! $this->currentUser()) {
+        if (! $user = $this->currentUser()) {
             return response()->json(['message' => 'Authentication required.'], 401);
         }
 
         // ?reactivate=1 brings a discontinued item back into the catalogue.
         if ($request->boolean('reactivate')) {
             $product->update(['is_active' => true]);
+
+            ActivityLogger::safe(fn () => ActivityLogger::productReactivated($user, $product));
 
             return response()->json([
                 'message' => 'Product reactivated successfully',
@@ -406,6 +453,8 @@ public function getProducts(Request $request): JsonResponse
         }
 
         $product->update(['is_active' => false]);
+
+        ActivityLogger::safe(fn () => ActivityLogger::productDeactivated($user, $product));
 
         return response()->json([
             'message' => 'Product deactivated successfully',
@@ -444,6 +493,7 @@ public function getProducts(Request $request): JsonResponse
         $delta = (int) $validated['delta'];
         $stockBefore = (int) $product->current_stock;
         $stockAfter = $stockBefore + $delta;
+        $adjustment = null;
 
         if ($stockAfter < 0) {
             throw ValidationException::withMessages([
@@ -451,12 +501,12 @@ public function getProducts(Request $request): JsonResponse
             ]);
         }
 
-        DB::transaction(function () use ($product, $user, $validated, $delta, $stockBefore, $stockAfter) {
+        DB::transaction(function () use ($product, $user, $validated, $delta, $stockBefore, $stockAfter, &$adjustment) {
             Product::where('id', $product->id)->update([
                 'current_stock' => $stockAfter,
             ]);
 
-            StockAdjustment::create([
+            $adjustment = StockAdjustment::create([
                 'product_id' => $product->id,
                 'user_id' => $user->id,
                 'reason' => $validated['reason'],
@@ -466,6 +516,8 @@ public function getProducts(Request $request): JsonResponse
                 'stock_after' => $stockAfter,
             ]);
         });
+
+        ActivityLogger::safe(fn () => ActivityLogger::stockAdjusted($user, $adjustment, $product));
 
         return response()->json([
             'message' => 'Stock adjusted successfully',

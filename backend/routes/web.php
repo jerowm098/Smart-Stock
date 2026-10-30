@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PosCheckoutController;
+use App\Http\Controllers\ProductSuggestionController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\TransactionSuggestionController;
 use App\Http\Controllers\UserController;
@@ -17,13 +19,17 @@ use Illuminate\Support\Facades\Route;
 | Smart-Stock API backend
 |--------------------------------------------------------------------------
 |
-| Ang Laravel dito ay PURE API na — walang Blade pages. Ang buong UI ay
-| ang React SPA sa frontend/, na naka-built sa public/app/ sa production
-| (sine-serve ng dalawang route sa dulo ng file na ito).
+| Ang Laravel dito ay PURE API lamang — walang Blade pages at HINDI nito
+| sine-serve ang frontend. Ang buong UI ay ang React SPA na pinapatakbo ng
+| Vite dev server (http://localhost:5173) sa panahon ng development.
 |
-| Lahat ng data endpoints ay nasa ilalim ng /api. Ang session cookie +
-| CSRF ang authentication (walang token auth na kailangan dahil
-| same-origin ang SPA at API sa production).
+| Kaya kapag nag-`php artisan serve`, backend/API lang ang makikita mo.
+| Para makita ang UI, patakbuhin ang Vite: `cd frontend && npm run dev`.
+|
+| Lahat ng data endpoints ay nasa ilalim ng /api. Sa dev, ang /api sa Vite
+| ay naka-proxy dito (tingnan ang frontend/vite.config.js) kaya iisang
+| origin ang nakikita ng browser — gumagana ang cookie + CSRF nang walang
+| CORS configuration.
 |
 | BRD (Account Management) — Out of Scope: "Self-service account
 | registration (staff cannot create their own accounts)." Walang /register;
@@ -31,30 +37,15 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-// SPA entry: ang built React app (frontend/dist -> public/app).
-// Kung wala pang build (fresh clone), magbibigay ng malinaw na 503.
-$serveSpa = function () {
-    $index = public_path('app/index.html');
+// Root: API-only ang backend. Walang rini-serve na HTML/frontend dito —
+// lahat ng UI ay nasa Vite dev server. Ito ay plain status lang.
+Route::get('/', fn () => response()->json([
+    'name' => 'Smart-Stock API',
+    'message' => 'API only. Ang frontend ay pinapatakbo ng Vite sa http://localhost:5173.',
+]));
 
-    if (! is_file($index)) {
-        return response()
-            ->json(['message' => 'SPA build not found. Run `npm run build:spa` first.'], 503);
-    }
-
-    // no-cache para agad makita ang mga bagong deploy ng SPA
-    return response()->file($index, [
-        'Content-Type' => 'text/html; charset=UTF-8',
-        'Cache-Control' => 'no-cache',
-    ]);
-};
-
-Route::get('/', $serveSpa);
-
-// Deep links ng SPA (e.g. /products, /pos, /login) — lahat pauwiin sa
-// index.html at hayaang ang React Router ang humawak. Nilalaktawan ang
-// /api (puro JSON) at /up (health check).
-Route::get('/{any}', $serveSpa)
-    ->where('any', '^(?!api(/|$)|up$).+');
+// Health check — JSON (200) din, hindi HTML page.
+Route::get('/up', fn () => response()->json(['status' => 'ok']));
 
 // Auth fallback: kapag nag-expire ang session at may kumatok sa isang
 // protected endpoint nang walang Accept: application/json (hal. download
@@ -91,9 +82,22 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/inventory/products', [InventoryController::class, 'getProducts'])
         ->name('inventory.products')
         ->middleware(EnsureUserIsAdmin::class);
+    Route::get('/api/inventory/defects', [InventoryController::class, 'defectCount'])
+        ->name('inventory.defects')
+        ->middleware(EnsureUserIsAdmin::class);
+    // AI product-field suggestions (Google Gemini) for the Add/Edit form.
+    Route::post('/api/inventory/suggest', [ProductSuggestionController::class, 'suggest'])
+        ->name('inventory.suggest')
+        ->middleware(EnsureUserIsAdmin::class);
     Route::delete('/api/inventory/{product}', [InventoryController::class, 'destroy'])->name('inventory.destroy')->middleware(EnsureUserIsAdmin::class);
     Route::post('/api/inventory/adjust', [InventoryController::class, 'adjustStock'])
         ->name('inventory.adjust')
+        ->middleware(EnsureUserIsAdmin::class);
+
+    // Recent Activity feed (unified audit stream shown on the Products page).
+    // Admin-only: it surfaces staff activity + inventory movements.
+    Route::get('/api/activity/recent', [ActivityLogController::class, 'recent'])
+        ->name('activity.recent')
         ->middleware(EnsureUserIsAdmin::class);
 
     // SS-88: Stock-In / Receiving API endpoint

@@ -19,9 +19,9 @@ const FEATURES = [
 ];
 
 const STEPS = [
-    { step: '01', title: 'Receive', body: 'Admin logs incoming units from a supplier.' },
+    { step: '01', title: 'Receive', body: 'Admin logs incoming stock on the Stock Inventory page.' },
     { step: '02', title: 'Sell', body: 'Cashier checks out from the live catalogue.' },
-    { step: '03', title: 'Replenish', body: 'Suggestions flag what to order next.' },
+    { step: '03', title: 'Reorder', body: 'Order Suggestions show what to restock next.' },
 ];
 
 export default function Home() {
@@ -45,13 +45,20 @@ export default function Home() {
                     <a href="#how">How it works</a>
                 </nav>
 
-                <ThemeToggle />
+                <div className="landing-nav-actions">
+                    <ThemeToggle />
 
-                {!loading && (
-                    <Link to={primaryTo} className="btn btn-primary">
+                    {/* Always reserved (never unmounted) so the nav doesn't reflow
+                        when the auth check resolves on reload — just hidden while loading. */}
+                    <Link
+                        to={primaryTo}
+                        className="btn btn-primary"
+                        aria-hidden={loading}
+                        style={loading ? { visibility: 'hidden' } : undefined}
+                    >
                         {primaryLabel}
                     </Link>
-                )}
+                </div>
             </header>
 
             <section className="hero">

@@ -10,6 +10,7 @@ import OrderSuggestions from './pages/admin/OrderSuggestions.jsx';
 import Suppliers from './pages/admin/Suppliers.jsx';
 import Users from './pages/admin/Users.jsx';
 import Backups from './pages/admin/Backups.jsx';
+import AdminPos from './pages/admin/Pos.jsx';
 import Pos from './pages/cashier/Pos.jsx';
 import NotFound from './pages/NotFound.jsx';
 
@@ -24,6 +25,7 @@ export default function App() {
                     <Route element={<RequireRole role="admin" />}>
                         <Route path="/products" element={<Products />} />
                         <Route path="/stock-in" element={<StockIn />} />
+                        <Route path="/checkout" element={<AdminPos />} />
                         <Route path="/transactions" element={<Transactions />} />
                         <Route path="/order-suggestions" element={<OrderSuggestions />} />
                         <Route path="/suppliers" element={<Suppliers />} />

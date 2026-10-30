@@ -83,7 +83,7 @@ export default function Login() {
                                 autoFocus
                                 value={username}
                                 onChange={(event) => setUsername(event.target.value)}
-                                placeholder="e.g. testadmin"
+                                placeholder="e.g. testadmin or testadmin@gmail.com"
                                 required
                             />
                         </label>

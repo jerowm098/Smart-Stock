@@ -8,7 +8,6 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
-        health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
         // Render (at Cloudflare's edge) terminates TLS, then talks plain HTTP
@@ -33,5 +32,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // sa mga non-JSON na request tulad ng backup download links.
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Pure JSON API: lahat ng error (404, 500, validation atbp.) ay sumasagot
+        // na JSON — hindi HTML error page. Kaya kahit saan ka tumama sa backend
+        // habang nag-`php artisan serve`, WALANG makikitang UI/HTML mula sa Laravel.
+        $exceptions->shouldRenderJsonWhen(fn () => true);
     })->create();

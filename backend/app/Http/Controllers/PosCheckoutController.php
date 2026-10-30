@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -232,6 +233,10 @@ class PosCheckoutController extends Controller
                 'total_amount' => $totalAmount,
                 'payment_amount' => $paymentAmount,
                 'change_amount' => $changeAmount,
+                // Admin POS vs cashier POS: the same checkout endpoint serves
+                // both terminals, so the channel is stamped from the signed-in
+                // user's role and stays fixed for the life of the record.
+                'channel' => $user->isAdmin() ? 'admin' : 'cashier',
             ]);
 
             foreach ($saleItemsData as $itemData) {
@@ -252,9 +257,13 @@ class PosCheckoutController extends Controller
                 }
             }
 
+            ActivityLogger::safe(fn () => ActivityLogger::saleCompleted($user, $sale, count($saleItemsData)));
+
             return response()->json([
                 'message' => 'Checkout completed successfully.',
                 'sale_id' => $sale->id,
+                'receipt_no' => 'SS-' . str_pad((string) $sale->id, 6, '0', STR_PAD_LEFT),
+                'channel' => $sale->channel,
                 'subtotal_amount' => $subtotal,
                 'total_amount' => $totalAmount,
                 'payment_amount' => $paymentAmount,

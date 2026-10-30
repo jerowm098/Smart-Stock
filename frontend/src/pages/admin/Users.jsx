@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../../components/Modal.jsx';
-import Alert, { FieldError, Loading } from '../../components/Feedback.jsx';
+import Alert, { FieldError } from '../../components/Feedback.jsx';
 import { get, post, put, validationMessages } from '../../lib/api.js';
 
 const EMPTY_CREATE = { name: '', username: '', email: '', role: 'cashier', password: '', password_confirmation: '' };
+const PER_PAGE = 6;
 
 export default function Users() {
     const [users, setUsers] = useState([]);
@@ -29,6 +30,13 @@ export default function Users() {
     const [resetting, setResetting] = useState(false);
     const [resetError, setResetError] = useState(null);
 
+    const [sortBy, setSortBy] = useState(null);
+    const [sortDir, setSortDir] = useState(null);
+    const [page, setPage] = useState(1);
+
+    const tableRef = useRef(null);
+    const wrapRef = useRef(null);
+
     const load = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -48,6 +56,85 @@ export default function Users() {
     useEffect(() => {
         load();
     }, [load]);
+
+    /** Column sort: 1st click asc → 2nd desc → 3rd back to the default order. */
+    function toggleSort(field) {
+        if (sortBy === field) {
+            if (sortDir === 'asc') {
+                setSortDir('desc');
+            } else {
+                setSortBy(null);
+                setSortDir(null);
+            }
+        } else {
+            setSortBy(field);
+            setSortDir('asc');
+        }
+    }
+
+    // Reset to the first page whenever the sort changes (mirrors Stock Inventory).
+    useEffect(() => {
+        setPage(1);
+    }, [sortBy, sortDir]);
+
+    const sortedUsers = useMemo(() => {
+        if (!sortBy) {
+            return users;
+        }
+
+        const dir = sortDir === 'asc' ? 1 : -1;
+        return [...users].sort((a, b) => {
+            // Date comparison for the last update (ISO timestamp from the API)
+            if (sortBy === 'updated') {
+                return ((Date.parse(a.updated_at_iso ?? '') || 0) - (Date.parse(b.updated_at_iso ?? '') || 0)) * dir;
+            }
+
+            // Status sorts by the label shown in the cell (Active / Inactive)
+            if (sortBy === 'status') {
+                const av = a.is_active ? 'Active' : 'Inactive';
+                const bv = b.is_active ? 'Active' : 'Inactive';
+                if (av < bv) return -1 * dir;
+                if (av > bv) return 1 * dir;
+                return 0;
+            }
+
+            // String comparison for account, email and role
+            const av = String(a[sortBy] ?? '').toLowerCase();
+            const bv = String(b[sortBy] ?? '').toLowerCase();
+            if (av < bv) return -1 * dir;
+            if (av > bv) return 1 * dir;
+            return 0;
+        });
+    }, [users, sortBy, sortDir]);
+
+    const lastPage = Math.max(1, Math.ceil(sortedUsers.length / PER_PAGE));
+    const safePage = Math.min(page, lastPage);
+    const pagedUsers = useMemo(
+        () => sortedUsers.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE),
+        [sortedUsers, safePage]
+    );
+
+    // Reserve exactly one full page (6 rows) of height, mirroring Stock
+    // Inventory and Backups. Measured from the rendered table so it stays
+    // accurate across fonts, zoom levels and action-button wrapping.
+    useLayoutEffect(() => {
+        const table = tableRef.current;
+        const wrap = wrapRef.current;
+        if (!table || !wrap) {
+            return;
+        }
+
+        const head = table.querySelector('thead');
+        const row = table.querySelector('tbody tr');
+
+        // Nothing to measure (empty list / loading): let the wrap size itself.
+        if (!head || !row) {
+            wrap.style.minHeight = '';
+            return;
+        }
+
+        wrap.style.minHeight = `${head.getBoundingClientRect().height + row.getBoundingClientRect().height * PER_PAGE}px`;
+    }, [pagedUsers.length, loading]);
 
     async function handleCreate(event) {
         event.preventDefault();
@@ -128,99 +215,217 @@ export default function Users() {
 
     return (
         <div className="page">
-            <header className="page-head">
-                <div>
-                    <h2>Users</h2>
-                    <p>Create accounts, assign roles, deactivate instead of delete, and reset passwords.</p>
-                </div>
-                <button type="button" className="btn btn-primary" onClick={() => setAddOpen(true)}>
-                    Add account
-                </button>
-            </header>
+            <section className={`page-hero${loading ? ' is-loading' : ''}`}>
+                <div className="page-loadbar" aria-hidden="true" />
+                <header className="page-head">
+                    <div>
+                        <h2>Users</h2>
+                        <p>Manage user accounts, roles, and access.</p>
+                    </div>
+                </header>
+            </section>
 
             {message && <Alert tone="success" onClose={() => setMessage(null)}>{message}</Alert>}
             {error && <Alert tone="error" onClose={() => setError(null)}>{error}</Alert>}
 
-            <section className="card table-card">
-                {loading && <Loading label="Loading accounts…" />}
+            {loading ? (
+                /* Loading phase: the hero above stays put (its loadbar is the
+                   progress UI) while these sections paint skeletons mirroring
+                   the real page — no spinners anywhere. */
+                <div className="page-loading-phase" aria-busy="true" aria-live="polite">
+                    {/* Add Account panel */}
+                    <section className="card panel panel-add">
+                        <div className="panel-head">
+                            <div>
+                                <span className="skeleton skeleton-lg" style={{ marginBottom: 8 }} />
+                                <span className="skeleton skeleton-line skeleton-sm" />
+                            </div>
+                            <span className="skeleton" style={{ width: 118, height: 38, borderRadius: 8 }} />
+                        </div>
+                    </section>
 
+                    {/* User Accounts table + pagination */}
+                    <section className="card padded">
+                        <div className="filter-head">
+                            <div>
+                                <span className="skeleton skeleton-lg" style={{ marginBottom: 8 }} />
+                                <span className="skeleton skeleton-line skeleton-sm" />
+                            </div>
+                        </div>
+                        <div className="table-shell">
+                            <table className="table" aria-hidden="true">
+                                <thead>
+                                    <tr>
+                                        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                                            <th key={i} className={i === 6 ? 'text-right' : undefined}>
+                                                <span className="skeleton skeleton-line skeleton-sm" style={{ width: '70%' }} />
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {[0, 1, 2, 3, 4, 5].map((r) => (
+                                        <tr key={r}>
+                                            {[0, 1, 2, 3, 4, 5, 6].map((c) => (
+                                                <td key={c} className={c === 6 ? 'text-right' : undefined}>
+                                                    <span className="skeleton skeleton-line" style={{ width: c === 6 ? '62%' : '85%' }} />
+                                                </td>
+                                            ))}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div className="pagination" aria-hidden="true">
+                            <span className="skeleton" style={{ width: 34, height: 34 }} />
+                            <span className="skeleton" style={{ width: 20, height: 12 }} />
+                            <span className="skeleton" style={{ width: 34, height: 34 }} />
+                        </div>
+                    </section>
+                </div>
+            ) : (
+            <>
+            <section className="card panel panel-add">
+                <header className="panel-head">
+                    <div>
+                        <h3>Add Account</h3>
+                        <p className="muted">Create a new user account with a role and initial password.</p>
+                    </div>
+                    <button type="button" className="btn btn-primary" onClick={() => setAddOpen(true)}>
+                        Add account
+                    </button>
+                </header>
+            </section>
+
+            <section className="card padded">
+                <div className="filter-head">
+                    <div>
+                        <h3>User Accounts</h3>
+                        <p className="muted">Every account with its role, status and last update.</p>
+                    </div>
+                </div>
                 {!loading && !error && (
-                    <div className="table-wrap">
-                        <table className="table">
-                            <thead>
-                                <tr>
-                                    <th>Account</th>
-                                    <th>Email</th>
-                                    <th>Role</th>
-                                    <th>Status</th>
-                                    <th>Updated</th>
-                                    <th className="text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {users.map((user) => {
-                                    const isSelf = me?.id === user.id;
+                    <div className="table-shell">
+                        <div className="table-wrap data-rows-6" ref={wrapRef}>
+                            <table className="table" ref={tableRef}>
+                                <thead>
+                                    <tr>
+                                        <th className="sort-header" onClick={() => toggleSort('name')}>
+                                            Account{sortBy === 'name' && sortDir === 'asc' ? ' ▲' : sortBy === 'name' ? ' ▼' : ''}
+                                        </th>
+                                        <th className="sort-header" onClick={() => toggleSort('username')}>
+                                            Username{sortBy === 'username' && sortDir === 'asc' ? ' ▲' : sortBy === 'username' ? ' ▼' : ''}
+                                        </th>
+                                        <th className="sort-header" onClick={() => toggleSort('email')}>
+                                            Email{sortBy === 'email' && sortDir === 'asc' ? ' ▲' : sortBy === 'email' ? ' ▼' : ''}
+                                        </th>
+                                        <th className="sort-header" onClick={() => toggleSort('role')}>
+                                            Role{sortBy === 'role' && sortDir === 'asc' ? ' ▲' : sortBy === 'role' ? ' ▼' : ''}
+                                        </th>
+                                        <th className="sort-header" onClick={() => toggleSort('status')}>
+                                            Status{sortBy === 'status' && sortDir === 'asc' ? ' ▲' : sortBy === 'status' ? ' ▼' : ''}
+                                        </th>
+                                        <th className="sort-header" onClick={() => toggleSort('updated')}>
+                                            Updated{sortBy === 'updated' && sortDir === 'asc' ? ' ▲' : sortBy === 'updated' ? ' ▼' : ''}
+                                        </th>
+                                        <th className="text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {pagedUsers.map((user) => {
+                                        const isSelf = me?.id === user.id;
 
-                                    return (
-                                        <tr key={user.id}>
-                                            <td>
-                                                <strong>{user.name}</strong>
-                                                <small className="muted"> @{user.username}</small>
-                                            </td>
-                                            <td>{user.email}</td>
-                                            <td>
-                                                <span className={`pill ${user.role === 'admin' ? 'pill-warn' : 'pill-neutral'}`}>
-                                                    {user.role}
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <span className={`pill ${user.is_active ? 'pill-ok' : 'pill-danger'}`}>
-                                                    {user.is_active ? 'Active' : 'Inactive'}
-                                                </span>
-                                            </td>
-                                            <td className="muted">{user.updated_at}</td>
-                                            <td className="text-right actions-cell">
-                                                <button type="button" className="btn btn-ghost btn-sm" onClick={() => openEdit(user)}>
-                                                    Edit
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-ghost btn-sm"
-                                                    onClick={() => setResetUser(user)}
-                                                    disabled={!user.is_active}
-                                                    title={user.is_active ? 'Reset password' : 'Reactivate first'}
-                                                >
-                                                    Reset password
-                                                </button>
-                                                {user.is_active ? (
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-ghost btn-sm btn-danger-text"
-                                                        disabled={isSelf || busyId === user.id}
-                                                        title={isSelf ? 'You cannot deactivate your own account.' : 'Deactivate'}
-                                                        onClick={() => handleStatus(user, 'deactivate')}
-                                                    >
-                                                        Deactivate
+                                        return (
+                                            <tr key={user.id} className={user.is_active ? undefined : 'row-inactive'}>
+                                                <td>
+                                                    <strong>{user.name}</strong>
+                                                </td>
+                                                <td className="mono muted">@{user.username}</td>
+                                                <td>{user.email}</td>
+                                                <td>
+                                                    <span className={`pill ${user.role === 'admin' ? 'pill-warn' : 'pill-neutral'}`}>
+                                                        {user.role}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <span className={`pill ${user.is_active ? 'pill-ok' : 'pill-danger'}`}>
+                                                        {user.is_active ? 'Active' : 'Inactive'}
+                                                    </span>
+                                                </td>
+                                                <td className="muted">{user.updated_at}</td>
+                                                <td className="text-right actions-cell">
+                                                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => openEdit(user)}>
+                                                        Edit
                                                     </button>
-                                                ) : (
                                                     <button
                                                         type="button"
                                                         className="btn btn-ghost btn-sm"
-                                                        disabled={busyId === user.id}
-                                                        onClick={() => handleStatus(user, 'activate')}
+                                                        onClick={() => setResetUser(user)}
+                                                        disabled={!user.is_active}
+                                                        title={user.is_active ? 'Reset password' : 'Reactivate first'}
                                                     >
-                                                        Activate
+                                                        Reset password
                                                     </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                                                    {user.is_active ? (
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-ghost btn-sm btn-danger-text action-toggle"
+                                                            disabled={isSelf || busyId === user.id}
+                                                            title={isSelf ? 'You cannot deactivate your own account.' : 'Deactivate'}
+                                                            onClick={() => handleStatus(user, 'deactivate')}
+                                                        >
+                                                            Deactivate
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            className="btn btn-ghost btn-sm btn-success-text action-toggle"
+                                                            disabled={busyId === user.id}
+                                                            onClick={() => handleStatus(user, 'activate')}
+                                                        >
+                                                            Activate
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {!loading && !error && sortedUsers.length > 0 && (
+                    <div className="pagination">
+                        <button
+                            type="button"
+                            className="btn btn-ghost btn-sm page-btn"
+                            disabled={safePage <= 1}
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                            aria-label="Previous page"
+                        >
+                            <svg className="page-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </button>
+                        <span className="page-count">{safePage}</span>
+                        <button
+                            type="button"
+                            className="btn btn-ghost btn-sm page-btn"
+                            disabled={safePage >= lastPage}
+                            onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+                            aria-label="Next page"
+                        >
+                            <svg className="page-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                        </button>
                     </div>
                 )}
             </section>
+            </>
+            )}
 
             {addOpen && (
                 <Modal title="Create account" onClose={() => setAddOpen(false)}>

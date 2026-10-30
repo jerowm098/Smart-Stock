@@ -112,15 +112,36 @@ class HardwareTerms
     }
 
     /**
-     * Short uppercase prefix for an auto-generated SKU, taken from the English
-     * form of the name: "Pako" -> "NAI", "Martilyo" -> "HAM".
+     * Uppercase code segments for an auto-generated SKU: one 3-alphanumeric
+     * segment per word of the English form of the name.
+     * "Pako" -> ["NAI"]; "Cordless Drill 18V" -> ["COR","DRI","18V"].
+     *
+     * @return list<string>
+     */
+    public static function skuSegments(string $name): array
+    {
+        $source = static::translate($name) ?: $name;
+
+        $segments = [];
+        foreach (preg_split('/\s+/', trim($source)) ?: [] as $word) {
+            $chunk = substr(strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $word)), 0, 3);
+            if ($chunk !== '') {
+                $segments[] = $chunk;
+            }
+        }
+
+        return $segments;
+    }
+
+    /**
+     * Uppercase code prefix, one segment per word joined by hyphens.
+     * "Pako" -> "NAI"; "Cordless Drill 18V" -> "COR-DRI-18V"; "Wood Screw" -> "WOO-SCR".
      */
     public static function skuPrefix(string $name): string
     {
-        $source = static::translate($name) ?: $name;
-        $letters = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $source));
+        $segments = static::skuSegments($name);
 
-        return substr($letters, 0, 3) ?: 'NEW';
+        return $segments ? implode('-', $segments) : 'NEW';
     }
 
     /**

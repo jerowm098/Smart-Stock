@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
@@ -17,7 +20,8 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
  * - Page: GET /backups → resources/views/backups.blade.php (Admin Dashboard side)
  * - Auto-schedule: daily 02:00 via routes/console.php → backup:run --keep=7
  * - Manual: POST /api/backups/run (Admin clicks "Run Backup Now")
- * - Files live in storage/app/private/backups (never public, JSON dump).
+ * - Dumps are stored in the `backups` table (survives Render restarts) and
+ *   also written to storage/app/private/backups as a local convenience copy.
  */
 class BackupController extends Controller
 {
@@ -38,7 +42,8 @@ class BackupController extends Controller
     }
 
     /**
-     * List all backup files (newest first).
+     * List all backups (newest first), merging database rows with any files
+     * left on disk (e.g. backups created before the database store existed).
      */
     public function list(): JsonResponse
     {
@@ -47,23 +52,43 @@ class BackupController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
+        $items = [];
+
+        if (Schema::hasTable('backups')) {
+            foreach (DB::table('backups')->get() as $row) {
+                $items[$row->filename] = [
+                    'name' => $row->filename,
+                    'size_bytes' => (int) $row->size_bytes,
+                    'size_human' => $this->humanSize((int) $row->size_bytes),
+                    'modified' => date('M d, Y g:i A', (int) strtotime((string) $row->created_at)),
+                    'type' => 'Database dump',
+                ];
+            }
+        }
+
         $dir = $this->backupDir();
         $files = glob($dir . DIRECTORY_SEPARATOR . 'smart-stock-backup-*') ?: [];
-        rsort($files);
+        foreach ($files as $path) {
+            $name = basename($path);
+            if (isset($items[$name])) {
+                continue;
+            }
 
-        $items = array_map(function ($path) {
-            return [
-                'name' => basename($path),
-                'size_bytes' => filesize($path),
+            $items[$name] = [
+                'name' => $name,
+                'size_bytes' => (int) filesize($path),
                 'size_human' => $this->humanSize((int) filesize($path)),
                 'modified' => date('M d, Y g:i A', (int) filemtime($path)),
-                'type' => 'PostgreSQL dump',
+                'type' => 'Database dump',
             ];
-        }, $files);
+        }
+
+        // Filenames are timestamps (Ymd-His), so reverse key sort = newest first.
+        krsort($items);
 
         return response()->json([
             'count' => count($items),
-            'backups' => $items,
+            'backups' => array_values($items),
             'schedule' => 'Automatic backup daily at 2:00 AM (Manila)',
             'driver' => config('database.default') . ' / ' . config('database.connections.' . config('database.default') . '.driver'),
         ]);
@@ -91,14 +116,26 @@ class BackupController extends Controller
     }
 
     /**
-     * Download one backup file.
+     * Download one backup.
      */
-    public function download(string $file): BinaryFileResponse|JsonResponse
+    public function download(string $file): BinaryFileResponse|JsonResponse|Response
     {
         if (! $this->isValidName($file)) {
             return response()->json(['message' => 'Invalid backup filename.'], 422);
         }
 
+        // Database copy first — this is the one that survives redeploys.
+        if (Schema::hasTable('backups')) {
+            $row = DB::table('backups')->where('filename', $file)->first();
+            if ($row) {
+                return response((string) $row->content, 200, [
+                    'Content-Type' => 'application/json',
+                    'Content-Disposition' => 'attachment; filename="' . $file . '"',
+                ]);
+            }
+        }
+
+        // Fall back to a file on disk.
         $path = $this->backupDir() . DIRECTORY_SEPARATOR . $file;
         if (! is_file($path)) {
             return response()->json(['message' => 'Backup not found.'], 404);
@@ -108,7 +145,7 @@ class BackupController extends Controller
     }
 
     /**
-     * Delete one backup file.
+     * Delete one backup.
      */
     public function destroy(string $file): JsonResponse
     {
@@ -116,12 +153,21 @@ class BackupController extends Controller
             return response()->json(['message' => 'Invalid backup filename.'], 422);
         }
 
-        $path = $this->backupDir() . DIRECTORY_SEPARATOR . $file;
-        if (! is_file($path)) {
-            return response()->json(['message' => 'Backup not found.'], 404);
+        $deleted = false;
+
+        if (Schema::hasTable('backups')) {
+            $deleted = DB::table('backups')->where('filename', $file)->delete() > 0;
         }
 
-        @unlink($path);
+        $path = $this->backupDir() . DIRECTORY_SEPARATOR . $file;
+        if (is_file($path)) {
+            @unlink($path);
+            $deleted = true;
+        }
+
+        if (! $deleted) {
+            return response()->json(['message' => 'Backup not found.'], 404);
+        }
 
         return response()->json(['message' => 'Backup deleted.', 'file' => $file]);
     }

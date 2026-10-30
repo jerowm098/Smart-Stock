@@ -4,7 +4,6 @@
     "description": "Workspace runner: backend/ = Laravel API, frontend/ = React SPA.",
     "scripts": {
         "dev": "npm --prefix frontend run dev",
-        "dev:backend": "cd backend && php artisan serve --host=127.0.0.1 --port=8000",
-        "build:spa": "npm --prefix frontend run build && node scripts/copy-spa.cjs"
+        "dev:backend": "cd backend && php artisan serve --host=127.0.0.1 --port=8000"
     }
 }
