@@ -28,6 +28,34 @@ Ginagamit natin ang **3 layers** sa loob ng isang container:
 
 ---
 
+## Fresh Blueprint deploy (kapag walang existing service)
+
+> Ang Blueprint ay laging gumagawa ng BAGONG service + bagong random URL.
+> I-apply ito **isang beses** lang — pagkatapos, auto-deploy na ang bawat
+> push sa `main` (`autoDeploy: true`), walang Manual Deploy na kailangan.
+
+1. Supabase Dashboard → ang project → **Connect** → kopyahin ang **Session pooler** details.
+2. Render Dashboard → **New + → Blueprint** → i-connect ang repo (`main`).
+3. Sa **Blueprint setup screen**, may hihinging env vars (`sync: false`) — **HUWAG i-blank**:
+   | Key | Value |
+   |---|---|
+   | `DB_HOST` | `aws-0-<region>.pooler.supabase.com` (Session pooler) |
+   | `DB_PORT` | `5432` (default na sa yaml) |
+   | `DB_USERNAME` | `postgres.<project-ref>` — may prefix! |
+   | `DB_PASSWORD` | Supabase DB password |
+   | `APP_KEY` | pwedeng blank (auto-generate ng entrypoint) |
+4. **Apply** → hihintayin ng deploy ang build, tapos awtomatikong mag-
+   `migrate --force` ang entrypoint sa boot.
+5. Kapag 500 pa rin ang login: tingnan ang **Logs** tab — laging nasa
+   doon ang eksaktong exception.
+
+> Bakit Session pooler (5432) at hindi Transaction pooler (6543)?
+> Gumagamit ang Laravel ng prepared statements na sumasabog sa transaction
+> pooling, at ang auto-migrate sa boot ay tumatakbo sa parehong connection.
+> Session pooler = parehong gumagana ang runtime queries at migrations.
+
+---
+
 ## Ang mga file na ginawa ko (at ang trabaho nila)
 
 > **Phase 4 update:** ang backend ay pure JSON API na at ang React SPA

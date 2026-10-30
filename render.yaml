@@ -49,7 +49,14 @@ services:
         value: stderr
 
       # --- Supabase PostgreSQL (primary, walang SQLite) ---
-      # Kunin sa Supabase Dashboard > Settings > Database > Connection string
+      # Kunin sa Supabase Dashboard > Connect > "Session pooler" string.
+      #   DB_HOST     = aws-0-<region>.pooler.supabase.com   (SESSION pooler!)
+      #   DB_PORT     = 5432   (Session pooler - kaya tumatakbo ang auto-migrate)
+      #   DB_DATABASE = postgres
+      #   DB_USERNAME = postgres.<project-ref>   (may prefix na "<ref>"!)
+      #   DB_PASSWORD = <Supabase DB password>
+      # Ang mga may `sync: false` ay hihingin sa Blueprint setup screen -
+      # DO NOT leave them blank, dahil dahan-dahang mag-500 ang login.
       - key: DB_CONNECTION
         value: pgsql
       - key: DB_HOST
@@ -59,7 +66,7 @@ services:
       - key: DB_DATABASE
         value: postgres
       - key: DB_USERNAME
-        value: postgres
+        sync: false
       - key: DB_PASSWORD
         sync: false
       - key: DB_SSLMODE
@@ -99,7 +106,9 @@ services:
       # --- APP_KEY ---
       # MAHALAGA: para manatiling valid ang mga session/encryption
       # sa bawat deploy, i-set ang APP_KEY sa dashboard o dito.
-      # Generate: php artisan key:generate --show
+      # Kung blank/iwanan: auto-generate ng entrypoint sa unang boot
+      # (ok lang ito - session cookies lang ang maa-reset pag nag-redeploy
+      # nang walang key). Generate: php artisan key:generate --show
       - key: APP_KEY
         sync: false
 
