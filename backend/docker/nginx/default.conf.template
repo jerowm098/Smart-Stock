@@ -40,11 +40,16 @@ server {
 
     # SPA deep links (/products, /pos, /login, ...) -> index.html,
     # at hayaang ang React Router ang humawak.
+    # no-cache sa shell: kapag nag-redeploy, dapat laging freseng index.html
+    # ang kunin ng browser para hindi ito mag-reference ng lumang hashed
+    # assets na 404 na (ang hashed assets may sariling 30-day cache sa baba).
     location = / {
+        add_header Cache-Control "no-cache";
         try_files /app/index.html =404;
     }
 
     location / {
+        add_header Cache-Control "no-cache";
         try_files $uri /app/index.html;
     }
 

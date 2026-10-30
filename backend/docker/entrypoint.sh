@@ -58,6 +58,13 @@ fi
 echo ">>> Running Laravel optimizations..."
 php artisan package:discover --ansi >/dev/null 2>&1 || true
 php artisan config:cache   >/dev/null 2>&1 || true
+
+# 5b) Auto-migrate - idempotent, so every deploy applies its pending
+#     migrations without needing a manual Shell step (missing tables are
+#     the #1 cause of 500s right after a deploy).
+echo ">>> Applying pending migrations (if any)..."
+php artisan migrate --force --no-interaction \
+    || echo ">>> WARNING: migrate failed - check the DB env vars above"
 # WARNING: route:cache and view:cache are intentionally SKIPPED here.
 # If you run them, the compiled route list locks in the current APP_URL
 # (http://localhost from .env.example). Any later env var override for
