@@ -36,7 +36,7 @@ const ADMIN_NAV = [
         ],
     },
     {
-        label: 'Planning',
+        label: 'Demand',
         items: [
             { to: '/order-suggestions', label: 'Order Suggestions', icon: 'clipboard' },
         ],
@@ -61,7 +61,14 @@ const ADMIN_NAV = [
     },
 ];
 
-const CASHIER_NAV = [{ items: [{ to: '/pos', label: 'Point of Sale', icon: 'cart' }] }];
+const CASHIER_NAV = [
+    {
+        label: 'Management',
+        items: [
+            { to: '/pos', label: 'Point of Sale', icon: 'cart' },
+        ],
+    },
+];
 
 function Icon({ name }) {
     const paths = {

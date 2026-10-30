@@ -70,21 +70,10 @@ export default function UserMenu() {
                 aria-label="Account menu"
             >
                 <span className="avatar">{(user?.name ?? '?').charAt(0).toUpperCase()}</span>
-                <span className="user-menu-name">{titleCaseName(user?.name)}</span>
-                <svg
-                    className={`user-menu-chevron${open ? ' is-open' : ''}`}
-                    viewBox="0 0 24 24"
-                    width="15"
-                    height="15"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden="true"
-                >
-                    <path d="M6 9l6 6 6-6" />
-                </svg>
+                <span className="user-menu-who">
+                    <strong>{titleCaseName(user?.name)}</strong>
+                    <small>{user?.email}</small>
+                </span>
             </button>
 
             {open && (

@@ -842,9 +842,9 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 .nav-group + .nav-group { margin-top: 14px; }
 .nav-group-label {
     padding: 0 12px 2px;
-    font-size: 10.5px;
+    font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.09em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--muted);
     user-select: none;
@@ -953,10 +953,10 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 .user-menu-btn {
     display: inline-flex;
     align-items: center;
-    gap: 9px;
-    height: 38px;
-    padding: 3px 10px 3px 4px;
-    border-radius: 999px;
+    gap: 11px;
+    height: 46px;
+    padding: 5px 16px 5px 6px;
+    border-radius: 12px;
     border: 1px solid var(--border);
     background: var(--surface);
     color: var(--text);
@@ -966,19 +966,16 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 .user-menu-btn:hover { background: var(--surface-2); }
 .user-menu-btn.is-open { border-color: var(--primary); }
 
-.user-menu-btn .avatar { width: 30px; height: 30px; font-size: 13px; }
-
-.user-menu-name {
-    font-size: 13px;
-    font-weight: 600;
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.user-menu-who {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    line-height: 1.25;
+    min-width: 0;
 }
-
-.user-menu-chevron { width: 15px; height: 15px; color: var(--muted); transition: transform 0.15s ease; }
-.user-menu-chevron.is-open { transform: rotate(180deg); }
+.user-menu-who strong { font-size: 13.5px; font-weight: 700; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.user-menu-who small { color: var(--muted); font-size: 12px; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .user-menu-panel {
     position: absolute;
@@ -1020,8 +1017,8 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 .user-menu-signout:disabled { opacity: 0.55; cursor: not-allowed; }
 
 @media (max-width: 640px) {
-    .user-menu-name { display: none; }
-    .user-menu-btn { padding-right: 7px; }
+    .user-menu-who { display: none; }
+    .user-menu-btn { padding: 5px; height: 40px; }
 }
 
 .content-scroll {
