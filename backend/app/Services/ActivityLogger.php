@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\ActivityLog;
 use App\Models\Product;
-use App\Models\Sale;
 use App\Models\StockAdjustment;
 use App\Models\StockIn;
 use App\Models\User;
@@ -190,26 +189,6 @@ class ActivityLogger
                 'stock_before' => (int) $adjustment->stock_before,
                 'stock_after' => (int) $adjustment->stock_after,
                 'changes' => $changes,
-            ],
-        ]);
-    }
-
-    public static function saleCompleted(User $user, Sale $sale, int $itemCount): void
-    {
-        $description = "Completed a sale of {$itemCount} ".($itemCount === 1 ? 'item' : 'items')
-            .' for ₱'.number_format((float) $sale->total_amount, 2);
-
-        self::log($user, 'sale_completed', $description, [
-            'subject_type' => 'sale',
-            'subject_id' => $sale->id,
-            'subject_name' => 'Sale #'.$sale->id,
-            'meta' => [
-                'total_amount' => (float) $sale->total_amount,
-                'item_count' => $itemCount,
-                'changes' => [
-                    ['field' => 'items', 'text' => 'Items sold '.(int) $itemCount],
-                    ['field' => 'total', 'text' => 'Total ₱'.number_format((float) $sale->total_amount, 2)],
-                ],
             ],
         ]);
     }

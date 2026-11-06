@@ -45,7 +45,11 @@ class InventoryController extends Controller
         $validated = $request->validate([
             'product_id' => ['nullable', 'integer', 'min:1'],
             'new_product_name' => ['nullable', 'string', 'max:255'],
-            // Optional override for the auto-generated SKU of a NEW product.
+            // Name typed into the Receive Stock modal for the product being
+            // received; ignored on the create path (that one uses new_product_name).
+            'product_name' => ['nullable', 'string', 'max:255'],
+            // Optional SKU: the auto-generated code for a NEW product, or a
+            // correction to an existing product's code.
             'custom_sku' => ['nullable', 'string', 'max:50'],
             // Optional category for a NEW product; defaults to Uncategorized.
             'custom_category' => ['nullable', 'string', 'max:100'],
@@ -72,10 +76,17 @@ class InventoryController extends Controller
         // A hand-typed SKU must be free before we start the transaction;
         // otherwise the unique constraint would abort the whole receive.
         $customSku = strtoupper(trim((string) ($validated['custom_sku'] ?? '')));
-        if (! $hasProductId && $customSku !== '' && Product::where('sku', $customSku)->exists()) {
-            return response()->json([
-                'message' => "SKU \"{$customSku}\" is already in use. Please choose another.",
-            ], 422);
+        if ($customSku !== '') {
+            $skuQuery = Product::where('sku', $customSku);
+            if ($hasProductId) {
+                // Editing an existing product: its own code is not a conflict.
+                $skuQuery->where('id', '!=', $validated['product_id']);
+            }
+            if ($skuQuery->exists()) {
+                return response()->json([
+                    'message' => "SKU \"{$customSku}\" is already in use. Please choose another.",
+                ], 422);
+            }
         }
 
         $transactionProduct = null;
@@ -100,6 +111,23 @@ class InventoryController extends Controller
                 $product = $query->first();
                 if (! $product) {
                     return;
+                }
+
+                // The Receive modal lets the admin correct the product name and
+                // SKU while recording a delivery — apply those edits here so a
+                // typed value is never silently discarded. Receiving does NOT
+                // log a "Edited product" audit row: the delivery is logged once
+                // as a stock-received entry (Stock Inventory feed).
+                $typedName = trim((string) ($validated['product_name'] ?? ''));
+
+                if ($typedName !== '' && $typedName !== $product->name) {
+                    $product->name = $typedName;
+                }
+                if ($customSku !== '' && $customSku !== (string) $product->sku) {
+                    $product->sku = $customSku;
+                }
+                if ($product->isDirty()) {
+                    $product->save();
                 }
             } else {
                 // "Other…" path: the admin is receiving stock for a brand-new
@@ -163,6 +191,9 @@ class InventoryController extends Controller
         }
 
         // Audit feed: log the receive (and the brand-new product, if any).
+        // Scope: Product-created rows belong to the Products page; received-stock
+        // rows belong to the Stock Inventory page. No "Edited product" row is
+        // written for a delivery.
         ActivityLogger::safe(function () use ($user, $stockIn, $transactionProduct, $newProductCreated) {
             if ($newProductCreated) {
                 ActivityLogger::productCreated($user, $transactionProduct);

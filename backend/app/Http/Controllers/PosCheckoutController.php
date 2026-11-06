@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleItem;
-use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -257,7 +256,9 @@ class PosCheckoutController extends Controller
                 }
             }
 
-            ActivityLogger::safe(fn () => ActivityLogger::saleCompleted($user, $sale, count($saleItemsData)));
+            // Sales are recorded in `sales` / `sale_items` (Transactions page) and
+            // intentionally NOT written to the Products "Recent Activity" feed —
+            // checkout history does not belong in the inventory audit list.
 
             return response()->json([
                 'message' => 'Checkout completed successfully.',

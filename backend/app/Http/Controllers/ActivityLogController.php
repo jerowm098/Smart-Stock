@@ -12,9 +12,14 @@ class ActivityLogController extends Controller
     /**
      * Recent Activity feed for the Products page.
      *
-     * Returns the most recent admin actions (product add/edit/deactivate, stock
-     * receive/adjust, sale) newest-first, each with the acting user's name so the
-     * UI can render "who did what, when" as a vertical row list.
+     * Returns the most recent admin actions (product add/edit/deactivate/reactivate,
+     * stock adjust) newest-first, each with the acting user's name so the UI can
+     * render "who did what, when" as a vertical row list.
+     *
+     * Each page owns its own feed: Products shows product actions only, Stock
+     * Inventory passes ?actions=stock_received, and sales live on Transactions.
+     * Stock-received and sale rows written by older builds are filtered out of
+     * this default feed so they stay hidden.
      *
      * Admin-only: it exposes staff activity and inventory movements, matching
      * the BRD rule that staff must never read admin dashboard data.
@@ -34,6 +39,10 @@ class ActivityLogController extends Controller
         $query = ActivityLog::with('user:id,name,role')->latest();
         if (!empty($actions)) {
             $query->whereIn('action', $actions);
+        } else {
+            // Default feed (Products "Recent Activity"): product-page actions only.
+            // Stock receipts belong to Stock Inventory; sales belong to Transactions.
+            $query->whereNotIn('action', ['sale_completed', 'stock_received']);
         }
 
         $rows = $query->limit($limit)->get()

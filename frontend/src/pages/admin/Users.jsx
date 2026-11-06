@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../../components/Modal.jsx';
-import Alert, { FieldError } from '../../components/Feedback.jsx';
+import InfoTip from '../../components/InfoTip.jsx';
+import Alert, { Toast } from '../../components/Feedback.jsx';
+import MessageDialog from '../../components/MessageDialog.jsx';
 import { get, post, put, validationMessages } from '../../lib/api.js';
 
 const EMPTY_CREATE = { name: '', username: '', email: '', role: 'cashier', password: '', password_confirmation: '' };
@@ -20,6 +22,8 @@ export default function Users() {
     const [creating, setCreating] = useState(false);
     const [formError, setFormError] = useState(null);
     const [fieldErrors, setFieldErrors] = useState([]);
+    const [showCreatePassword, setShowCreatePassword] = useState(false);
+    const [showCreateConfirm, setShowCreateConfirm] = useState(false);
 
     const [editUser, setEditUser] = useState(null);
     const [editForm, setEditForm] = useState(null);
@@ -29,6 +33,8 @@ export default function Users() {
     const [resetForm, setResetForm] = useState({ password: '', password_confirmation: '' });
     const [resetting, setResetting] = useState(false);
     const [resetError, setResetError] = useState(null);
+    const [showResetPassword, setShowResetPassword] = useState(false);
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
 
     const [sortBy, setSortBy] = useState(null);
     const [sortDir, setSortDir] = useState(null);
@@ -209,9 +215,36 @@ export default function Users() {
         }
     }
 
-    const createSet = (name) => (event) => setCreateForm((current) => ({ ...current, [name]: event.target.value }));
-    const editSet = (name) => (event) => setEditForm((current) => ({ ...current, [name]: event.target.value }));
+    // Full names accept letters (incl. Ñ/ñ) and spaces only — mirrors the
+    // backend rule so digits/symbols can't be typed in the first place.
+    const sanitizeName = (value) => value.replace(/[^A-Za-zÑñ ]/g, '');
+
+    const createSet = (name) => (event) => {
+        const value = name === 'name' ? sanitizeName(event.target.value) : event.target.value;
+        setCreateForm((current) => ({ ...current, [name]: value }));
+    };
+    const editSet = (name) => (event) => {
+        const value = name === 'name' ? sanitizeName(event.target.value) : event.target.value;
+        setEditForm((current) => ({ ...current, [name]: value }));
+    };
     const resetSet = (name) => (event) => setResetForm((current) => ({ ...current, [name]: event.target.value }));
+
+    // Add-account validation feedback is shown in a nested dialog (not inline in
+    // the form). Laravel returns a general message plus per-field messages, so
+    // they are merged and de-duplicated before display.
+    const createErrorOpen = Boolean(formError) || fieldErrors.length > 0;
+    const createErrorMessages = useMemo(() => {
+        const list = [...fieldErrors];
+        if (formError) {
+            list.push(formError);
+        }
+        return [...new Set(list)];
+    }, [formError, fieldErrors]);
+
+    const closeCreateError = () => {
+        setFormError(null);
+        setFieldErrors([]);
+    };
 
     return (
         <div className="page">
@@ -225,7 +258,7 @@ export default function Users() {
                 </header>
             </section>
 
-            {message && <Alert tone="success" onClose={() => setMessage(null)}>{message}</Alert>}
+            {message && <Toast tone="success" onClose={() => setMessage(null)}>{message}</Toast>}
             {error && <Alert tone="error" onClose={() => setError(null)}>{error}</Alert>}
 
             {loading ? (
@@ -428,19 +461,71 @@ export default function Users() {
             )}
 
             {addOpen && (
-                <Modal title="Create account" onClose={() => setAddOpen(false)}>
+                <Modal
+                    title="Create account"
+                    onClose={() => {
+                        // Keep the form open while the nested error dialog is up,
+                        // otherwise one Escape press would close both dialogs.
+                        if (!createErrorOpen) {
+                            setAddOpen(false);
+                        }
+                    }}
+                >
                     <form className="form" onSubmit={handleCreate}>
                         <label className="field">
-                            <span>Full name *</span>
-                            <input type="text" required maxLength={100} value={createForm.name} onChange={createSet('name')} autoFocus />
+                            <span className="field-label">
+                                Full name
+                                <InfoTip text="Letters and spaces only. Shown in activity logs and across the app." />*
+                            </span>
+                            <div className="input-prefix-wrap has-icon">
+                                <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="8" r="4" />
+                                        <path d="M4 21a8 8 0 0 1 16 0" />
+                                    </svg>
+                                </span>
+                                <input
+                                    type="text"
+                                    required
+                                    maxLength={100}
+                                    placeholder="e.g. Juan Dela Cruz"
+                                    value={createForm.name}
+                                    onChange={createSet('name')}
+                                    autoFocus
+                                />
+                            </div>
                         </label>
                         <div className="field-row">
                             <label className="field">
-                                <span>Username *</span>
-                                <input type="text" required minLength={3} maxLength={255} pattern="[A-Za-z0-9]+" title="Letters and numbers only" value={createForm.username} onChange={createSet('username')} />
+                                <span className="field-label">
+                                    Username
+                                    <InfoTip text="Used to sign in. Letters and numbers only, at least 3 characters." />*
+                                </span>
+                                <div className="input-prefix-wrap has-icon">
+                                    <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="12" cy="8" r="4" />
+                                            <path d="M4 21a8 8 0 0 1 16 0" />
+                                        </svg>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        required
+                                        minLength={3}
+                                        maxLength={255}
+                                        pattern="[A-Za-z0-9]+"
+                                        title="Letters and numbers only"
+                                        placeholder="e.g. jdelacruz123"
+                                        value={createForm.username}
+                                        onChange={createSet('username')}
+                                    />
+                                </div>
                             </label>
                             <label className="field">
-                                <span>Role *</span>
+                                <span className="field-label">
+                                    Role
+                                    <InfoTip text="Admin manages stock and accounts. Cashier can only sell at the POS." />*
+                                </span>
                                 <select className="input" value={createForm.role} onChange={createSet('role')}>
                                     {roles.map((role) => (
                                         <option key={role} value={role}>{role}</option>
@@ -449,26 +534,77 @@ export default function Users() {
                             </label>
                         </div>
                         <label className="field">
-                            <span>Email *</span>
-                            <input type="email" required maxLength={255} value={createForm.email} onChange={createSet('email')} />
+                            <span className="field-label">
+                                Email
+                                <InfoTip text="Contact address for the account. Each account needs a unique email." />*
+                            </span>
+                            <div className="input-prefix-wrap has-icon">
+                                <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                                    </svg>
+                                </span>
+                                <input
+                                    type="email"
+                                    required
+                                    maxLength={255}
+                                    placeholder="e.g. jdelacruz123@example.com"
+                                    value={createForm.email}
+                                    onChange={createSet('email')}
+                                />
+                            </div>
                         </label>
                         <div className="field-row">
                             <label className="field">
-                                <span>Password *</span>
-                                <input type="password" required minLength={6} autoComplete="new-password" value={createForm.password} onChange={createSet('password')} />
+                                <span className="field-label">
+                                    Password
+                                    <InfoTip text="At least 6 characters. The user can change it after signing in." />*
+                                </span>
+                                <div className="input-with-action">
+                                    <input
+                                        type={showCreatePassword ? 'text' : 'password'}
+                                        required
+                                        minLength={6}
+                                        autoComplete="new-password"
+                                        placeholder="Minimum 6 characters"
+                                        value={createForm.password}
+                                        onChange={createSet('password')}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="input-action"
+                                        onClick={() => setShowCreatePassword((visible) => !visible)}
+                                    >
+                                        {showCreatePassword ? 'Hide' : 'Show'}
+                                    </button>
+                                </div>
                             </label>
                             <label className="field">
-                                <span>Confirm password *</span>
-                                <input type="password" required minLength={6} autoComplete="new-password" value={createForm.password_confirmation} onChange={createSet('password_confirmation')} />
+                                <span className="field-label">
+                                    Confirm password
+                                    <InfoTip text="Must exactly match the password above." />*
+                                </span>
+                                <div className="input-with-action">
+                                    <input
+                                        type={showCreateConfirm ? 'text' : 'password'}
+                                        required
+                                        minLength={6}
+                                        autoComplete="new-password"
+                                        placeholder="Re-enter password"
+                                        value={createForm.password_confirmation}
+                                        onChange={createSet('password_confirmation')}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="input-action"
+                                        onClick={() => setShowCreateConfirm((visible) => !visible)}
+                                    >
+                                        {showCreateConfirm ? 'Hide' : 'Show'}
+                                    </button>
+                                </div>
                             </label>
                         </div>
-
-                        {formError && (
-                            <div className="alert alert-error" role="alert">
-                                <span>{formError}</span>
-                                <FieldError messages={fieldErrors} />
-                            </div>
-                        )}
 
                         <div className="modal-actions">
                             <button type="button" className="btn btn-ghost" onClick={() => setAddOpen(false)}>Cancel</button>
@@ -480,17 +616,43 @@ export default function Users() {
                 </Modal>
             )}
 
+            {addOpen && createErrorOpen && (
+                <MessageDialog
+                    tone="danger"
+                    title="Couldn't create account"
+                    description="Please fix the following and try again."
+                    messages={createErrorMessages}
+                    onClose={closeCreateError}
+                />
+            )}
+
             {editUser && editForm && (
                 <Modal title={`Edit @${editUser.username}`} onClose={() => setEditUser(null)}>
                     <form className="form" onSubmit={handleEdit}>
                         <label className="field">
                             <span>Full name *</span>
-                            <input type="text" required maxLength={100} value={editForm.name} onChange={editSet('name')} />
+                            <div className="input-prefix-wrap has-icon">
+                                <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="8" r="4" />
+                                        <path d="M4 21a8 8 0 0 1 16 0" />
+                                    </svg>
+                                </span>
+                                <input type="text" required maxLength={100} value={editForm.name} onChange={editSet('name')} />
+                            </div>
                         </label>
                         <div className="field-row">
                             <label className="field">
                                 <span>Username *</span>
-                                <input type="text" required minLength={3} pattern="[A-Za-z0-9]+" value={editForm.username} onChange={editSet('username')} />
+                                <div className="input-prefix-wrap has-icon">
+                                    <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="12" cy="8" r="4" />
+                                            <path d="M4 21a8 8 0 0 1 16 0" />
+                                        </svg>
+                                    </span>
+                                    <input type="text" required minLength={3} pattern="[A-Za-z0-9]+" value={editForm.username} onChange={editSet('username')} />
+                                </div>
                             </label>
                             <label className="field">
                                 <span>Role *</span>
@@ -509,7 +671,15 @@ export default function Users() {
                         </div>
                         <label className="field">
                             <span>Email *</span>
-                            <input type="email" required maxLength={255} value={editForm.email} onChange={editSet('email')} />
+                            <div className="input-prefix-wrap has-icon">
+                                <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="2" y="4" width="20" height="16" rx="2" />
+                                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                                    </svg>
+                                </span>
+                                <input type="email" required maxLength={255} value={editForm.email} onChange={editSet('email')} />
+                            </div>
                         </label>
 
                         {editError && <div className="alert alert-error" role="alert"><span>{editError}</span></div>}
@@ -527,11 +697,44 @@ export default function Users() {
                     <form className="form" onSubmit={handleReset}>
                         <label className="field">
                             <span>New password *</span>
-                            <input type="password" required minLength={6} autoComplete="new-password" value={resetForm.password} onChange={resetSet('password')} autoFocus />
+                            <div className="input-with-action">
+                                <input
+                                    type={showResetPassword ? 'text' : 'password'}
+                                    required
+                                    minLength={6}
+                                    autoComplete="new-password"
+                                    value={resetForm.password}
+                                    onChange={resetSet('password')}
+                                    autoFocus
+                                />
+                                <button
+                                    type="button"
+                                    className="input-action"
+                                    onClick={() => setShowResetPassword((visible) => !visible)}
+                                >
+                                    {showResetPassword ? 'Hide' : 'Show'}
+                                </button>
+                            </div>
                         </label>
                         <label className="field">
                             <span>Confirm new password *</span>
-                            <input type="password" required minLength={6} autoComplete="new-password" value={resetForm.password_confirmation} onChange={resetSet('password_confirmation')} />
+                            <div className="input-with-action">
+                                <input
+                                    type={showResetConfirm ? 'text' : 'password'}
+                                    required
+                                    minLength={6}
+                                    autoComplete="new-password"
+                                    value={resetForm.password_confirmation}
+                                    onChange={resetSet('password_confirmation')}
+                                />
+                                <button
+                                    type="button"
+                                    className="input-action"
+                                    onClick={() => setShowResetConfirm((visible) => !visible)}
+                                >
+                                    {showResetConfirm ? 'Hide' : 'Show'}
+                                </button>
+                            </div>
                         </label>
 
                         {resetError && <div className="alert alert-error" role="alert"><span>{resetError}</span></div>}

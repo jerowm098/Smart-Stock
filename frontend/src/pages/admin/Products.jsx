@@ -303,7 +303,12 @@ export default function Products() {
                 const [rows, defects, feed] = await Promise.all([
                     get('/api/inventory/products'),
                     get('/api/inventory/defects').catch(() => null),
-                    get('/api/activity/recent', { limit: 12 }).catch(() => null),
+                    // Products page feed is scoped to product actions only —
+                    // stock receipts live on Stock Inventory, sales on Transactions.
+                    get('/api/activity/recent', {
+                        limit: 12,
+                        actions: 'product_created,product_updated,product_deactivated,product_reactivated,stock_adjusted',
+                    }).catch(() => null),
                 ]);
                 return { rows, defects, feed };
             } catch (err) {

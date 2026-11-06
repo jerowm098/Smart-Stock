@@ -25,7 +25,7 @@ const STEPS = [
 ];
 
 export default function Home() {
-    const { user, loading } = useAuth();
+    const { user } = useAuth();
     const primaryTo = user ? homeFor(user) : '/login';
     const primaryLabel = user ? 'Open dashboard' : 'Sign in to Smart-Stock';
 
@@ -48,14 +48,10 @@ export default function Home() {
                 <div className="landing-nav-actions">
                     <ThemeToggle />
 
-                    {/* Always reserved (never unmounted) so the nav doesn't reflow
-                        when the auth check resolves on reload — just hidden while loading. */}
-                    <Link
-                        to={primaryTo}
-                        className="btn btn-primary"
-                        aria-hidden={loading}
-                        style={loading ? { visibility: 'hidden' } : undefined}
-                    >
+                    {/* Visible from the first paint — the cached auth user makes
+                        the label correct right away, so it no longer waits on
+                        the session check (that wait read as a "delayed" button). */}
+                    <Link to={primaryTo} className="btn btn-primary">
                         {primaryLabel}
                     </Link>
                 </div>
@@ -64,7 +60,6 @@ export default function Home() {
             <section className="hero">
                 <div className="hero-glow" aria-hidden="true" />
                 <div className="hero-copy">
-                    <span className="eyebrow">Hardware store inventory · Sales · Forecasting</span>
                     <h1>
                         Stock that stays <span className="accent">ahead of demand.</span>
                     </h1>
@@ -95,31 +90,6 @@ export default function Home() {
                         </div>
                     </dl>
                 </div>
-
-                <div className="hero-panel" aria-hidden="true">
-                    <div className="panel-head">
-                        <span className="dot dot-red" />
-                        <span className="dot dot-amber" />
-                        <span className="dot dot-green" />
-                        <span className="panel-title">Order suggestions</span>
-                    </div>
-                    <div className="panel-row">
-                        <span>Cordless Drill 18V</span>
-                        <span className="pill pill-warn">Reorder 12</span>
-                    </div>
-                    <div className="panel-row">
-                        <span>Hammer Claw 16oz</span>
-                        <span className="pill pill-danger">Out of stock</span>
-                    </div>
-                    <div className="panel-row">
-                        <span>Screwdriver Set 8-in-1</span>
-                        <span className="pill pill-ok">Healthy</span>
-                    </div>
-                    <div className="panel-foot">
-                        <span>Next delivery</span>
-                        <strong>+36 units</strong>
-                    </div>
-                </div>
             </section>
 
             <section id="features" className="section">
@@ -149,7 +119,6 @@ export default function Home() {
 
             <footer className="landing-footer">
                 <span>Smart-Stock · Intelligent Inventory System</span>
-                <Link to={primaryTo}>{primaryLabel}</Link>
             </footer>
         </div>
     );

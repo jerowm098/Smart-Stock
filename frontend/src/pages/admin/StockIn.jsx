@@ -106,6 +106,8 @@ const UNITS = [
 
 const EMPTY_RECEIVE_FORM = {
     product_id: '',
+    product_name: '',
+    sku: '',
     supplier_id: '',
     unit_of_measure: '',
     quantity_received: '',
@@ -316,7 +318,12 @@ export default function StockIn() {
     }
 
     function openReceive(product) {
-        setReceiveForm({ ...EMPTY_RECEIVE_FORM, product_id: String(product.id) });
+        setReceiveForm({
+            ...EMPTY_RECEIVE_FORM,
+            product_id: String(product.id),
+            product_name: product.name || '',
+            sku: product.sku || '',
+        });
         setReceiveError(null);
         setReceiveFieldErrors([]);
         setReceiveOpen(true);
@@ -356,7 +363,9 @@ export default function StockIn() {
 
         try {
             const response = await post('/api/inventory/stock-in', {
-                product_id: receiveForm.product_id,
+                product_id: receiveForm.product_id || null,
+                product_name: receiveForm.product_name || null,
+                custom_sku: receiveForm.sku || null,
                 supplier_id: receiveForm.supplier_id || null,
                 quantity_received: receiveForm.quantity_received,
                 unit_of_measure: receiveForm.unit_of_measure || null,
@@ -883,17 +892,32 @@ export default function StockIn() {
                     onClose={resetReceive}
                 >
                     <form className="form" onSubmit={handleReceive}>
-                        <label className="field">
-                            <span>Product *</span>
-                            <select className="input" required autoFocus {...receiveInput('product_id')}>
-                                <option value="">Select a product…</option>
-                                {products.map((product) => (
-                                    <option key={product.id} value={product.id}>
-                                        {product.name} ({product.sku})
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                        {/* Both fields are editable: the modal opens prefilled from
+                            the clicked row, and a corrected name or SKU is saved
+                            together with the receive. */}
+                        <div className="field-row">
+                            <label className="field">
+                                <span>Product</span>
+                                <input
+                                    className="input"
+                                    type="text"
+                                    required
+                                    maxLength={255}
+                                    value={receiveForm.product_name}
+                                    onChange={(event) => setReceiveField('product_name', event.target.value)}
+                                />
+                            </label>
+                            <label className="field">
+                                <span>SKU code</span>
+                                <input
+                                    className="input mono"
+                                    type="text"
+                                    maxLength={50}
+                                    value={receiveForm.sku}
+                                    onChange={(event) => setReceiveField('sku', event.target.value)}
+                                />
+                            </label>
+                        </div>
 
                         <div className="field-row">
                             <label className="field">
@@ -928,6 +952,7 @@ export default function StockIn() {
                                     min="1"
                                     step="1"
                                     required
+                                    autoFocus
                                     placeholder="e.g. 10"
                                     {...receiveInput('quantity_received')}
                                 />
@@ -937,7 +962,6 @@ export default function StockIn() {
                                     <span>On hand now</span>
                                     <div className="readonly-value">
                                         {selected.current_stock} {selected.receiving_unit}
-                                        <small className="muted"> · {selected.pieces_per_receiving_unit} pcs per {selected.receiving_unit}</small>
                                     </div>
                                 </div>
                             )}

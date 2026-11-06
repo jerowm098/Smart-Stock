@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from './Modal.jsx';
 import Alert from './Feedback.jsx';
@@ -46,6 +46,33 @@ export default function PosTerminal({ channel = 'cashier' }) {
     const [submitting, setSubmitting] = useState(false);
     const [checkoutError, setCheckoutError] = useState(null);
     const [receipt, setReceipt] = useState(null);
+
+    // Transient "+N"/"-N" cart-change badges keyed by product id (same idea as
+    // the Products page stock-delta badge): pop in over the card, then disappear.
+    const [cartDeltas, setCartDeltas] = useState({});
+    const cartDeltaSeq = useRef(0);
+
+    function showCartDelta(productId, delta) {
+        if (!delta) {
+            return;
+        }
+
+        const key = ++cartDeltaSeq.current;
+        setCartDeltas((current) => ({ ...current, [productId]: { delta, key } }));
+    }
+
+    function clearCartDelta(productId) {
+        setCartDeltas((current) => {
+            if (!(productId in current)) {
+                return current;
+            }
+
+            const next = { ...current };
+            delete next[productId];
+
+            return next;
+        });
+    }
 
     useEffect(() => {
         let active = true;
@@ -163,17 +190,20 @@ export default function PosTerminal({ channel = 'cashier' }) {
             return;
         }
 
+        const existing = cart.find((line) => line.product.id === product.id);
+
+        if (existing && existing.quantity >= stock) {
+            return;
+        }
+
+        showCartDelta(product.id, 1);
         setCheckoutError(null);
         setCart((current) => {
-            const existing = current.find((line) => line.product.id === product.id);
+            const line = current.find((entry) => entry.product.id === product.id);
 
-            if (existing) {
-                if (existing.quantity >= stock) {
-                    return current;
-                }
-
-                return current.map((line) =>
-                    line.product.id === product.id ? { ...line, quantity: line.quantity + 1 } : line,
+            if (line) {
+                return current.map((entry) =>
+                    entry.product.id === product.id ? { ...entry, quantity: entry.quantity + 1 } : entry,
                 );
             }
 
@@ -183,19 +213,27 @@ export default function PosTerminal({ channel = 'cashier' }) {
 
     function setQuantity(productId, quantity) {
         const stock = stockOf(productId);
+        const before = cart.find((line) => line.product.id === productId)?.quantity ?? 0;
+        const next = Math.max(0, Math.min(Number(quantity) || 0, stock));
+
+        if (next !== before) {
+            showCartDelta(productId, next - before);
+        }
 
         setCart((current) =>
             current
-                .map((line) =>
-                    line.product.id === productId
-                        ? { ...line, quantity: Math.max(0, Math.min(Number(quantity) || 0, stock)) }
-                        : line,
-                )
+                .map((line) => (line.product.id === productId ? { ...line, quantity: next } : line))
                 .filter((line) => line.quantity > 0),
         );
     }
 
     function removeLine(productId) {
+        const before = cart.find((line) => line.product.id === productId)?.quantity ?? 0;
+
+        if (before > 0) {
+            showCartDelta(productId, -before);
+        }
+
         setCart((current) => current.filter((line) => line.product.id !== productId));
     }
 
@@ -523,7 +561,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                         const stock = Number(item.current_stock);
                                         const out = stock <= 0;
                                         const low = !out && stock <= Number(item.reorder_threshold);
-                                        const inCart = cart.find((line) => line.product.id === item.id)?.quantity ?? 0;
+                                        const delta = cartDeltas[item.id];
 
                                         return (
                                             <button
@@ -534,19 +572,29 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                                 disabled={out}
                                                 title={out ? 'Out of stock' : `Add ${item.name} to cart`}
                                             >
+                                                {delta && (
+                                                    <span
+                                                        key={delta.key}
+                                                        className={`pos-cart-delta ${delta.delta > 0 ? 'is-up' : 'is-down'}`}
+                                                        onAnimationEnd={() => clearCartDelta(item.id)}
+                                                    >
+                                                        {delta.delta > 0 ? `+${delta.delta}` : delta.delta}
+                                                    </span>
+                                                )}
                                                 <header>
-                                                    <span className="mono muted">{item.sku}</span>
+                                                    <span className="muted pos-card-category">{item.category || 'Uncategorised'}</span>
+                                                </header>
+                                                <h3>{item.name}</h3>
+                                                <div className="pos-card-meta">
+                                                    <span className="mono muted pos-card-sku">{item.sku}</span>
                                                     <span className={`pill ${out ? 'pill-danger' : low ? 'pill-warn' : 'pill-ok'}`}>
                                                         {out ? 'Out' : `${stock} left`}
                                                     </span>
-                                                </header>
-                                                <h3>{item.name}</h3>
-                                                <p className="muted">{item.category || 'Uncategorised'}</p>
+                                                </div>
                                                 <footer>
                                                     <strong>{formatPeso(item.price)}</strong>
                                                     <span className="muted">per {item.sell_unit}</span>
                                                 </footer>
-                                                {inCart > 0 && <span className="cart-badge">×{inCart} in cart</span>}
                                             </button>
                                         );
                                     })}
