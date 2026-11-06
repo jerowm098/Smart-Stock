@@ -95,6 +95,22 @@ export default function AppLayout() {
     const [menuOpen, setMenuOpen] = useState(false);
     const scrollRef = useRef(null);
 
+    // Touchpad momentum scrolling: rows/columns scroll past the stationary
+    // cursor and their :hover tints repaint in a wave, which reads as a
+    // "jelly" color trail on tables. Flag the gesture so CSS can suppress
+    // hover recolors while the page is in motion (see .is-scrolling rules
+    // in app.css); the class clears ~150ms after the last scroll event.
+    const [isScrolling, setIsScrolling] = useState(false);
+    const scrollIdleRef = useRef(null);
+
+    const handleScroll = () => {
+        setIsScrolling(true);
+        clearTimeout(scrollIdleRef.current);
+        scrollIdleRef.current = setTimeout(() => setIsScrolling(false), 150);
+    };
+
+    useEffect(() => () => clearTimeout(scrollIdleRef.current), []);
+
     const nav = user?.role === 'admin' ? ADMIN_NAV : CASHIER_NAV;
     const navItems = nav.flatMap((section) => section.items);
     const current = navItems.find((item) => location.pathname.startsWith(item.to));
@@ -173,7 +189,11 @@ export default function AppLayout() {
                     </div>
                 </header>
 
-                <div className="content-scroll" ref={scrollRef}>
+                <div
+                    className={`content-scroll${isScrolling ? ' is-scrolling' : ''}`}
+                    ref={scrollRef}
+                    onScroll={handleScroll}
+                >
                     <main className="content">
                         <Outlet />
                     </main>

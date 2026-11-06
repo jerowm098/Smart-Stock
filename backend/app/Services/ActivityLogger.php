@@ -193,6 +193,50 @@ class ActivityLogger
         ]);
     }
 
+    public static function suggestionOrdered(User $user, \App\Models\OrderSuggestion $suggestion): void
+    {
+        $name = $suggestion->product?->name ?? 'product';
+        $sku  = $suggestion->product?->sku  ?? '—';
+
+        self::log($user, 'suggestion_ordered', "Marked order suggestion as ordered: {$name}", [
+            'subject_type' => 'suggestion',
+            'subject_id'   => $suggestion->id,
+            'subject_name' => $name,
+            'meta' => [
+                'sku'           => $sku,
+                'suggested_qty' => (int) ceil((float) $suggestion->suggested_qty),
+                'urgency'       => $suggestion->urgency,
+                'changes' => [
+                    ['field' => 'status', 'text' => 'Status Active → Ordered'],
+                    ['field' => 'product', 'text' => "Product {$name} ({$sku})"],
+                    ['field' => 'qty', 'text' => 'Suggested qty '.(int) ceil((float) $suggestion->suggested_qty)],
+                    ['field' => 'urgency', 'text' => 'Urgency '.ucfirst($suggestion->urgency)],
+                ],
+            ],
+        ]);
+    }
+
+    public static function suggestionDismissed(User $user, \App\Models\OrderSuggestion $suggestion): void
+    {
+        $name = $suggestion->product?->name ?? 'product';
+        $sku  = $suggestion->product?->sku  ?? '—';
+
+        self::log($user, 'suggestion_dismissed', "Dismissed order suggestion: {$name}", [
+            'subject_type' => 'suggestion',
+            'subject_id'   => $suggestion->id,
+            'subject_name' => $name,
+            'meta' => [
+                'sku'     => $sku,
+                'urgency' => $suggestion->urgency,
+                'changes' => [
+                    ['field' => 'status', 'text' => 'Status Active → Dismissed'],
+                    ['field' => 'product', 'text' => "Product {$name} ({$sku})"],
+                    ['field' => 'urgency', 'text' => 'Urgency '.ucfirst($suggestion->urgency)],
+                ],
+            ],
+        ]);
+    }
+
     /**
      * Compare a before-snapshot against the freshly-saved product and return a
      * list of {field, text} entries for the fields that changed.

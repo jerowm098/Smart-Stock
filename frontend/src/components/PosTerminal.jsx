@@ -336,7 +336,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                 <header className="page-head">
                     <div>
                         <div className="page-title">
-                            <h2>{isAdmin ? 'Point of Sale Checkout (Admin)' : 'Point of Sale'}</h2>
+                            <h2>{isAdmin ? 'Point of Sale Checkout (Admin)' : 'Point of Sale (Cashier)'}</h2>
                         </div>
                         <p>
                             {isAdmin

@@ -71,6 +71,14 @@ export default function Home() {
     const primaryLabel = user ? 'Open dashboard' : 'Sign in to Smart-Stock';
     const [summary, setSummary] = useState(null);
 
+    // The landing page scrolls the document viewport itself (no .content-scroll
+    // wrapper like the admin area) — flag the root element so CSS can give the
+    // viewport the same custom scrollbar the admin dashboard uses.
+    useEffect(() => {
+        document.documentElement.classList.add('landing-page');
+        return () => document.documentElement.classList.remove('landing-page');
+    }, []);
+
     useEffect(() => {
         let active = true;
 
@@ -146,6 +154,11 @@ export default function Home() {
                 </div>
             </header>
 
+            {/* Everything below the pinned header scrolls inside its own
+                container, so the custom scrollbar starts at the header's
+                bottom edge — same idea as the admin .content-scroll. */}
+            <div className="landing-scroll">
+
             <section className="hero">
                 <div className="hero-glow" aria-hidden="true" />
                 <div className="hero-copy">
@@ -186,6 +199,8 @@ export default function Home() {
             <footer className="landing-footer">
                 <span>© {new Date().getFullYear()} Smart-Stock · Intelligent Inventory System. All rights reserved.</span>
             </footer>
+
+            </div>
         </div>
     );
 }

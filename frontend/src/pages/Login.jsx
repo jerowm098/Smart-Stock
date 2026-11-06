@@ -51,7 +51,7 @@ export default function Login() {
                     </Link>
 
                     <div className="auth-aside-copy">
-                        <h2>Every unit accounted for.</h2>
+                        <h2>Stock made simple.</h2>
                         <p>
                             Sign in to receive deliveries, run the counter, or review what the store needs next.
                         </p>

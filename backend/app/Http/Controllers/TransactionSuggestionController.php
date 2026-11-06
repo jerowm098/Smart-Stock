@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OrderSuggestion;
 use App\Models\Product;
+use App\Services\ActivityLogger;
 use App\Services\ForecastingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -176,6 +177,18 @@ class TransactionSuggestionController extends Controller
             'actioned_at' => now(),
             'actioned_by' => $request->user()?->id,
         ]);
+
+        $user = $request->user();
+        if ($user) {
+            $fresh = $suggestion->fresh(['product']);
+            ActivityLogger::safe(function () use ($user, $fresh, $status) {
+                if ($status === OrderSuggestion::STATUS_ORDERED) {
+                    ActivityLogger::suggestionOrdered($user, $fresh);
+                } else {
+                    ActivityLogger::suggestionDismissed($user, $fresh);
+                }
+            });
+        }
 
         return response()->json([
             'message'    => $status === OrderSuggestion::STATUS_ORDERED

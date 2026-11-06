@@ -148,6 +148,7 @@ html,
 body,
 #root {
     min-height: 100%;
+    overscroll-behavior: none;
 }
 
 body {
@@ -438,7 +439,10 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
     display: flex;
     flex-direction: column;
     width: 100%;
-    min-height: 100vh;
+    /* Fixed-height frame: pinned nav on top, .landing-scroll fills the rest.
+       dvh keeps the frame correct on mobile viewports with dynamic chrome. */
+    height: 100vh;
+    height: 100dvh;
 }
 
 /* Full-bleed header, but its inner content aligns to the same 1180px column
@@ -471,7 +475,10 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 /* Constrain the plain content blocks to the shared centered column.
    The header AND hero are intentionally excluded: the hero spans full-bleed so
    its clipped glow fades at the viewport edge (no hard vertical seam). */
-.landing > .section {
+/* Sections now live inside the .landing-scroll wrapper (pinned-nav layout),
+   so target them through it — a bare `.landing > .section` stopped matching
+   and the step cards stretched full-viewport width. */
+.landing > .landing-scroll > .section {
     width: min(1180px, 100% - 48px);
     margin-inline: auto;
 }
@@ -556,7 +563,7 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 
 .hero-stats {
     display: flex;
-    gap: 56px;
+    gap: 8px;
     margin-top: 34px;
     justify-content: center;
     flex-wrap: wrap;
@@ -579,7 +586,7 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
     justify-content: center;
     min-height: 1.1em; /* same height whether showing 0 or the final value */
     color: var(--text);
-    font-size: clamp(28px, 3.4vw, 38px);
+    font-size: clamp(22px, 2.6vw, 28px);
     font-weight: 800;
     line-height: 1.1;
     font-variant-numeric: tabular-nums;
@@ -635,7 +642,7 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 .section { padding: 44px 0 8px; }
 
 /* Breathing room between the last content section and the footer bar. */
-.landing > .section:last-of-type { padding-bottom: 112px; }
+.landing > .landing-scroll > .section:last-of-type { padding-bottom: 112px; }
 
 .section h2 {
     font-size: 24px;
@@ -1069,6 +1076,7 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    overscroll-behavior: none;
     scrollbar-width: thin;
     scrollbar-color: var(--scroll-thumb) transparent;
 }
@@ -1087,6 +1095,43 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
     background-clip: content-box;
 }
 .content-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--scroll-thumb-hover);
+    background-clip: content-box;
+}
+
+/* Homepage (public landing): the header is pinned and everything below it
+   scrolls inside .landing-scroll — so the custom scrollbar starts at the
+   header's bottom edge, exactly like the admin dashboard's .content-scroll.
+   Home.jsx toggles the .landing-page class on <html> to lock the viewport
+   (the document itself never scrolls on the landing page). */
+html.landing-page,
+html.landing-page body {
+    height: 100vh;
+    overflow: hidden;
+}
+
+.landing-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) transparent;
+}
+.landing-scroll::-webkit-scrollbar {
+    width: 10px;
+}
+.landing-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.landing-scroll::-webkit-scrollbar-thumb {
+    background: var(--scroll-thumb);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+.landing-scroll::-webkit-scrollbar-thumb:hover {
     background: var(--scroll-thumb-hover);
     background-clip: content-box;
 }
@@ -1165,6 +1210,7 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
     transition: opacity 0.15s ease;
 }
 .page-hero.is-loading .page-loadbar { opacity: 1; }
+.page-hero.is-loading .page-loadbar::before { animation-play-state: running; }
 .page-loadbar::before {
     content: '';
     position: absolute;
@@ -1174,6 +1220,10 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
     width: 100%;
     background: linear-gradient(90deg, var(--primary) 0%, var(--primary-2) 100%);
     animation: page-loadbar-run 1.4s linear infinite;
+    /* Idle pages must not keep a compositor animation running — an always-on
+       transform inside the scrolled content forces constant re-compositing and
+       reads as "jelly" on laptop GPUs during touchpad scrolling. */
+    animation-play-state: paused;
 }
 @keyframes page-loadbar-run {
     from { transform: translateX(-100%); }
@@ -1218,7 +1268,7 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 .table-card { overflow: hidden; }
 .padded { padding: 18px; }
 
-.table-wrap { overflow-x: auto; }
+.table-wrap { overflow-x: auto; overscroll-behavior: contain; }
 
 /* Backups table: reserve the height of a full six-row page so the pager and
    card bottom stay put even when fewer backups exist (same six rows per page
@@ -1261,6 +1311,22 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 }
 
 .table thead th { background: var(--table-head-bg); }
+
+/* Two-line column headers: the term on top, a small expansion of the
+   abbreviation under it (e.g. SKU — Stock Keeping Unit). Kept tiny and
+   nowrap so the sublabel never forces its column wider than the data
+   already does — the table must stay overflow-free (jelly fix). */
+.table th .th-sub {
+    display: block;
+    margin-top: 2px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    color: var(--muted);
+    white-space: nowrap;
+    opacity: 0.85;
+}
 
 .search-highlight {
     background: rgba(37, 99, 235, 0.15);
@@ -1322,6 +1388,15 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
     background-color: var(--surface);
     background-image: linear-gradient(var(--row-hover), var(--row-hover));
 }
+
+/* Touchpad momentum scrolling: as rows/column headers pass under the
+   stationary cursor their :hover tints repaint in a wave, which reads as a
+   "jelly" color trail. While the page is in motion (AppLayout toggles
+   .is-scrolling on .content-scroll), suppress the recolors; they return the
+   moment scrolling stops. Mouse-hover behaviour when idle is unchanged. */
+.content-scroll.is-scrolling .table tbody tr:hover { background-image: none; }
+.content-scroll.is-scrolling .activity-row:hover { background-image: none; }
+.content-scroll.is-scrolling .sort-header:hover { color: var(--muted); }
 
 .text-right { text-align: right; }
 
@@ -2425,18 +2500,34 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 .table-plain th,
 .table-plain td { padding: 9px 12px; }
 
-.actions-cell { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.actions-cell { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: nowrap; }
 
-.reason-cell { max-width: 260px; font-size: 13px; }
+.reason-cell { max-width: 140px; font-size: 13px; }
 
 /* Keep the reason to a single truncated line (full text on hover via title). */
 .reason-text {
     display: block;
-    max-width: 260px;
+    max-width: 140px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
+
+.table th small { text-transform: none; letter-spacing: 0; }
+
+.suggestions-table .mono { white-space: nowrap; }
+.suggestions-table .actions-cell { white-space: nowrap; }
+
+/* Dense 10-column table: keep every column inside the card at desktop widths
+   so .table-wrap never becomes a horizontal scroller under the cursor (a
+   nested scroller under a touchpad scroll-chains against the page scroll and
+   made scrolling feel jelly/bouncy). On narrow screens overflow-x auto still
+   applies as the graceful fallback. */
+.suggestions-table th,
+.suggestions-table td { padding-left: 11px; padding-right: 11px; }
+.suggestions-table .reason-cell,
+.suggestions-table .reason-text { max-width: 96px; }
+.suggestions-table .actions-cell { gap: 4px; }
 
 .inline-select { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .inline-select .input { width: auto; padding: 7px 10px; }

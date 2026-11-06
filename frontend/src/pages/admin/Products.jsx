@@ -1247,8 +1247,10 @@ export default function Products() {
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('sku')}
+                                            title="Stock Keeping Unit"
                                         >
                                             SKU{sortBy === 'sku' && sortDir === 'asc' ? ' ▲' : sortBy === 'sku' ? ' ▼' : ''}
+                                            <span className="th-sub">Stock Keeping Unit</span>
                                         </th>
                                         <th
                                             className="sort-header"
