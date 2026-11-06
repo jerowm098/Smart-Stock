@@ -1,22 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ThemeToggle from '../components/ThemeToggle.jsx';
-import { homeFor } from '../lib/api.js';
+import { get, homeFor } from '../lib/api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
-
-const FEATURES = [
-    {
-        title: 'One shared catalogue',
-        body: 'Admin and cashier work on the same stock rows, so a sale on the counter is reflected everywhere instantly.',
-    },
-    {
-        title: 'Forecast-driven restocking',
-        body: 'Thirty days of sales history turns into order suggestions before items run dry.',
-    },
-    {
-        title: 'Audit-ready history',
-        body: 'Every sale, stock-in and adjustment keeps the trail needed for reconciliation and reporting.',
-    },
-];
 
 const STEPS = [
     { step: '01', title: 'Receive', body: 'Admin logs incoming stock on the Stock Inventory page.' },
@@ -24,10 +10,114 @@ const STEPS = [
     { step: '03', title: 'Reorder', body: 'Order Suggestions show what to restock next.' },
 ];
 
+/* Counters start at zero and count up to the live figures. */
+const INITIAL_STATS = [
+    { label: 'Stock received', value: 0, suffix: 'units', plus: true },
+    { label: 'Suppliers', value: 0, suffix: 'partners', plus: true },
+    { label: 'Best seller', value: 0, suffix: 'units sold', plus: true },
+];
+
+/* Animated counter — eases a number up from 0 whenever the value changes. */
+function useCountUp(target) {
+    const [count, setCount] = useState(0);
+
+    useEffect(() => {
+        if (typeof target !== 'number' || Number.isNaN(target)) return undefined;
+
+        let frame;
+        const start = performance.now();
+        const duration = 900;
+
+        const tick = (now) => {
+            const progress = Math.min(Math.max((now - start) / duration, 0), 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            setCount(Math.round(target * eased));
+            if (progress < 1) frame = requestAnimationFrame(tick);
+        };
+
+        frame = requestAnimationFrame(tick);
+
+        return () => cancelAnimationFrame(frame);
+    }, [target]);
+
+    return typeof target === 'number' ? count : 0;
+}
+
+function HeroStat({ label, value, suffix, plus, title }) {
+    const count = useCountUp(value);
+    // Always reserve room for 6 characters; a wider final value only grows once.
+    const finalWidth = `${value.toLocaleString()}${plus ? '+' : ''}`.length;
+
+    return (
+        <div className="hero-stat">
+            <span className="hero-stat-label">{label}</span>
+            <span className="hero-stat-number" title={title}>
+                <span
+                    className="hero-stat-count"
+                    style={{ minWidth: `${Math.max(6, finalWidth)}ch` }}
+                >
+                    {count.toLocaleString()}
+                    {plus && <span className="hero-stat-plus">+</span>}
+                </span>
+            </span>
+            {suffix && <span className="hero-stat-suffix">{suffix}</span>}
+        </div>
+    );
+}
+
 export default function Home() {
     const { user } = useAuth();
     const primaryTo = user ? homeFor(user) : '/login';
     const primaryLabel = user ? 'Open dashboard' : 'Sign in to Smart-Stock';
+    const [summary, setSummary] = useState(null);
+
+    useEffect(() => {
+        let active = true;
+
+        const load = () => {
+            get('/api/public/stats')
+                .then((data) => {
+                    if (active) setSummary(data);
+                })
+                .catch(() => {
+                    // Keep whatever counters are already rendered.
+                });
+        };
+
+        load();
+
+        // Keep the counters live while the visitor stays on the page.
+        const timer = setInterval(load, 60_000);
+
+        return () => {
+            active = false;
+            clearInterval(timer);
+        };
+    }, []);
+
+    const topProduct = summary?.top_product;
+
+    const heroStats = summary ? [
+        {
+            label: 'Stock received',
+            value: summary.stock_received_units ?? 0,
+            suffix: 'units',
+            plus: true,
+        },
+        {
+            label: 'Suppliers',
+            value: summary.supplier_count ?? 0,
+            suffix: 'partners',
+            plus: true,
+        },
+        {
+            label: topProduct?.name ? `Best seller · ${topProduct.name}` : 'Best seller',
+            value: topProduct?.total_qty ?? 0,
+            suffix: 'units sold',
+            plus: true,
+            title: topProduct?.name,
+        },
+    ] : INITIAL_STATS;
 
     return (
         <div className="landing">
@@ -41,7 +131,6 @@ export default function Home() {
                 </Link>
 
                 <nav className="landing-links">
-                    <a href="#features">Features</a>
                     <a href="#how">How it works</a>
                 </nav>
 
@@ -61,46 +150,23 @@ export default function Home() {
                 <div className="hero-glow" aria-hidden="true" />
                 <div className="hero-copy">
                     <h1>
-                        Stock that stays <span className="accent">ahead of demand.</span>
+                        Stock your Hardware in <span className="accent">Smart way.</span>
                     </h1>
                     <p>
-                        Smart-Stock connects receiving, the checkout counter and demand forecasting into one
-                        shared inventory — so the shelf is never a surprise.
+                        Smart-Stock brings receiving, checkout and demand forecasting together in one shared
+                        inventory for your hardware store, so you always know what's on the shelf and what
+                        to restock next.
                     </p>
                     <div className="hero-actions">
                         <Link to={primaryTo} className="btn btn-primary btn-lg">
                             {primaryLabel}
                         </Link>
-                        <a href="#features" className="btn btn-ghost btn-lg">
-                            See what it does
-                        </a>
                     </div>
-                    <dl className="hero-stats">
-                        <div>
-                            <dt>Shared catalogue</dt>
-                            <dd>1 source of truth</dd>
-                        </div>
-                        <div>
-                            <dt>Forecast window</dt>
-                            <dd>30 days</dd>
-                        </div>
-                        <div>
-                            <dt>Audit trail</dt>
-                            <dd>Every movement</dd>
-                        </div>
-                    </dl>
-                </div>
-            </section>
-
-            <section id="features" className="section">
-                <h2>Built for the counter and the stockroom</h2>
-                <div className="feature-grid">
-                    {FEATURES.map((feature) => (
-                        <article key={feature.title} className="card feature-card">
-                            <h3>{feature.title}</h3>
-                            <p>{feature.body}</p>
-                        </article>
-                    ))}
+                    <div className="hero-stats">
+                        {heroStats.map((stat) => (
+                            <HeroStat key={stat.label} {...stat} />
+                        ))}
+                    </div>
                 </div>
             </section>
 
@@ -118,7 +184,7 @@ export default function Home() {
             </section>
 
             <footer className="landing-footer">
-                <span>Smart-Stock · Intelligent Inventory System</span>
+                <span>© {new Date().getFullYear()} Smart-Stock · Intelligent Inventory System. All rights reserved.</span>
             </footer>
         </div>
     );

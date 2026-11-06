@@ -39,6 +39,9 @@ class DashboardController extends Controller
         // Active suppliers (for admin overview)
         $supplierCount = Supplier::count();
 
+        // Total units received across all stock-in records
+        $stockReceivedUnits = (int) StockIn::sum('quantity_received');
+
         return response()->json([
             'total_products'     => $totalProducts,
             'total_revenue'      => $totalRevenue,
@@ -46,6 +49,7 @@ class DashboardController extends Controller
             'critical_stock_count' => $criticalStockCount,
             'total_sales'        => $totalSales,
             'supplier_count'     => $supplierCount,
+            'stock_received_units' => $stockReceivedUnits,
         ]);
     }
 
@@ -145,6 +149,32 @@ class DashboardController extends Controller
             });
 
         return response()->json($stockIns);
+    }
+
+    /**
+     * Public aggregate figures for the landing page hero counters.
+     *
+     * Returns counts only (no prices, stock levels or per-user data) so the
+     * marketing page can show live numbers to signed-out visitors.
+     */
+    public function publicStats(): JsonResponse
+    {
+        $topProduct = DB::table('sale_items')
+            ->join('products', 'sale_items.product_id', '=', 'products.id')
+            ->select('products.name', DB::raw('SUM(sale_items.quantity) as total_qty'))
+            ->groupBy('products.id', 'products.name')
+            ->orderByDesc('total_qty')
+            ->first();
+
+        return response()->json([
+            'product_count'        => Product::count(),
+            'supplier_count'       => Supplier::count(),
+            'sale_count'           => Sale::count(),
+            'stock_received_units' => (int) StockIn::sum('quantity_received'),
+            'top_product'          => $topProduct
+                ? ['name' => $topProduct->name, 'total_qty' => (int) $topProduct->total_qty]
+                : null,
+        ]);
     }
 
     /**

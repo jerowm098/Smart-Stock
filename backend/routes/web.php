@@ -63,6 +63,9 @@ Route::post('/api/auth/logout', [AuthController::class, 'apiLogout'])->name('api
 // XSRF-TOKEN cookie before the frontend's first POST.
 Route::get('/api/auth/user', [AuthController::class, 'apiUser'])->name('api.auth.user');
 
+// Public aggregate counters for the landing page (no auth, counts only).
+Route::get('/api/public/stats', [DashboardController::class, 'publicStats'])->name('public.stats');
+
 // ------------------------------------------------------------------
 // Authenticated API
 // ------------------------------------------------------------------
