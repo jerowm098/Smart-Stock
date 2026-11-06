@@ -171,7 +171,7 @@ export default function Home() {
             </section>
 
             <section id="how" className="section">
-                <h2>One loop, three steps</h2>
+                <h2>The full inventory cycle</h2>
                 <div className="step-grid">
                     {STEPS.map((item) => (
                         <article key={item.step} className="card step-card">

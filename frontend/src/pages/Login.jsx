@@ -39,53 +39,62 @@ export default function Login() {
 
     return (
         <div className="auth-shell">
-            <aside className="auth-aside">
-                <Link to="/" className="brand brand-inline">
-                    <span className="brand-mark">SS</span>
-                    <span className="brand-text">
-                        <strong>Smart-Stock</strong>
-                        <small>Intelligent Inventory</small>
-                    </span>
-                </Link>
+            <div className="auth-box">
+                {/* Left column — brand / copy */}
+                <aside className="auth-aside">
+                    <Link to="/" className="brand brand-inline">
+                        <span className="brand-mark">SS</span>
+                        <span className="brand-text">
+                            <strong>Smart-Stock</strong>
+                            <small>Intelligent Inventory</small>
+                        </span>
+                    </Link>
 
-                <div className="auth-aside-copy">
-                    <h2>Every unit accounted for.</h2>
-                    <p>
-                        Sign in to receive deliveries, run the counter, or review what the store needs next.
-                    </p>
-                </div>
+                    <div className="auth-aside-copy">
+                        <h2>Every unit accounted for.</h2>
+                        <p>
+                            Sign in to receive deliveries, run the counter, or review what the store needs next.
+                        </p>
+                    </div>
 
-                <ul className="auth-points">
-                    <li>Admin and cashier see the right surface for their role</li>
-                    <li>Live stock levels, no spreadsheet sync</li>
-                    <li>Forecast suggestions built from real sales</li>
-                </ul>
-            </aside>
+                    <ul className="auth-points">
+                        <li>Admin and cashier see the right surface for their role</li>
+                        <li>Live stock levels, no spreadsheet sync</li>
+                        <li>Forecast suggestions built from real sales</li>
+                    </ul>
+                </aside>
 
-            <main className="auth-main">
-                <div className="auth-card">
-                    <div className="auth-card-head">
-                        <header>
-                            <span className="eyebrow">Welcome back</span>
-                            <h1>Sign in</h1>
-                            <p>Use the username (or email) assigned by the store admin.</p>
-                        </header>
+                {/* Right column — form */}
+                <main className="auth-main">
+                    <div className="auth-theme-toggle">
                         <ThemeToggle />
                     </div>
+                    <header className="auth-main-head">
+                        <h1>Sign in</h1>
+                        <p>Use the username or email assigned by the store admin.</p>
+                    </header>
 
                     <form onSubmit={handleSubmit} className="form" noValidate>
                         <label className="field">
                             <span>Username or email</span>
-                            <input
-                                type="text"
-                                name="username"
-                                autoComplete="username"
-                                autoFocus
-                                value={username}
-                                onChange={(event) => setUsername(event.target.value)}
-                                placeholder="e.g. testadmin or testadmin@gmail.com"
-                                required
-                            />
+                            <div className="input-prefix-wrap has-icon">
+                                <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="8" r="4" />
+                                        <path d="M4 21a8 8 0 0 1 16 0" />
+                                    </svg>
+                                </span>
+                                <input
+                                    type="text"
+                                    name="username"
+                                    autoComplete="username"
+                                    autoFocus
+                                    value={username}
+                                    onChange={(event) => setUsername(event.target.value)}
+                                    placeholder="e.g. testadmin or testadmin@gmail.com"
+                                    required
+                                />
+                            </div>
                         </label>
 
                         <label className="field">
@@ -124,8 +133,8 @@ export default function Login() {
                     <p className="auth-footnote">
                         Accounts are created by an admin. No self-registration.
                     </p>
-                </div>
-            </main>
+                </main>
+            </div>
         </div>
     );
 }
