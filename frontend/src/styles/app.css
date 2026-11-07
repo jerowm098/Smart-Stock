@@ -483,6 +483,15 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
     margin-inline: auto;
 }
 
+/* "How it works" gets the same flat light-blue band as the hero — full-bleed,
+   with its content aligned to the same 1180px column. */
+.landing > .landing-scroll > .section#how {
+    width: 100%;
+    margin-inline: 0;
+    background: var(--primary-soft-bg);
+    padding: 44px max(24px, calc((100% - 1180px) / 2)) 112px;
+}
+
 .brand {
     display: flex;
     align-items: center;
@@ -513,19 +522,11 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
     position: relative;
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
+    align-items: flex-start;
+    text-align: left;
     padding: 64px max(24px, calc((100% - 1180px) / 2)) 40px;
     overflow: hidden;
-}
-
-.hero-glow {
-    position: absolute;
-    inset: -40% -20% auto -20%;
-    height: 420px;
-    background: radial-gradient(closest-side, var(--glow-hero), transparent);
-    filter: blur(10px);
-    pointer-events: none;
+    background: var(--primary-soft-bg);
 }
 
 .hero-copy {
@@ -556,16 +557,15 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
     font-size: 16.5px;
     line-height: 1.65;
     max-width: 52ch;
-    margin-inline: auto;
 }
 
-.hero-actions { display: flex; gap: 12px; margin-top: 26px; flex-wrap: wrap; justify-content: center; }
+.hero-actions { display: flex; gap: 12px; margin-top: 26px; flex-wrap: wrap; justify-content: flex-start; }
 
 .hero-stats {
     display: flex;
     gap: 8px;
     margin-top: 34px;
-    justify-content: center;
+    justify-content: flex-start;
     flex-wrap: wrap;
 }
 
@@ -573,17 +573,17 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
    Fixed width so nothing moves while the numbers animate. */
 .hero-stat {
     display: flex;
-    flex: 0 0 220px;
+    flex: 0 0 auto;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     gap: 4px;
-    width: 220px;
+    width: auto;
 }
 
 .hero-stat-number {
     display: inline-flex;
     align-items: baseline;
-    justify-content: center;
+    justify-content: flex-start;
     min-height: 1.1em; /* same height whether showing 0 or the final value */
     color: var(--text);
     font-size: clamp(22px, 2.6vw, 28px);
@@ -593,10 +593,10 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 }
 
 /* Fixed width (set inline) so the animation grows the digits inside the box
-   instead of resizing it. Centered so every number lines up under its label. */
+   instead of resizing it. Left-aligned with the rest of the hero content. */
 .hero-stat-count {
     display: inline-block;
-    text-align: center;
+    text-align: left;
     font-variant-numeric: tabular-nums;
 }
 
@@ -620,7 +620,7 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 .hero-stat-label {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     width: 100%;
     min-height: 2.7em;
     color: var(--muted);
@@ -2528,6 +2528,18 @@ html.landing-page body {
 .suggestions-table .reason-cell,
 .suggestions-table .reason-text { max-width: 96px; }
 .suggestions-table .actions-cell { gap: 4px; }
+
+/* Stock Inventory receiving table (same jelly discipline as the suggestions
+   table): 7 columns must fit inside the card at desktop widths so .table-wrap
+   never becomes a horizontal scroller under the cursor — a nested scroller
+   chains against the page scroll and reads as jelly/bouncy, worst over the
+   header row. Trim paddings and keep the SKU sublabel from widening its
+   column beyond what the data needs. */
+.receiving-table th,
+.receiving-table td { padding-left: 12px; padding-right: 12px; }
+.receiving-table th .th-sub { font-size: 8px; letter-spacing: 0.01em; }
+.receiving-table td.mono { font-size: 12.5px; }
+.receiving-table .actions-cell { gap: 4px; }
 
 .inline-select { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .inline-select .input { width: auto; padding: 7px 10px; }

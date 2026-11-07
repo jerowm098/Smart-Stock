@@ -139,6 +139,7 @@ export default function Home() {
                 </Link>
 
                 <nav className="landing-links">
+                    <a href="#top">Home</a>
                     <a href="#how">How it works</a>
                 </nav>
 
@@ -159,8 +160,7 @@ export default function Home() {
                 bottom edge — same idea as the admin .content-scroll. */}
             <div className="landing-scroll">
 
-            <section className="hero">
-                <div className="hero-glow" aria-hidden="true" />
+            <section id="top" className="hero">
                 <div className="hero-copy">
                     <h1>
                         Stock your Hardware in <span className="accent">Smart way.</span>
