@@ -344,7 +344,7 @@ export default function Users() {
                                 <thead>
                                     <tr>
                                         <th className="sort-header" onClick={() => toggleSort('name')}>
-                                            Account{sortBy === 'name' && sortDir === 'asc' ? ' ▲' : sortBy === 'name' ? ' ▼' : ''}
+                                            Full name{sortBy === 'name' && sortDir === 'asc' ? ' ▲' : sortBy === 'name' ? ' ▼' : ''}
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('username')}>
                                             Username{sortBy === 'username' && sortDir === 'asc' ? ' ▲' : sortBy === 'username' ? ' ▼' : ''}
@@ -373,7 +373,7 @@ export default function Users() {
                                                 <td>
                                                     <strong>{user.name}</strong>
                                                 </td>
-                                                <td className="mono muted">@{user.username}</td>
+                                                <td className="mono muted">{user.username}</td>
                                                 <td>{user.email}</td>
                                                 <td>
                                                     <span className={`pill ${user.role === 'admin' ? 'pill-warn' : 'pill-neutral'}`}>

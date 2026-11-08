@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from './Modal.jsx';
-import Alert from './Feedback.jsx';
+import MessageDialog from './MessageDialog.jsx';
+import Alert, { Toast } from './Feedback.jsx';
 import { get, post, validationMessages } from '../lib/api.js';
 import { formatPeso } from '../lib/format.js';
 
-const QUICK_CASH = [20, 50, 100, 200, 500, 1000];
+const QUICK_CASH = [20, 50, 100, 200];
 const PER_PAGE = 12;
 
 function receiptNo(saleId) {
@@ -46,11 +47,19 @@ export default function PosTerminal({ channel = 'cashier' }) {
     const [submitting, setSubmitting] = useState(false);
     const [checkoutError, setCheckoutError] = useState(null);
     const [receipt, setReceipt] = useState(null);
+    const [gcashNotice, setGcashNotice] = useState(false);
+    const [toast, setToast] = useState(null);
 
-    // Transient "+N"/"-N" cart-change badges keyed by product id (same idea as
-    // the Products page stock-delta badge): pop in over the card, then disappear.
+    // Transient "+N"/"-N" badges keyed by product id (same idea as the Products
+    // page stock-delta badge): pop in over the card, then disappear.
+    //
+    // The number always describes the change in AVAILABLE stock, never the cart
+    // direction — adding to the cart takes stock off the shelf (so "-1" and the
+    // "N left" pill drops by one), while removing a line or clearing the cart
+    // puts stock back (so "+N" and the pill climbs back).
     const [cartDeltas, setCartDeltas] = useState({});
     const cartDeltaSeq = useRef(0);
+    const deltaTimers = useRef(new Map());
 
     function showCartDelta(productId, delta) {
         if (!delta) {
@@ -59,11 +68,30 @@ export default function PosTerminal({ channel = 'cashier' }) {
 
         const key = ++cartDeltaSeq.current;
         setCartDeltas((current) => ({ ...current, [productId]: { delta, key } }));
+
+        // Safety net: a card that is not on the current page never fires
+        // onAnimationEnd, so clear stale badges on a timer as well.
+        const pending = deltaTimers.current.get(productId);
+
+        if (pending) {
+            clearTimeout(pending);
+        }
+
+        deltaTimers.current.set(
+            productId,
+            setTimeout(() => {
+                deltaTimers.current.delete(productId);
+                clearCartDelta(productId, key);
+            }, 2100),
+        );
     }
 
-    function clearCartDelta(productId) {
+    function clearCartDelta(productId, key) {
         setCartDeltas((current) => {
-            if (!(productId in current)) {
+            const entry = current[productId];
+
+            // Ignore a late animation end belonging to an older badge.
+            if (!entry || (key !== undefined && entry.key !== key)) {
                 return current;
             }
 
@@ -73,6 +101,11 @@ export default function PosTerminal({ channel = 'cashier' }) {
             return next;
         });
     }
+
+    useEffect(() => () => {
+        deltaTimers.current.forEach((timer) => clearTimeout(timer));
+        deltaTimers.current.clear();
+    }, []);
 
     useEffect(() => {
         let active = true;
@@ -183,6 +216,19 @@ export default function PosTerminal({ channel = 'cashier' }) {
         return items.find((item) => item.id === productId)?.current_stock ?? 0;
     }
 
+    function inCartQty(productId) {
+        return cart.find((line) => line.product.id === productId)?.quantity ?? 0;
+    }
+
+    /**
+     * Stock still available for new cart lines = on-hand stock minus everything
+     * already parked in the cart. This is what the "N left" pill shows, so it
+     * moves the moment an item is clicked.
+     */
+    function availableOf(product) {
+        return Math.max(0, (Number(product.current_stock) || 0) - inCartQty(product.id));
+    }
+
     function addToCart(product) {
         const stock = Number(product.current_stock) || 0;
 
@@ -196,7 +242,8 @@ export default function PosTerminal({ channel = 'cashier' }) {
             return;
         }
 
-        showCartDelta(product.id, 1);
+        // One unit leaves the shelf and goes into the cart.
+        showCartDelta(product.id, -1);
         setCheckoutError(null);
         setCart((current) => {
             const line = current.find((entry) => entry.product.id === product.id);
@@ -217,7 +264,8 @@ export default function PosTerminal({ channel = 'cashier' }) {
         const next = Math.max(0, Math.min(Number(quantity) || 0, stock));
 
         if (next !== before) {
-            showCartDelta(productId, next - before);
+            // Cart goes down → stock goes back up, and vice versa.
+            showCartDelta(productId, before - next);
         }
 
         setCart((current) =>
@@ -231,16 +279,30 @@ export default function PosTerminal({ channel = 'cashier' }) {
         const before = cart.find((line) => line.product.id === productId)?.quantity ?? 0;
 
         if (before > 0) {
-            showCartDelta(productId, -before);
+            // The whole line goes back on the shelf.
+            showCartDelta(productId, before);
         }
 
         setCart((current) => current.filter((line) => line.product.id !== productId));
     }
 
     function clearCart() {
+        // Every line returns to stock, so each product card shows the full
+        // return total (+N) for that item — not one combined badge.
+        cart.forEach((line) => showCartDelta(line.product.id, line.quantity));
+
         setCart([]);
         setPayment('');
         setCheckoutError(null);
+    }
+
+    function addCash(amount) {
+        // Denominations stack instead of replacing: ₱20 then ₱20 again is ₱40.
+        setPayment((current) => {
+            const base = Number(current) || 0;
+
+            return String(Math.round((base + amount) * 100) / 100);
+        });
     }
 
     function clearFilters() {
@@ -314,7 +376,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                 setCheckoutError(
                     `${err.message}${err.payload?.product_name ? ` (${err.payload.product_name})` : ''}` +
                         (err.payload?.available_stock !== undefined
-                            ? ` — only ${err.payload.available_stock} left.`
+                            ? `, only ${err.payload.available_stock} left.`
                             : ''),
                 );
             } else if (err.status === 402) {
@@ -327,6 +389,23 @@ export default function PosTerminal({ channel = 'cashier' }) {
         } finally {
             setSubmitting(false);
         }
+    }
+
+    /**
+     * Dismiss the receipt and confirm the completed sale with a toast. The
+     * receipt modal is the transaction summary; this is the "done" signal once
+     * the cashier clicks "New sale". The close (X) button only closes.
+     */
+    function dismissReceipt() {
+        const saleId = receipt?.saleId;
+        const saleTotal = receipt?.total;
+
+        setReceipt(null);
+        setToast(
+            saleId
+                ? `Sale ${receiptNo(saleId)} completed successfully. Total ${formatPeso(saleTotal ?? 0)}.`
+                : 'Purchase completed successfully.',
+        );
     }
 
     return (
@@ -411,8 +490,8 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                             <span className="skeleton" style={{ width: 48, height: 16 }} />
                                             <span className="skeleton" style={{ width: 42, height: 24 }} />
                                         </div>
-                                        <ul className="cart-lines">
-                                            {[0, 1, 2, 3].map((i) => (
+                                        <ul className="cart-lines is-skeleton">
+                                            {[0, 1, 2].map((i) => (
                                                 <li key={i} className="cart-line">
                                                     <div className="cart-line-info">
                                                         <span className="skeleton skeleton-line" style={{ width: '75%', marginBottom: 6 }} />
@@ -547,7 +626,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                         <div>
                             <h3>Product Catalogue List</h3>
                             <p className="muted">
-                                Active products available for sale, with price and current stock.
+                                Active products available for sale, with price and stock still available to add.
                             </p>
                         </div>
                     </header>
@@ -558,25 +637,35 @@ export default function PosTerminal({ channel = 'cashier' }) {
                             {!error && (
                                 <div className={`pos-grid${paged.length >= 9 ? ' is-stretch' : ''}`}>
                                     {paged.map((item) => {
-                                        const stock = Number(item.current_stock);
+                                        const stock = Number(item.current_stock) || 0;
+                                        // "left" is what can still be added, so it drops as
+                                        // soon as the item is clicked into the cart.
+                                        const available = availableOf(item);
                                         const out = stock <= 0;
-                                        const low = !out && stock <= Number(item.reorder_threshold);
+                                        const allInCart = !out && available <= 0;
+                                        const low = !out && !allInCart && available <= Number(item.reorder_threshold);
                                         const delta = cartDeltas[item.id];
 
                                         return (
                                             <button
                                                 key={item.id}
                                                 type="button"
-                                                className={`card pos-card pos-pick ${out ? 'is-out' : low ? 'is-low' : ''}`}
+                                                className={`card pos-card pos-pick ${out ? 'is-out' : low || allInCart ? 'is-low' : ''}`}
                                                 onClick={() => addToCart(item)}
-                                                disabled={out}
-                                                title={out ? 'Out of stock' : `Add ${item.name} to cart`}
+                                                disabled={out || allInCart}
+                                                title={
+                                                    out
+                                                        ? 'Out of stock'
+                                                        : allInCart
+                                                          ? 'All available stock is already in the cart'
+                                                          : `Add ${item.name} to cart`
+                                                }
                                             >
                                                 {delta && (
                                                     <span
                                                         key={delta.key}
                                                         className={`pos-cart-delta ${delta.delta > 0 ? 'is-up' : 'is-down'}`}
-                                                        onAnimationEnd={() => clearCartDelta(item.id)}
+                                                        onAnimationEnd={() => clearCartDelta(item.id, delta.key)}
                                                     >
                                                         {delta.delta > 0 ? `+${delta.delta}` : delta.delta}
                                                     </span>
@@ -587,8 +676,8 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                                 <h3>{item.name}</h3>
                                                 <div className="pos-card-meta">
                                                     <span className="mono muted pos-card-sku">{item.sku}</span>
-                                                    <span className={`pill ${out ? 'pill-danger' : low ? 'pill-warn' : 'pill-ok'}`}>
-                                                        {out ? 'Out' : `${stock} left`}
+                                                    <span className={`pill ${out ? 'pill-danger' : low || allInCart ? 'pill-warn' : 'pill-ok'}`}>
+                                                        {out ? 'Out' : `${available} left`}
                                                     </span>
                                                 </div>
                                                 <footer>
@@ -694,11 +783,21 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                     </label>
 
                                     <div className="quick-cash">
-                                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => setPayment(total.toFixed(2))} disabled={cart.length === 0}>
-                                            Exact
+                                        <button
+                                            type="button"
+                                            className="btn btn-ghost btn-sm"
+                                            onClick={() => setPayment('')}
+                                            disabled={!payment}
+                                        >
+                                            Clear
                                         </button>
                                         {QUICK_CASH.map((amount) => (
-                                            <button key={amount} type="button" className="btn btn-ghost btn-sm" onClick={() => setPayment(String(amount))}>
+                                            <button
+                                                key={amount}
+                                                type="button"
+                                                className="btn btn-ghost btn-sm"
+                                                onClick={() => addCash(amount)}
+                                            >
                                                 ₱{amount}
                                             </button>
                                         ))}
@@ -718,6 +817,14 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                         onClick={handleCheckout}
                                     >
                                         {submitting ? 'Processing…' : `Checkout · ${formatPeso(total)}`}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        className="btn btn-ghost btn-lg btn-block"
+                                        onClick={() => setGcashNotice(true)}
+                                    >
+                                        Process to G-Cash
                                     </button>
                                 </div>
                             </section>
@@ -756,26 +863,38 @@ export default function PosTerminal({ channel = 'cashier' }) {
             )}
 
             {receipt && (
-                <Modal title={`Receipt ${receiptNo(receipt.saleId)}`} onClose={() => setReceipt(null)}>
+                <Modal
+                    title={`Receipt ${receiptNo(receipt.saleId)}`}
+                    titleIcon={
+                        <span className="modal-title-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 11v5M12 8h.01" />
+                            </svg>
+                        </span>
+                    }
+                    className="modal-receipt"
+                    onClose={() => setReceipt(null)}
+                >
                     <div className="receipt">
                         <p className="receipt-store">Smart-Stock Hardware</p>
                         <p className="muted receipt-id">
                             Sale #{receipt.saleId} · {receipt.channel === 'admin' ? 'Admin POS' : 'Cashier POS'}
                         </p>
 
-                        <table className="table table-plain receipt-lines">
-                            <tbody>
-                                {receipt.items.map((item, index) => (
-                                    <tr key={index}>
-                                        <td>
-                                            {item.name}
-                                            <small className="muted"> ×{item.quantity} {item.unit}</small>
-                                        </td>
-                                        <td className="text-right">{formatPeso(item.lineTotal)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                        <ul className="receipt-items">
+                            {receipt.items.map((item, index) => (
+                                <li key={index} className="receipt-item">
+                                    <span className="receipt-item-name">
+                                        {item.name}
+                                        <small className="muted"> ×{item.quantity} {item.unit}</small>
+                                    </span>
+                                    <span className="receipt-item-amount">{formatPeso(item.lineTotal)}</span>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <div className="receipt-divider" role="separator" aria-hidden="true" />
 
                         <div className="cart-row">
                             <span>Total</span>
@@ -790,11 +909,27 @@ export default function PosTerminal({ channel = 'cashier' }) {
                             <strong>{formatPeso(receipt.change)}</strong>
                         </div>
 
-                        <button type="button" className="btn btn-primary btn-block" onClick={() => setReceipt(null)}>
+                        <button type="button" className="btn btn-primary" onClick={dismissReceipt}>
                             New sale
                         </button>
                     </div>
                 </Modal>
+            )}
+
+            {gcashNotice && (
+                <MessageDialog
+                    tone="info"
+                    title="Process to G-Cash"
+                    description="This function is under development. G-Cash payments are not available yet. Please continue with cash payment for now."
+                    closeLabel="Got it"
+                    onClose={() => setGcashNotice(false)}
+                />
+            )}
+
+            {toast && (
+                <Toast tone="success" onClose={() => setToast(null)}>
+                    {toast}
+                </Toast>
             )}
         </div>
     );

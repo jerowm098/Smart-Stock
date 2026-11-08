@@ -3,6 +3,7 @@ import { FieldError, Toast } from '../../components/Feedback.jsx';
 import { get, post, validationMessages } from '../../lib/api.js';
 import { timeAgo } from '../../lib/format.js';
 import Modal from '../../components/Modal.jsx';
+import Tooltip from '../../components/Tooltip.jsx';
 
 function highlight(text, needle) {
     if (!needle) return text;
@@ -93,7 +94,7 @@ const ACTIVITY_ICONS = {
     product_deactivated: (<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M8 12h8" /></svg>),
     product_reactivated: (<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>),
     stock_received: (<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v13" /><path d="M8 12l4 4 4-4" /><path d="M3 17v2a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-2" /></svg>),
-    stock_adjusted: (<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 0 0-15-6.7L3 8" /><path d="M3 3v5h5" /><path d="M3 12a9 9 0 0 0 15 6.7L21 16" /><path d="M21 21v-5h-5" /></svg>),
+    stock_adjusted: (<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 4A8 8 0 0 1 20 12" /><path d="M21.72 9.79 20 12 18.28 9.79" /><path d="M18.93 16A8 8 0 0 1 8 18.93" /><path d="M9.05 21.53 8 18.93 10.77 18.54" /><path d="M5.07 16A8 8 0 0 1 8 5.07" /><path d="M5.23 4.68 8 5.07 6.95 7.67" /></svg>),
     sale_completed: (<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" /></svg>),
     default: (<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 8h.01M11 12h1v4h1" /></svg>),
 };
@@ -707,7 +708,7 @@ export default function StockIn() {
                                             className="sort-header"
                                             onClick={() => toggleSort('receiving_unit')}
                                         >
-                                            Receiving unit{sortBy === 'receiving_unit' && sortDir === 'asc' ? ' ▲' : sortBy === 'receiving_unit' ? ' ▼' : ''}
+                                            Unit{sortBy === 'receiving_unit' && sortDir === 'asc' ? ' ▲' : sortBy === 'receiving_unit' ? ' ▼' : ''}
                                         </th>
                                         <th
                                             className="sort-header"
@@ -735,13 +736,16 @@ export default function StockIn() {
                                                 }
                                             </td>
                                             <td className="actions-cell">
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-ghost btn-sm receive-btn"
+                                                <Tooltip
+                                                    label="Edit stock received"
+                                                    className="btn btn-ghost btn-sm action-icon-btn"
                                                     onClick={() => openReceive(product)}
                                                 >
-                                                    Edit stock received
-                                                </button>
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M12 20h9" />
+                                                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                                    </svg>
+                                                </Tooltip>
                                             </td>
                                         </tr>
                                     ))}

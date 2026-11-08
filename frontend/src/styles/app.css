@@ -1235,6 +1235,20 @@ html.landing-page body {
 
 /* Body region: its sections live in a loading phase until data arrives. */
 .page-body { display: flex; flex-direction: column; gap: 18px; }
+
+/* Routed Add-product page: two stacked cards, both 520px wide like the old
+   modal. Card 1 holds the Back control; card 2 reuses the popup's own header
+   (.modal-head) above the form, so the layout just moved onto the page. */
+.add-product-back {
+    width: min(520px, 100%);
+    margin-inline: auto;
+    padding: 10px 16px;
+}
+
+.add-product-card {
+    width: min(520px, 100%);
+    margin-inline: auto;
+}
 /* Inert: skeleton rows reuse real table/activity classes, so block hover/focus. */
 .page-loading-phase { display: flex; flex-direction: column; gap: 18px; pointer-events: none; }
 
@@ -1619,6 +1633,10 @@ html.landing-page body {
 .modal-adjust { width: min(440px, 100%); }
 .modal-edit   { width: min(460px, 100%); }
 
+/* Receipt popup after checkout: a receipt is a narrow slip, so it does not
+   need the default 520px width. */
+.modal-receipt { width: min(420px, 100%); }
+
 /* Adjust modal header icon: same 44px circle pill as the ConfirmDialog info icon. */
 .adjust-header-icon {
     flex: 0 0 auto;
@@ -1684,6 +1702,21 @@ html.landing-page body {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+}
+
+/* Static info badge on the left of a modal title (e.g. the receipt popup).
+   Mirrors the Transaction details header icon (.activity-detail-infoicon):
+   same 24px circle, tint, and 16px circled "i" glyph. */
+.modal-title-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary-soft-bg);
+    color: var(--primary-soft-text);
+    flex-shrink: 0;
 }
 
 /* Optional description line under the modal title (e.g. New Product form). */
@@ -1981,6 +2014,8 @@ html.landing-page body {
 }
 
 .toast {
+    position: relative;
+    overflow: hidden;
     display: flex;
     align-items: center;
     gap: 10px;
@@ -1994,8 +2029,39 @@ html.landing-page body {
     font-size: 13.5px;
     line-height: 1.4;
     pointer-events: auto;
-    box-shadow: none;
-    animation: toast-in 0.22s ease, toast-out 0.3s ease 2.9s forwards;
+    /* Footer track for the countdown bar, echoing the hero loadbar band. */
+    box-shadow: inset 0 -3px 0 rgba(255, 255, 255, 0.18);
+    /* Fade-out starts 300ms before the timer fires, which keeps it in step
+       with the progress bar for any `duration` passed to the component. */
+    animation: toast-in 0.22s ease,
+               toast-out 0.3s ease calc(var(--toast-duration, 3200ms) - 300ms) forwards;
+}
+
+/* Countdown bar: pinned to the bottom edge, same 3px band as the hero and
+   modal loadbars, and shrinking over exactly the toast's dismiss timer. */
+.toast-progress {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    width: 100%;
+    /* Anchored to the right edge so the bar drains rightward (left edge moves
+       right) instead of collapsing toward the left. */
+    transform-origin: right center;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.6));
+    animation: toast-progress-shrink linear forwards;
+    animation-duration: var(--toast-duration, 3200ms);
+}
+
+@keyframes toast-progress-shrink {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+}
+
+/* Pale/surface toasts need the brand gradient; solid success/error toasts keep
+   the white bar above so it stays legible on their fill. */
+.toast:not(.toast-success):not(.toast-error) .toast-progress {
+    background: linear-gradient(90deg, var(--primary) 0%, var(--primary-2) 100%);
 }
 
 .toast-icon {
@@ -2093,10 +2159,6 @@ html.landing-page body {
 .filter-grid-2 {
     grid-template-columns: 1.4fr 1fr 1fr auto;
 }
-
-/* Stock Receiving table: per-row Receive action (icon + label, even width) */
-.receive-btn { min-width: 96px; justify-content: center; }
-.receive-icon { display: block; }
 
 /* Header above a filter row (title + helper text) */
 .filter-head {
@@ -2249,6 +2311,16 @@ html.landing-page body {
 .table tbody tr.row-inactive td.actions-cell .action-toggle {
     opacity: 1;
     filter: none;
+}
+
+/* Icon-only row actions: square hit area so Edit / Adjust / Activate read as
+   icons. The button name only appears in the tooltip on hover or focus. */
+.actions-cell .action-icon-btn {
+    width: 30px;
+    height: 30px;
+    min-width: 0;
+    padding: 0;
+    flex: 0 0 auto;
 }
 
 /* Confirmation dialog body (custom modal for destructive actions) */
@@ -2740,13 +2812,14 @@ button.pos-card:disabled { cursor: not-allowed; }
 .cart-block .cart-lines { border: 0; background: transparent; border-radius: 0; }
 .cart-block .cart-summary { border-top: 0; padding-top: 0; margin-top: 0; }
 
-/* Four-line viewport: the items list and the empty message share one stable
-   height (4 × 56px rows), so the panel never jumps between an empty and a
-   filled cart. Extra items scroll inside the list instead of growing it. */
+/* Three-line viewport: the items list and the empty message share one stable
+   height (3 × 56px rows), so the panel never jumps between an empty and a
+   filled cart. The fourth item and beyond scroll inside the list instead of
+   growing it. */
 .cart-empty {
     font-size: 13.5px;
     text-align: center;
-    min-height: 224px;
+    min-height: 168px;
     flex: 1;
     display: grid;
     place-items: center;
@@ -2755,7 +2828,8 @@ button.pos-card:disabled { cursor: not-allowed; }
 
 .cart-lines {
     list-style: none;
-    min-height: 224px;
+    min-height: 168px;
+    max-height: 168px;
     flex: 1;
     overflow-y: auto;
     display: flex;
@@ -2763,7 +2837,25 @@ button.pos-card:disabled { cursor: not-allowed; }
     border: 1px solid var(--border-soft);
     border-radius: 10px;
     background: var(--inset-bg);
+    scrollbar-width: thin;
+    scrollbar-color: var(--scroll-thumb) transparent;
 }
+
+.cart-lines::-webkit-scrollbar { width: 8px; }
+.cart-lines::-webkit-scrollbar-track { background: transparent; }
+.cart-lines::-webkit-scrollbar-thumb {
+    background: var(--scroll-thumb);
+    border-radius: 999px;
+}
+.cart-lines::-webkit-scrollbar-thumb:hover { background: var(--scroll-thumb-hover); }
+
+/* Loading skeleton: the placeholder rows are not a real cart, so keep the list
+   scrollbar-free until the live data arrives. */
+.cart-lines.is-skeleton {
+    overflow: hidden;
+    scrollbar-width: none;
+}
+.cart-lines.is-skeleton::-webkit-scrollbar { display: none; }
 
 .cart-line {
     display: grid;
@@ -2888,9 +2980,43 @@ button.pos-card:disabled { cursor: not-allowed; }
 .receipt-store { text-align: center; font-weight: 700; font-size: 15px; }
 .receipt-id { text-align: center; font-size: 12.5px; margin-top: -6px; }
 
-.receipt-lines td { font-size: 13.5px; }
+/* Receipt product rows: static pill tint per line, no hover wash (the old
+   table rows inherited the app-wide hover background). */
+.receipt-items {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
 
-.receipt .btn { margin-top: 6px; }
+.receipt-item {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: var(--inset-bg);
+    font-size: 13.5px;
+}
+
+.receipt-item-name { min-width: 0; }
+.receipt-item-name small { font-size: 12px; }
+.receipt-item-amount { font-weight: 600; white-space: nowrap; }
+
+/* Rule between the product lines and the totals/payment block. */
+.receipt-divider {
+    height: 0;
+    border-top: 1px solid var(--border);
+}
+
+/* The single action is centered and content-sized, not a full-width bar. */
+.receipt .btn {
+    margin-top: 6px;
+    align-self: center;
+    min-width: 148px;
+    padding-inline: 22px;
+}
 
 /* --------------------------------------------------------------------------
    Responsive

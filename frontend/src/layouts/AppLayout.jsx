@@ -115,6 +115,8 @@ export default function AppLayout() {
     const navItems = nav.flatMap((section) => section.items);
     const current = navItems.find((item) => location.pathname.startsWith(item.to));
     const title = current?.label ?? 'Smart-Stock';
+    // Routed sub-pages extend the crumb trail: /products/new = Add Product.
+    const onAddProductPage = location.pathname === '/products/new';
 
     // Close the mobile drawer whenever the route changes.
     useEffect(() => {
@@ -168,17 +170,28 @@ export default function AppLayout() {
                             <path d="M4 7h16M4 12h16M4 17h16" />
                         </svg>
                     </button>
-                    {/* Breadcrumb sa topbar (Home / <Page>) — pumapalit sa lumang topbar-title. */}
+                    {/* Breadcrumb sa topbar (Dashboard / <Page>) — pumapalit sa lumang topbar-title.
+                        Sub-pages get an extra crumb, e.g. Dashboard / Products / Add Product. */}
                     <nav className="topbar-breadcrumb" aria-label="Breadcrumb">
                         <ol className="topbar-breadcrumb-list">
                             <li className="topbar-breadcrumb-item">
-                                <Link to="/">Home</Link>
+                                <Link to="/stock-in">Dashboard</Link>
                             </li>
+                            {onAddProductPage && (
+                                <li className="topbar-breadcrumb-item">
+                                    <span className="topbar-breadcrumb-separator">/</span>
+                                </li>
+                            )}
+                            {onAddProductPage && (
+                                <li className="topbar-breadcrumb-item">
+                                    <Link to="/products">Products</Link>
+                                </li>
+                            )}
                             <li className="topbar-breadcrumb-item">
                                 <span className="topbar-breadcrumb-separator">/</span>
                             </li>
                             <li className="topbar-breadcrumb-item">
-                                <span className="topbar-breadcrumb-current">{title}</span>
+                                <span className="topbar-breadcrumb-current">{onAddProductPage ? 'Add Product' : title}</span>
                             </li>
                         </ol>
                     </nav>

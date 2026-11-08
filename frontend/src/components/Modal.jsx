@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import InfoTip from './InfoTip.jsx';
 
-export default function Modal({ title, description, titleTip, ariaLabel, onClose, children, footer, wide = false, bare = false, noClose = false, className = '', loading = false }) {
+export default function Modal({ title, description, titleTip, titleIcon, ariaLabel, onClose, children, footer, wide = false, bare = false, noClose = false, className = '', loading = false }) {
     useEffect(() => {
         const onKey = (event) => {
             if (event.key === 'Escape') {
@@ -40,6 +40,7 @@ export default function Modal({ title, description, titleTip, ariaLabel, onClose
                     <header className="modal-head">
                         <div className="modal-head-text">
                             <h3>
+                                {titleIcon}
                                 {title}
                                 {titleTip && <InfoTip text={titleTip} />}
                             </h3>

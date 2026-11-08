@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import Modal from '../../components/Modal.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import InfoTip from '../../components/InfoTip.jsx';
+import Tooltip from '../../components/Tooltip.jsx';
 import { FieldError, Toast } from '../../components/Feedback.jsx';
 import { del, get, post, put, validationMessages } from '../../lib/api.js';
 import { formatPeso } from '../../lib/format.js';
@@ -167,10 +168,12 @@ const ACTIVITY_ICONS = {
     ),
     stock_adjusted: (
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 12a9 9 0 0 0-15-6.7L3 8" />
-            <path d="M3 3v5h5" />
-            <path d="M3 12a9 9 0 0 0 15 6.7L21 16" />
-            <path d="M21 21v-5h-5" />
+            <path d="M12 4A8 8 0 0 1 20 12" />
+            <path d="M21.72 9.79 20 12 18.28 9.79" />
+            <path d="M18.93 16A8 8 0 0 1 8 18.93" />
+            <path d="M9.05 21.53 8 18.93 10.77 18.54" />
+            <path d="M5.07 16A8 8 0 0 1 8 5.07" />
+            <path d="M5.23 4.68 8 5.07 6.95 7.67" />
         </svg>
     ),
     sale_completed: (
@@ -217,6 +220,10 @@ function stockState(product) {
 
 export default function Products() {
     const navigate = useNavigate();
+    const location = useLocation();
+    // The Add-product form lives on its own page (/products/new) instead of a
+    // modal, so the topbar breadcrumb can read Dashboard / Products / Add Product.
+    const isAddPage = location.pathname === '/products/new';
 
     const [products, setProducts] = useState([]);
     const [defectCount, setDefectCount] = useState(null);
@@ -245,7 +252,6 @@ export default function Products() {
     const hasLoadedRef = useRef(false);
     const stockDeltaTimer = useRef(null);
 
-    const [addOpen, setAddOpen] = useState(false);
     const [addForm, setAddForm] = useState(EMPTY_PRODUCT);
     const [saving, setSaving] = useState(false);
     const [formError, setFormError] = useState(null);
@@ -600,7 +606,7 @@ export default function Products() {
     useEffect(() => {
         currentNameRef.current = addForm.name;
 
-        if (!addOpen) {
+        if (!isAddPage) {
             return undefined;
         }
 
@@ -645,11 +651,11 @@ export default function Products() {
             clearTimeout(suggestTimer.current);
             clearTimeout(priceSuggestTimer.current);
         };
-    }, [addForm.name, addOpen, addForm.receiving_unit, runSuggest, runPriceSuggest]);
+    }, [addForm.name, isAddPage, addForm.receiving_unit, runSuggest, runPriceSuggest]);
 
     // Suggest reorder threshold as half of starting stock
     useEffect(() => {
-        if (!addOpen) {
+        if (!isAddPage) {
             setReorderSuggestion('');
             return;
         }
@@ -673,7 +679,7 @@ export default function Products() {
 
         const half = Math.floor(num / 2);
         setReorderSuggestion(String(half));
-    }, [addForm.current_stock, addOpen]);
+    }, [addForm.current_stock, isAddPage]);
 
     // Merge ghost suggestions into any field the admin left blank, so the
     // preview values are used on submit even though they were shown as
@@ -829,7 +835,7 @@ export default function Products() {
             setSuggesting(false);
             setPriceSuggesting(false);
             lastAutoSuggestedName.current = '';
-            setAddOpen(false);
+            navigate('/products');
             await refresh();
         } catch (err) {
             setFormError(err.message);
@@ -839,12 +845,11 @@ export default function Products() {
         }
     }
 
-    // Full reset of the Add-product form + suggestion state. Called on Cancel,
-    // close (X), and overlay dismiss so reopening starts clean.
+    // Full reset of the Add-product form + suggestion state, then back to the
+    // catalogue page. Called on Cancel and on the hero Back button.
     function resetAdd() {
         clearTimeout(suggestTimer.current);
         clearTimeout(priceSuggestTimer.current);
-        setAddOpen(false);
         setAddForm(EMPTY_PRODUCT);
         setSuggestions({});
         setPriceSuggestion('');
@@ -854,6 +859,7 @@ export default function Products() {
         setFormError(null);
         setFieldErrors([]);
         lastAutoSuggestedName.current = '';
+        navigate('/products');
     }
 
     function openEdit(product) {
@@ -981,6 +987,134 @@ export default function Products() {
         }
     }
 
+    // Add-product page: routed (/products/new) instead of a modal popup so the
+    // topbar breadcrumb can read Dashboard / Products / Add Product. Two stacked
+    // cards, both 520px wide: the Back control, then the popup's own header and
+    // the form combined.
+    if (isAddPage) {
+        return (
+            <div className="page">
+                <div className="page-body">
+                    <section className="card add-product-back">
+                        <button type="button" className="btn btn-ghost" onClick={resetAdd}>
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M19 12H5M12 19l-7-7 7-7" />
+                            </svg>
+                            Back
+                        </button>
+                    </section>
+
+                    <section className="card add-product-card">
+                        <header className="modal-head">
+                            <div className="modal-head-text">
+                                <h3>
+                                    <span className="activity-detail-title">
+                                        <span className="activity-detail-infoicon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <circle cx="12" cy="12" r="9" />
+                                                <path d="M12 11v5M12 8h.01" />
+                                            </svg>
+                                        </span>
+                                        Add product
+                                    </span>
+                                </h3>
+                            </div>
+                        </header>
+                        <div className="modal-body">
+                        <form className="form" onSubmit={handleAdd}>
+                            <label className="field">
+                                <span className="field-label">Product name <InfoTip text="What the product is called in the catalogue." />*</span>
+                                <input type="text" required maxLength={255} placeholder="e.g. Cordless Drill 18V" value={addForm.name} onChange={(event) => setAddForm((c) => ({ ...c, name: event.target.value }))} onKeyDown={handleNameTab} autoFocus />
+                            </label>
+                            <div className="field-row">
+                                <label className="field">
+                                    <span className="field-label">Unit of measure <InfoTip text="How this item is counted or sold. AI uses this to suggest a price." />*</span>
+                                    <select
+                                        className="input"
+                                        required
+                                        value={addForm.receiving_unit}
+                                        onChange={(event) => {
+                                            setAddForm((c) => ({ ...c, receiving_unit: event.target.value }));
+                                            setPriceSuggestion('');
+                                        }}
+                                    >
+                                        <option value="" disabled>Select unit</option>
+                                        {UNITS.map((unit) => (
+                                            <option key={unit} value={unit}>{unit}</option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label className="field">
+                                    <span className="field-label">Starting stock <InfoTip text="How many units are on hand right now. The reorder threshold will suggest half this amount." /></span>
+                                    <input type="number" min="0" step="1" placeholder="0" value={addForm.current_stock} onChange={(event) => setAddForm((c) => ({ ...c, current_stock: event.target.value.replace(/[^0-9]/g, '') }))} />
+                                </label>
+                            </div>
+                            <div className="field-row">
+                                <label className="field">
+                                    <span className="field-label">Item Code <InfoTip text="Leave blank to auto-generate on save." /></span>
+                                    <input type="text" className="mono" maxLength={50} placeholder={suggestions.sku || 'e.g. COR-DRI-18V'} value={addForm.sku} onChange={(event) => setAddForm((c) => ({ ...c, sku: event.target.value.toUpperCase() }))} onKeyDown={handleSuggestionTab('sku')} disabled={suggesting} />
+                                </label>
+                                <label className="field">
+                                    <span className="field-label">Category <InfoTip text="Groups products for easier filtering." /></span>
+                                    <input type="text" maxLength={100} placeholder={suggestions.category || 'e.g. Power Tools'} value={addForm.category} onChange={(event) => setAddForm((c) => ({ ...c, category: event.target.value }))} onKeyDown={handleSuggestionTab('category')} disabled={suggesting} />
+                                </label>
+                            </div>
+                            <div className="field-row">
+                                <label className="field">
+                                    <span className="field-label">Price <InfoTip text="Selling price per unit. AI suggests an amount based on the product name and unit." />*</span>
+                                    <div className="input-prefix-wrap">
+                                        <span className="input-prefix" aria-hidden="true">₱</span>
+                                        <input type="text" inputMode="decimal" className="input" placeholder={priceSuggestion || '0.00'} value={addForm.price} onChange={(event) => {
+                                            const val = event.target.value.replace(/[^0-9.]/g, '');
+                                            setAddForm((c) => ({ ...c, price: val }));
+                                        }} onBlur={(event) => {
+                                            const val = event.target.value.replace(/[^0-9.]/g, '');
+                                            if (val === '' || val === '.') {
+                                                setAddForm((c) => ({ ...c, price: '' }));
+                                                return;
+                                            }
+                                            let num = Number(val);
+                                            const unitLower = (addForm.receiving_unit || '').toLowerCase();
+                                            if ((unitLower === 'piece' || unitLower === 'pc' || unitLower === 'pcs') && num < 2) {
+                                                num = 2;
+                                            }
+                                            if (!Number.isFinite(num) || num < 2) {
+                                                num = 2;
+                                            }
+                                            num = Math.round(num);
+                                            setAddForm((c) => ({ ...c, price: num.toFixed(2) }));
+                                        }} onKeyDown={handleSuggestionTab('price')} disabled={priceSuggesting && !addForm.price} />
+                                    </div>
+                                </label>
+                                <label className="field">
+                                    <span className="field-label">Reorder threshold <InfoTip text="A low-stock alert fires when stock falls to this number." /></span>
+                                    <input type="number" min="0" step="1" placeholder={reorderSuggestion || '0'} value={addForm.reorder_threshold} onChange={(event) => setAddForm((c) => ({ ...c, reorder_threshold: event.target.value.replace(/[^0-9]/g, '') }))} onKeyDown={handleSuggestionTab('reorder_threshold')} />
+                                </label>
+                            </div>
+
+                            {formError && (
+                                <div className="alert alert-error" role="alert">
+                                    <span>{formError}</span>
+                                    <FieldError messages={fieldErrors} />
+                                </div>
+                            )}
+
+                            <div className="modal-actions modal-actions-center">
+                                <button type="submit" className="btn btn-primary" disabled={saving}>
+                                    {saving ? 'Saving…' : 'Add product'}
+                                </button>
+                            </div>
+                        </form>
+                        </div>
+                    </section>
+                </div>
+
+                {message && <Toast tone="success" onClose={() => setMessage(null)}>{message}</Toast>}
+                {error && <Toast tone="error" onClose={() => setError(null)}>{error}</Toast>}
+            </div>
+        );
+    }
+
     return (
         <div className="page">
             <section className={`page-hero${loading ? ' is-loading' : ''}`}>
@@ -1058,8 +1192,8 @@ export default function Products() {
                             <table className="table" aria-hidden="true">
                                 <thead>
                                     <tr>
-                                        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
-                                            <th key={i} className={i === 3 || i === 4 || i === 6 ? 'text-right' : undefined}>
+                                        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
+                                            <th key={i} className={i === 4 || i === 5 || i === 7 ? 'text-right' : undefined}>
                                                 <span className="skeleton skeleton-line skeleton-sm" style={{ width: '70%' }} />
                                             </th>
                                         ))}
@@ -1068,9 +1202,9 @@ export default function Products() {
                                 <tbody>
                                     {[0, 1, 2, 3, 4, 5].map((r) => (
                                         <tr key={r}>
-                                            {[0, 1, 2, 3, 4, 5, 6].map((c) => (
-                                                <td key={c} className={c === 3 || c === 4 || c === 6 ? 'text-right' : undefined}>
-                                                    <span className="skeleton skeleton-line" style={{ width: c === 6 ? '62%' : '85%' }} />
+                                            {[0, 1, 2, 3, 4, 5, 6, 7].map((c) => (
+                                                <td key={c} className={c === 4 || c === 5 || c === 7 ? 'text-right' : undefined}>
+                                                    <span className="skeleton skeleton-line" style={{ width: c === 7 ? '62%' : '85%' }} />
                                                 </td>
                                             ))}
                                         </tr>
@@ -1149,7 +1283,7 @@ export default function Products() {
                                 <h3>Add New Product</h3>
                                 <p className="muted">Create a product catalogue entry.</p>
                             </div>
-                            <button type="button" className="btn btn-primary" onClick={() => { resetAdd(); setAddOpen(true); }}>
+                            <button type="button" className="btn btn-primary" onClick={() => navigate('/products/new')}>
                                 Add product
                             </button>
                         </div>
@@ -1259,6 +1393,12 @@ export default function Products() {
                                             Category{sortBy === 'category' && sortDir === 'asc' ? ' ▲' : sortBy === 'category' ? ' ▼' : ''}
                                         </th>
                                         <th
+                                            className="sort-header"
+                                            onClick={() => toggleSort('receiving_unit')}
+                                        >
+                                            Unit{sortBy === 'receiving_unit' && sortDir === 'asc' ? ' ▲' : sortBy === 'receiving_unit' ? ' ▼' : ''}
+                                        </th>
+                                        <th
                                             className="sort-header text-right"
                                             onClick={() => toggleSort('price')}
                                         >
@@ -1268,7 +1408,7 @@ export default function Products() {
                                             className="sort-header text-right"
                                             onClick={() => toggleSort('current_stock')}
                                         >
-                                            Stock{sortBy === 'current_stock' && sortDir === 'asc' ? ' ▲' : sortBy === 'current_stock' ? ' ▼' : ''}
+                                            Current stock{sortBy === 'current_stock' && sortDir === 'asc' ? ' ▲' : sortBy === 'current_stock' ? ' ▼' : ''}
                                         </th>
                                         <th>Status</th>
                                         <th className="text-right">Actions</th>
@@ -1285,6 +1425,7 @@ export default function Products() {
                                                 </td>
                                                 <td className="mono">{product.sku}</td>
                                                 <td>{product.category || '—'}</td>
+                                                <td>{product.receiving_unit || 'piece'}</td>
                                                 <td className="text-right">{formatPeso(product.price)}</td>
                                                 <td className="text-right">
                                                     <span className="stock-cell-value">
@@ -1301,42 +1442,62 @@ export default function Products() {
                                                     <span className={`pill ${state.className}`}>{state.label}</span>
                                                 </td>
                                                 <td className="text-right actions-cell">
-                                                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => openEdit(product)}>
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-ghost btn-sm"
+                                                    <Tooltip
+                                                        label="Edit"
+                                                        className="btn btn-ghost btn-sm action-icon-btn"
+                                                        onClick={() => openEdit(product)}
+                                                    >
+                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M12 20h9" />
+                                                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                                        </svg>
+                                                    </Tooltip>
+                                                    <Tooltip
+                                                        label="Adjust stock"
+                                                        className="btn btn-ghost btn-sm action-icon-btn"
                                                         onClick={() => {
                                                             setAdjustProduct(product);
                                                             setAdjustForm({ delta: '', reason: 'correction', reason_note: '' });
                                                             setAdjustError(null);
                                                         }}
                                                     >
-                                                        Adjust
-                                                    </button>
+                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M12 4A8 8 0 0 1 20 12" />
+                                                            <path d="M21.72 9.79 20 12 18.28 9.79" />
+                                                            <path d="M18.93 16A8 8 0 0 1 8 18.93" />
+                                                            <path d="M9.05 21.53 8 18.93 10.77 18.54" />
+                                                            <path d="M5.07 16A8 8 0 0 1 8 5.07" />
+                                                            <path d="M5.23 4.68 8 5.07 6.95 7.67" />
+                                                        </svg>
+                                                    </Tooltip>
                                                     {product.is_active ? (
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-ghost btn-sm btn-danger-text action-toggle"
+                                                        <Tooltip
+                                                            label="Deactivate"
+                                                            className="btn btn-ghost btn-sm btn-danger-text action-toggle action-icon-btn"
                                                             onClick={() => {
                                                                 setDeactivateProduct(product);
                                                                 setDeactivateError(null);
                                                             }}
                                                         >
-                                                            Deactivate
-                                                        </button>
+                                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <circle cx="12" cy="12" r="9" />
+                                                                <path d="m5.6 5.6 12.8 12.8" />
+                                                            </svg>
+                                                        </Tooltip>
                                                     ) : (
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-ghost btn-sm btn-success-text action-toggle"
+                                                        <Tooltip
+                                                            label="Activate"
+                                                            className="btn btn-ghost btn-sm btn-success-text action-toggle action-icon-btn"
                                                             onClick={() => {
                                                                 setReactivateProduct(product);
                                                                 setReactivateError(null);
                                                             }}
                                                         >
-                                                            Activate
-                                                        </button>
+                                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <circle cx="12" cy="12" r="9" />
+                                                                <path d="m8.5 12 2.5 2.5 4.5-5" />
+                                                            </svg>
+                                                        </Tooltip>
                                                     )}
                                                 </td>
                                             </tr>
@@ -1472,106 +1633,6 @@ export default function Products() {
                         )}
                     </section>
                 </div>
-            )}
-
-            {addOpen && (
-                <Modal title={(
-                    <span className="activity-detail-title">
-                        <span className="activity-detail-infoicon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M12 11v5M12 8h.01" />
-                            </svg>
-                        </span>
-                        Add product
-                    </span>
-                )} titleTip="Type a product name to get AI suggestions for Item Code and Category. Choose a unit of measure to get an AI price suggestion for that unit. Press Tab to accept grey suggestions." onClose={resetAdd} noClose loading={suggesting || priceSuggesting}>
-                    <form className="form" onSubmit={handleAdd}>
-                        <label className="field">
-                            <span className="field-label">Product name <InfoTip text="What the product is called in the catalogue." />*</span>
-                            <input type="text" required maxLength={255} placeholder="e.g. Cordless Drill 18V" value={addForm.name} onChange={(event) => setAddForm((c) => ({ ...c, name: event.target.value }))} onKeyDown={handleNameTab} autoFocus />
-                        </label>
-                        <div className="field-row">
-                            <label className="field">
-                                <span className="field-label">Unit of measure <InfoTip text="How this item is counted or sold. AI uses this to suggest a price." />*</span>
-                                <select
-                                    className="input"
-                                    required
-                                    value={addForm.receiving_unit}
-                                    onChange={(event) => {
-                                        setAddForm((c) => ({ ...c, receiving_unit: event.target.value }));
-                                        setPriceSuggestion('');
-                                    }}
-                                >
-                                    <option value="" disabled>Select unit</option>
-                                    {UNITS.map((unit) => (
-                                        <option key={unit} value={unit}>{unit}</option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className="field">
-                                <span className="field-label">Starting stock <InfoTip text="How many units are on hand right now. The reorder threshold will suggest half this amount." /></span>
-                                <input type="number" min="0" step="1" placeholder="0" value={addForm.current_stock} onChange={(event) => setAddForm((c) => ({ ...c, current_stock: event.target.value.replace(/[^0-9]/g, '') }))} />
-                            </label>
-                        </div>
-                        <div className="field-row">
-                            <label className="field">
-                                <span className="field-label">Item Code <InfoTip text="Leave blank to auto-generate on save." /></span>
-                                <input type="text" className="mono" maxLength={50} placeholder={suggestions.sku || 'e.g. COR-DRI-18V'} value={addForm.sku} onChange={(event) => setAddForm((c) => ({ ...c, sku: event.target.value.toUpperCase() }))} onKeyDown={handleSuggestionTab('sku')} disabled={suggesting} />
-                            </label>
-                            <label className="field">
-                                <span className="field-label">Category <InfoTip text="Groups products for easier filtering." /></span>
-                                <input type="text" maxLength={100} placeholder={suggestions.category || 'e.g. Power Tools'} value={addForm.category} onChange={(event) => setAddForm((c) => ({ ...c, category: event.target.value }))} onKeyDown={handleSuggestionTab('category')} disabled={suggesting} />
-                            </label>
-                        </div>
-                        <div className="field-row">
-                            <label className="field">
-                                <span className="field-label">Price <InfoTip text="Selling price per unit. AI suggests an amount based on the product name and unit." />*</span>
-                                <div className="input-prefix-wrap">
-                                    <span className="input-prefix" aria-hidden="true">₱</span>
-                                    <input type="text" inputMode="decimal" className="input" placeholder={priceSuggestion || '0.00'} value={addForm.price} onChange={(event) => {
-                                        const val = event.target.value.replace(/[^0-9.]/g, '');
-                                        setAddForm((c) => ({ ...c, price: val }));
-                                    }} onBlur={(event) => {
-                                        const val = event.target.value.replace(/[^0-9.]/g, '');
-                                        if (val === '' || val === '.') {
-                                            setAddForm((c) => ({ ...c, price: '' }));
-                                            return;
-                                        }
-                                        let num = Number(val);
-                                        const unitLower = (addForm.receiving_unit || '').toLowerCase();
-                                        if ((unitLower === 'piece' || unitLower === 'pc' || unitLower === 'pcs') && num < 2) {
-                                            num = 2;
-                                        }
-                                        if (!Number.isFinite(num) || num < 2) {
-                                            num = 2;
-                                        }
-                                        num = Math.round(num);
-                                        setAddForm((c) => ({ ...c, price: num.toFixed(2) }));
-                                    }} onKeyDown={handleSuggestionTab('price')} disabled={priceSuggesting && !addForm.price} />
-                                </div>
-                            </label>
-                            <label className="field">
-                                <span className="field-label">Reorder threshold <InfoTip text="A low-stock alert fires when stock falls to this number." /></span>
-                                <input type="number" min="0" step="1" placeholder={reorderSuggestion || '0'} value={addForm.reorder_threshold} onChange={(event) => setAddForm((c) => ({ ...c, reorder_threshold: event.target.value.replace(/[^0-9]/g, '') }))} onKeyDown={handleSuggestionTab('reorder_threshold')} />
-                            </label>
-                        </div>
-
-                        {formError && (
-                            <div className="alert alert-error" role="alert">
-                                <span>{formError}</span>
-                                <FieldError messages={fieldErrors} />
-                            </div>
-                        )}
-
-                        <div className="modal-actions modal-actions-center">
-                            <button type="button" className="btn btn-ghost" onClick={resetAdd}>Cancel</button>
-                            <button type="submit" className="btn btn-primary" disabled={saving}>
-                                {saving ? 'Saving…' : 'Add product'}
-                            </button>
-                        </div>
-                    </form>
-                </Modal>
             )}
 
             {editProduct && editForm && (

@@ -24,6 +24,7 @@ export default function App() {
                 <Route element={<AppLayout />}>
                     <Route element={<RequireRole role="admin" />}>
                         <Route path="/products" element={<Products />} />
+                        <Route path="/products/new" element={<Products />} />
                         <Route path="/stock-in" element={<StockIn />} />
                         <Route path="/checkout" element={<AdminPos />} />
                         <Route path="/transactions" element={<Transactions />} />
