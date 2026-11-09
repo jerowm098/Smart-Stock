@@ -245,6 +245,10 @@ export default function Products() {
     const [page, setPage] = useState(1);
     const PER_PAGE = 6;
 
+    // Id of the product just created — used to scroll to + flash-highlight its
+    // table row after the Add-product page redirects back to the list.
+    const [highlightId, setHighlightId] = useState(null);
+
     // Transient "+N" / "-N" stock-change badges keyed by product id. Populated by
     // comparing each reload against the previous stock counts, then auto-cleared.
     const [stockDeltas, setStockDeltas] = useState({});
@@ -489,6 +493,45 @@ export default function Products() {
     useEffect(() => {
         setPage(1);
     }, [search, categoryFilter, statusFilter, activeFilter, sortBy, sortDir]);
+
+    // After adding a product: jump to the page holding its row, smooth-scroll
+    // to it and play a flash-highlight animation. If active filters would hide
+    // the row, clear them first so the row is always reachable.
+    useEffect(() => {
+        if (loading || highlightId == null) {
+            return undefined;
+        }
+
+        const idx = sorted.findIndex((p) => p.id === highlightId);
+        if (idx === -1) {
+            clearFilters();
+            return undefined;
+        }
+
+        const targetPage = Math.floor(idx / PER_PAGE) + 1;
+        if (targetPage !== safePage) {
+            setPage(targetPage);
+            return undefined;
+        }
+
+        const row = document.querySelector(`tr[data-product-id="${highlightId}"]`);
+        if (!row) {
+            return undefined;
+        }
+
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.classList.add('row-flash');
+        const timer = setTimeout(() => {
+            row.classList.remove('row-flash');
+            setHighlightId(null);
+        }, 2400);
+
+        return () => {
+            clearTimeout(timer);
+            row.classList.remove('row-flash');
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading, highlightId, sorted, safePage]);
 
     // Recent Activity pagination (3 rows per page).
     const activityLastPage = Math.max(1, Math.ceil(activity.length / ACTIVITY_PER_PAGE));
@@ -835,6 +878,9 @@ export default function Products() {
             setSuggesting(false);
             setPriceSuggesting(false);
             lastAutoSuggestedName.current = '';
+            // Remember the new product so the list view can scroll to and
+            // flash-highlight its row after the redirect.
+            setHighlightId(response.product?.id ?? null);
             navigate('/products');
             await refresh();
         } catch (err) {
@@ -1419,9 +1465,16 @@ export default function Products() {
                                         const state = stockState(product);
 
                                         return (
-                                            <tr key={product.id} className={product.is_active ? undefined : 'row-inactive'}>
+                                            <tr key={product.id} data-product-id={product.id} className={product.is_active ? undefined : 'row-inactive'}>
                                                 <td>
-                                                    {highlight(product.name, search.trim())}
+                                                    <span className="stock-cell-value">
+                                                        {highlight(product.name, search.trim())}
+                                                    </span>
+                                                    {highlightId === product.id && (
+                                                        <span className="stock-delta is-up new-item-badge" aria-label="Newly added product">
+                                                            +1 new
+                                                        </span>
+                                                    )}
                                                 </td>
                                                 <td className="mono">{product.sku}</td>
                                                 <td>{product.category || '—'}</td>

@@ -1412,6 +1412,41 @@ html.landing-page body {
 .content-scroll.is-scrolling .activity-row:hover { background-image: none; }
 .content-scroll.is-scrolling .sort-header:hover { color: var(--muted); }
 
+/* Flash-highlight for a newly added product's row: after the Add-product page
+   redirects back to the list, the row is scrolled into view and shows the SAME
+   tint as the row hover (var(--row-hover) gradient over the row surface) —
+   one identical layer, no extra/stronger color — then fades out. */
+@keyframes row-flash-fade {
+    0%, 55% { background-image: linear-gradient(var(--row-hover), var(--row-hover)); }
+    100% { background-image: linear-gradient(rgba(37, 99, 235, 0), rgba(37, 99, 235, 0)); }
+}
+
+.table tbody tr.row-flash {
+    /* Anchor for the centered "+1 new" badge (a <tr> works as a containing
+       block in all evergreen browsers). */
+    position: relative;
+    background-color: var(--surface);
+    animation: row-flash-fade 2.2s ease-out both;
+}
+
+/* Park the badge at the NORTH edge of the flashing row, horizontally centered:
+   half-risen above the top edge, middle of the row width, never shifting the
+   row text. */
+.table tbody tr.row-flash td .new-item-badge {
+    left: 50%;
+    right: auto;
+    top: 0;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+.table tbody tr.row-flash td.actions-cell .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+}
+
+
 .text-right { text-align: right; }
 
 /* All tables are left-aligned for both headers and values. The generic
