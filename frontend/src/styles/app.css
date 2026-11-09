@@ -1429,11 +1429,13 @@ html.landing-page body {
     animation: row-flash-fade 2.2s ease-out both;
 }
 
-/* Park the badge at the NORTH edge of the flashing row, horizontally centered:
-   half-risen above the top edge, middle of the row width, never shifting the
-   row text. */
+/* Park the badge at the NORTH edge of the flashing row, horizontally centered
+   on the column BOUNDARY nearest the row's center (set as --badge-x by the
+   Products effect) — i.e. in the free space BETWEEN column headers, never
+   visually aligning with a single header like Price. Half-risen above the
+   top edge, never shifting the row text. */
 .table tbody tr.row-flash td .new-item-badge {
-    left: 50%;
+    left: var(--badge-x, 50%);
     right: auto;
     top: 0;
     bottom: auto;

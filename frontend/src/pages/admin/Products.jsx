@@ -521,6 +521,27 @@ export default function Products() {
 
         row.scrollIntoView({ behavior: 'smooth', block: 'center' });
         row.classList.add('row-flash');
+
+        // Park the "+1 new" badge on the column BOUNDARY nearest the row's
+        // horizontal center, so it sits in the free space BETWEEN column
+        // headers instead of visually aligning with one (e.g. Price).
+        const cells = row.cells;
+        if (cells.length > 0) {
+            const mid = row.clientWidth / 2;
+            let acc = 0;
+            let best = null;
+            for (const cell of cells) {
+                const boundary = acc + cell.offsetWidth;
+                if (best === null || Math.abs(boundary - mid) < Math.abs(best - mid)) {
+                    best = boundary;
+                }
+                acc = boundary;
+            }
+            if (best != null) {
+                row.style.setProperty('--badge-x', `${best}px`);
+            }
+        }
+
         const timer = setTimeout(() => {
             row.classList.remove('row-flash');
             setHighlightId(null);
