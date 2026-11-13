@@ -197,9 +197,6 @@ export default function NotificationBell() {
                                         navigate('/stock-in');
                                     }}
                                 >
-                                    <span className={`notif-avatar ${severity}`}>
-                                        {severity === 'critical' ? '!!' : '!'}
-                                    </span>
                                     <span className="notif-card-body">
                                         <span className="notif-card-title">
                                             {alert.name}

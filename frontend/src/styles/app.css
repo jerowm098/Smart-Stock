@@ -1542,7 +1542,7 @@ html.landing-page body {
    no lopsided right-aligned headers sitting above right-aligned values. */
 .table th.text-right,
 .table td.text-right { text-align: left; }
-.table .actions-cell { justify-content: flex-start; }
+.table td.actions-cell { text-align: left; }
 
 /* Relative timestamps ("3 days ago") must stay on one line in the table. */
 .txn-date { white-space: nowrap; }
@@ -2037,20 +2037,6 @@ html.landing-page body {
 
 .notif-card:last-child { border-bottom: 0; }
 .notif-card:hover { background: var(--row-hover); }
-
-.notif-avatar {
-    flex-shrink: 0;
-    display: grid;
-    place-items: center;
-    width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    font-weight: 800;
-    font-size: 14px;
-}
-
-.notif-avatar.critical { background: rgba(239, 68, 68, 0.15); color: var(--danger-text); }
-.notif-avatar.low { background: rgba(245, 158, 11, 0.15); color: var(--warn-text); }
 
 .notif-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 
@@ -2717,7 +2703,14 @@ html.landing-page body {
 .table-plain th,
 .table-plain td { padding: 9px 12px; }
 
-.actions-cell { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: nowrap; }
+/* Action cells stay REAL table-cells: their .btn children are inline-flex, so
+   the cell's vertical-align: middle (from .table td) keeps the buttons centred
+   even in taller rows (wrapped product names). display:flex on a <td> swaps
+   the table-cell box for an anonymous one — vertical-align stops applying and
+   the buttons top-align, floating between rows. Adjacent buttons take their
+   spacing from a margin (gap only works on flex containers). */
+.actions-cell { white-space: nowrap; }
+.actions-cell .btn + .btn { margin-left: 6px; }
 
 .reason-cell { max-width: 140px; font-size: 13px; }
 
@@ -2733,7 +2726,11 @@ html.landing-page body {
 .table th small { text-transform: none; letter-spacing: 0; }
 
 .suggestions-table .mono { white-space: nowrap; }
-.suggestions-table .actions-cell { white-space: nowrap; }
+
+/* Keep money/numeric cells on one line so values like ₱5,400.00 never wrap
+   and bleed into the Urgency pill column. */
+.suggestions-table .num-cell { white-space: nowrap; }
+.suggestions-table .est-cost-cell { white-space: nowrap; padding-right: 10px; }
 
 /* Dense 10-column table: keep every column inside the card at desktop widths
    so .table-wrap never becomes a horizontal scroller under the cursor (a
@@ -2741,10 +2738,10 @@ html.landing-page body {
    made scrolling feel jelly/bouncy). On narrow screens overflow-x auto still
    applies as the graceful fallback. */
 .suggestions-table th,
-.suggestions-table td { padding-left: 11px; padding-right: 11px; }
-.suggestions-table .reason-cell,
-.suggestions-table .reason-text { max-width: 96px; }
-.suggestions-table .actions-cell { gap: 4px; }
+.suggestions-table td { padding-left: 10px; padding-right: 10px; }
+.suggestions-table .reason-cell { max-width: 150px; }
+.suggestions-table .reason-text { max-width: 140px; }
+.suggestions-table .actions-cell .btn + .btn { margin-left: 4px; }
 
 /* Stock Inventory receiving table (same jelly discipline as the suggestions
    table): 7 columns must fit inside the card at desktop widths so .table-wrap
@@ -2756,7 +2753,6 @@ html.landing-page body {
 .receiving-table td { padding-left: 12px; padding-right: 12px; }
 .receiving-table th .th-sub { font-size: 8px; letter-spacing: 0.01em; }
 .receiving-table td.mono { font-size: 12.5px; }
-.receiving-table .actions-cell { gap: 4px; }
 
 .inline-select { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .inline-select .input { width: auto; padding: 7px 10px; }

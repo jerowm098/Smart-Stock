@@ -61,7 +61,7 @@ export default function Dashboard() {
                 <header className="page-head">
                     <div>
                         <h2>Dashboard</h2>
-                        <p>Centralized overview of key inventory and sales metrics.</p>
+                        <p>Centralized overview of stock inventory and sales metrics.</p>
                     </div>
                 </header>
             </section>

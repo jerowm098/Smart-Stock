@@ -600,13 +600,13 @@ export default function OrderSuggestions() {
                                                 <td className="muted mono">
                                                     {highlight(suggestion.sku, search)}
                                                 </td>
-                                                <td>{suggestion.current_stock}</td>
-                                                <td>{suggestion.avg_daily}</td>
-                                                <td>{suggestion.reorder_point}</td>
-                                                <td>
+                                                <td className="num-cell">{suggestion.current_stock}</td>
+                                                <td className="num-cell">{suggestion.avg_daily}</td>
+                                                <td className="num-cell">{suggestion.reorder_point}</td>
+                                                <td className="num-cell">
                                                     <strong>{suggestion.suggested_qty}</strong>
                                                 </td>
-                                                <td>
+                                                <td className="num-cell est-cost-cell">
                                                     {suggestion.est_cost !== null ? formatPeso(suggestion.est_cost) : '—'}
                                                 </td>
                                                 <td>
