@@ -35,65 +35,80 @@ class ProductSuggestionController extends Controller
             'receiving_unit'  => ['nullable', 'string', 'max:30'],
         ]);
 
-        $apiKey = config('services.ollama.key');
-        if (empty($apiKey)) {
-            return response()->json([
-                'message' => 'AI suggestions are not configured. Add OLLAMA_API_KEY to the backend .env.',
-            ], 503);
-        }
-
-        $base   = rtrim(config('services.ollama.base_url'), '/');
-        $models = config('services.ollama.models', []);
-        if (empty($models)) {
-            return response()->json(['message' => 'No AI models configured (OLLAMA_MODELS).'], 503);
-        }
-
         $unit = $validated['unit'] ?? ($validated['receiving_unit'] ?? null);
+        $prompt = ! empty($unit)
+            ? $this->buildPricePrompt(['name' => $validated['name'], 'unit' => $unit])
+            : $this->buildPrompt($validated);
 
-        // If a unit of measure is provided with a product name, focus ONLY on price suggestion
-        // for that (product + unit) combination.
-        if (! empty($unit)) {
-            $prompt = $this->buildPricePrompt([
-                'name' => $validated['name'],
-                'unit' => $unit,
-            ]);
+        // Try Gemini (primary) first, then Ollama (fallback). Each service has
+        // its own ordered model chain.
+        $services = [
+            [
+                'key'     => config('services.gemini.key'),
+                'base_url' => config('services.gemini.base_url'),
+                'models'  => config('services.gemini.models', []),
+                'label'   => 'Gemini',
+            ],
+            [
+                'key'     => config('services.ollama.key'),
+                'base_url' => config('services.ollama.base_url'),
+                'models'  => config('services.ollama.models', []),
+                'label'   => 'Ollama',
+            ],
+        ];
+
+        $anyConfigured = false;
+        foreach ($services as $svc) {
+            $apiKey = $svc['key'];
+            $base   = rtrim($svc['base_url'], '/');
+            $models = $svc['models'];
+            $label  = $svc['label'];
+
+            if (empty($apiKey) || empty($models)) {
+                continue;
+            }
+            $anyConfigured = true;
+
+            if (! empty($unit)) {
+                foreach ($models as $model) {
+                    $suggestion = $this->tryPriceModel($base, $model, $apiKey, $prompt);
+                    if ($suggestion !== null) {
+                        return response()->json([
+                            'suggestion' => $suggestion,
+                            'model_used' => $model,
+                            'provider'   => $label,
+                        ]);
+                    }
+                }
+                continue;
+            }
+
+            // A deterministic item code is generated locally via SkuGenerator
+            // (max 3 segments or with suffix) and always overrides any AI suggestion.
+            $code = SkuGenerator::next($validated['name']);
 
             foreach ($models as $model) {
-                $suggestion = $this->tryPriceModel($base, $model, $apiKey, $prompt);
+                $suggestion = $this->tryModel($base, $model, $apiKey, $prompt);
                 if ($suggestion !== null) {
+                    $suggestion['sku'] = $code;
+
                     return response()->json([
                         'suggestion' => $suggestion,
                         'model_used' => $model,
+                        'provider'   => $label,
                     ]);
                 }
             }
-
-            return response()->json([
-                'message' => 'All AI models failed. Check OLLAMA_API_KEY and OLLAMA_MODELS, then try again.',
-            ], 502);
         }
 
-        $prompt = $this->buildPrompt($validated);
-
-        // A deterministic item code is generated locally via SkuGenerator
-        // (max 3 segments or with suffix) and always overrides any AI suggestion.
-        $code = SkuGenerator::next($validated['name']);
-
-        // Try each model in the fallback chain until one yields a usable result.
-        foreach ($models as $model) {
-            $suggestion = $this->tryModel($base, $model, $apiKey, $prompt);
-            if ($suggestion !== null) {
-                $suggestion['sku'] = $code;
-
-                return response()->json([
-                    'suggestion' => $suggestion,
-                    'model_used' => $model,
-                ]);
-            }
+        if (! $anyConfigured) {
+            return response()->json([
+                'message' => 'AI suggestions are not configured. Add GEMINI_API_KEY (or OLLAMA_API_KEY) to the backend .env.',
+            ], 503);
         }
 
         return response()->json([
-            'message' => 'All AI models failed. Check OLLAMA_API_KEY and OLLAMA_MODELS, then try again.',
+            'message' => 'All AI models failed. Check GEMINI_API_KEY / OLLAMA_API_KEY and model config, then try again.',
         ], 502);
     }
 
@@ -123,19 +138,19 @@ class ProductSuggestionController extends Controller
         }
 
         if ($response->failed()) {
-            Log::warning("Ollama model {$model} returned {$response->status()}: " . $response->body());
+            Log::warning("Model {$model} returned {$response->status()}: " . $response->body());
             return null;
         }
 
         $text = data_get($response->json(), 'choices.0.message.content');
         if (! is_string($text) || trim($text) === '') {
-            Log::warning("Ollama model {$model} returned an empty response.");
+            Log::warning("Model {$model} returned an empty response.");
             return null;
         }
 
         $suggestion = $this->parseJson($text);
         if ($suggestion === null) {
-            Log::warning("Ollama model {$model} response could not be parsed: {$text}");
+            Log::warning("Model {$model} response could not be parsed: {$text}");
             return null;
         }
 
@@ -168,13 +183,13 @@ class ProductSuggestionController extends Controller
         }
 
         if ($response->failed()) {
-            Log::warning("Ollama model {$model} returned {$response->status()}: " . $response->body());
+            Log::warning("Model {$model} returned {$response->status()}: " . $response->body());
             return null;
         }
 
         $text = data_get($response->json(), 'choices.0.message.content');
         if (! is_string($text) || trim($text) === '') {
-            Log::warning("Ollama model {$model} returned an empty response.");
+            Log::warning("Model {$model} returned an empty response.");
             return null;
         }
 
@@ -208,7 +223,7 @@ class ProductSuggestionController extends Controller
                 ])
                 ->post("{$base}/chat/completions", $body);
         } catch (\Throwable $e) {
-            Log::warning("Ollama request failed: " . $e->getMessage());
+            Log::warning("AI request failed: " . $e->getMessage());
             return null;
         }
     }

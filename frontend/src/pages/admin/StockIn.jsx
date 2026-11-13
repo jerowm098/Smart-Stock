@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FieldError, Toast } from '../../components/Feedback.jsx';
 import { get, post, validationMessages } from '../../lib/api.js';
 import { timeAgo } from '../../lib/format.js';
 import Modal from '../../components/Modal.jsx';
 import Tooltip from '../../components/Tooltip.jsx';
+import InfoTip from '../../components/InfoTip.jsx';
 
 function highlight(text, needle) {
     if (!needle) return text;
@@ -120,8 +121,10 @@ const EMPTY_ADD_FORM = {
     sku: '',
     category: '',
     supplier_id: '',
-    unit_of_measure: '',
+    unit_choice: '',
+    unit_other: '',
     quantity_received: '',
+    note_type: '',
     note: '',
 };
 
@@ -156,12 +159,19 @@ export default function StockIn() {
     const [receiveError, setReceiveError] = useState(null);
     const [receiveFieldErrors, setReceiveFieldErrors] = useState([]);
 
-    // Receive New Stock (create + first stock-in) — modal via its panel button.
+    // Receive New Stock (create + first stock-in) — modal via its panel
+    // button. SKU + Category hints show up as ghost placeholders while the
+    // product name is typed; they are never labelled in the UI.
     const [addOpen, setAddOpen] = useState(false);
     const [addForm, setAddForm] = useState(EMPTY_ADD_FORM);
     const [addSubmitting, setAddSubmitting] = useState(false);
     const [addError, setAddError] = useState(null);
     const [addFieldErrors, setAddFieldErrors] = useState([]);
+    const [suggestions, setSuggestions] = useState({});
+    const [suggesting, setSuggesting] = useState(false);
+    const suggestTimer = useRef(null);
+    const lastSuggestedName = useRef('');
+    const currentNameRef = useRef('');
 
     // Search & filter over the receiving table.
     const [search, setSearch] = useState('');
@@ -204,6 +214,64 @@ export default function StockIn() {
     useEffect(() => {
         refresh();
     }, [refresh]);
+
+    // Ghost hints for the new-product form: debounce the name, then ask the
+    // suggestion endpoint for a code + category. Values are only ever shown as
+    // placeholders (never committed), and a failure is silent.
+    const runSuggest = useCallback(async (name) => {
+        const clean = name.trim();
+        if (clean.length < 3) {
+            return;
+        }
+
+        setSuggesting(true);
+
+        try {
+            const response = await post('/api/inventory/suggest', { name: clean });
+
+            // Ignore stale responses: only apply if the box still holds this name.
+            if (currentNameRef.current.trim() !== clean) {
+                return;
+            }
+
+            const s = response.suggestion || {};
+            setSuggestions({ sku: s.sku || '', category: s.category || '' });
+            lastSuggestedName.current = clean;
+        } catch {
+            if (currentNameRef.current.trim() === clean) {
+                setSuggestions({});
+            }
+        } finally {
+            if (currentNameRef.current.trim() === clean) {
+                setSuggesting(false);
+            }
+        }
+    }, []);
+
+    useEffect(() => {
+        currentNameRef.current = addForm.name;
+
+        if (!addOpen) {
+            return undefined;
+        }
+
+        const name = addForm.name.trim();
+
+        if (name.length < 3) {
+            clearTimeout(suggestTimer.current);
+            setSuggestions({});
+            setSuggesting(false);
+            lastSuggestedName.current = '';
+            return undefined;
+        }
+
+        if (name !== lastSuggestedName.current) {
+            clearTimeout(suggestTimer.current);
+            suggestTimer.current = setTimeout(() => runSuggest(name), 500);
+        }
+
+        return () => clearTimeout(suggestTimer.current);
+    }, [addForm.name, addOpen, runSuggest]);
 
     const categories = useMemo(
         () => [...new Set(products.map((product) => product.category).filter(Boolean))]
@@ -324,6 +392,7 @@ export default function StockIn() {
             product_id: String(product.id),
             product_name: product.name || '',
             sku: product.sku || '',
+            unit_of_measure: product.receiving_unit || '',
         });
         setReceiveError(null);
         setReceiveFieldErrors([]);
@@ -338,15 +407,88 @@ export default function StockIn() {
 
     function openAdd() {
         setAddForm(EMPTY_ADD_FORM);
+        setSuggestions({});
+        setSuggesting(false);
+        lastSuggestedName.current = '';
+        currentNameRef.current = '';
         setAddError(null);
         setAddFieldErrors([]);
         setAddOpen(true);
     }
 
     function resetAdd() {
+        clearTimeout(suggestTimer.current);
         setAddOpen(false);
+        setAddForm(EMPTY_ADD_FORM);
+        setSuggestions({});
+        setSuggesting(false);
+        lastSuggestedName.current = '';
+        currentNameRef.current = '';
         setAddError(null);
         setAddFieldErrors([]);
+    }
+
+    // Merge the ghost hints into any field left blank, so the preview values
+    // are used on submit even though they were only placeholders. Anything the
+    // admin typed always wins.
+    function mergeSuggestions() {
+        return {
+            ...addForm,
+            sku: addForm.sku || suggestions.sku || '',
+            category: addForm.category || suggestions.category || '',
+        };
+    }
+
+    // Fill ONE field from its hint (Tab inside that field). Never overwrites
+    // something the admin already typed.
+    function acceptSuggestion(field) {
+        const value = suggestions[field];
+        if (value == null || value === '') {
+            return;
+        }
+
+        setAddForm((current) => {
+            if (String(current[field] ?? '').trim() !== '') {
+                return current;
+            }
+            return { ...current, [field]: value };
+        });
+    }
+
+    // Tab on the product-name field commits both hints at once.
+    function acceptAllSuggestions() {
+        setAddForm((current) => ({
+            ...current,
+            sku: current.sku || suggestions.sku || '',
+            category: current.category || suggestions.category || '',
+        }));
+    }
+
+    // Tab-to-accept: fills the hint and lets focus move on naturally. Typed
+    // values are never overwritten.
+    function handleSuggestionTab(field) {
+        return (event) => {
+            if (event.key !== 'Tab' || event.shiftKey) {
+                return;
+            }
+            if (field !== 'sku' && field !== 'category') {
+                return;
+            }
+            if (String(addForm[field] ?? '').trim() !== '' || !suggestions[field]) {
+                return;
+            }
+            acceptSuggestion(field);
+        };
+    }
+
+    function handleNameTab(event) {
+        if (event.key !== 'Tab' || event.shiftKey) {
+            return;
+        }
+        if (!suggestions.sku && !suggestions.category) {
+            return;
+        }
+        acceptAllSuggestions();
     }
 
     function stockInToast(response) {
@@ -391,18 +533,26 @@ export default function StockIn() {
         setAddFieldErrors([]);
 
         try {
+            const merged = mergeSuggestions();
+
             const response = await post('/api/inventory/stock-in', {
-                new_product_name: addForm.name,
-                custom_sku: addForm.sku || null,
-                custom_category: addForm.category || null,
-                unit_of_measure: addForm.unit_of_measure || null,
-                supplier_id: addForm.supplier_id || null,
-                quantity_received: addForm.quantity_received,
-                note: addForm.note || null,
+                new_product_name: merged.name,
+                custom_sku: merged.sku || null,
+                custom_category: merged.category || null,
+                unit_of_measure: merged.unit_choice === 'other' ? (merged.unit_other.trim() || null) : merged.unit_choice,
+                supplier_id: merged.supplier_id || null,
+                quantity_received: merged.quantity_received,
+                note: merged.note_type === 'others' ? (merged.note || null) : 'Received',
             });
 
+            clearTimeout(suggestTimer.current);
             setToast(stockInToast(response));
             setAddOpen(false);
+            setAddForm(EMPTY_ADD_FORM);
+            setSuggestions({});
+            setSuggesting(false);
+            lastSuggestedName.current = '';
+            currentNameRef.current = '';
             await refresh();
         } catch (err) {
             setAddError(err.message);
@@ -797,6 +947,7 @@ export default function StockIn() {
                                     <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             </button>
+                            <span className="page-detail">{Math.min(safePage * PRODUCTS_PER_PAGE, filteredProducts.length)} of {filteredProducts.length}</span>
                         </div>
                     )}
                 </section>
@@ -883,6 +1034,7 @@ export default function StockIn() {
                                             <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
                                     </button>
+                                    <span className="page-detail">{Math.min(activitySafePage * ACTIVITY_PER_PAGE, activity.length)} of {activity.length}</span>
                                 </div>
                             )}
                         </>
@@ -892,18 +1044,26 @@ export default function StockIn() {
             )}
 
             {receiveOpen && (
-                <Modal
-                    title="Receive Stock"
-                    description="Record receiving for an existing catalogue product."
-                    onClose={resetReceive}
-                >
+                <Modal bare noClose className="modal-edit" onClose={resetReceive}>
                     <form className="form" onSubmit={handleReceive}>
+                        <div className="confirm-dialog confirm-dialog-info">
+                            <span className="confirm-dialog-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z" />
+                                </svg>
+                            </span>
+                            <div className="confirm-dialog-body">
+                                <p className="confirm-dialog-title">Edit Stock</p>
+                                <p className="muted confirm-dialog-text">Update the receiving details for this product.</p>
+                            </div>
+                        </div>
                         {/* Both fields are editable: the modal opens prefilled from
                             the clicked row, and a corrected name or SKU is saved
                             together with the receive. */}
                         <div className="field-row">
                             <label className="field">
-                                <span>Product</span>
+                                <span>Product name</span>
                                 <input
                                     className="input"
                                     type="text"
@@ -913,6 +1073,9 @@ export default function StockIn() {
                                     onChange={(event) => setReceiveField('product_name', event.target.value)}
                                 />
                             </label>
+                        </div>
+
+                        <div className="field-row">
                             <label className="field">
                                 <span>SKU code</span>
                                 <input
@@ -923,13 +1086,19 @@ export default function StockIn() {
                                     onChange={(event) => setReceiveField('sku', event.target.value)}
                                 />
                             </label>
+                            {selected && (
+                                <div className="field">
+                                    <span>On hand now</span>
+                                    <div className="readonly-value">{selected.current_stock} {selected.receiving_unit}</div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="field-row">
                             <label className="field">
                                 <span>Supplier</span>
                                 <select className="input" {...receiveInput('supplier_id')}>
-                                    <option value="">No supplier / walk-in</option>
+                                    <option value="">No supplier</option>
                                     {suppliers.map((supplier) => (
                                         <option key={supplier.id} value={supplier.id}>
                                             {supplier.name}
@@ -939,20 +1108,19 @@ export default function StockIn() {
                             </label>
                             <label className="field">
                                 <span>Receiving unit</span>
-                                <select className="input" {...receiveInput('unit_of_measure')}>
-                                    <option value="">{selected ? selected.receiving_unit : 'Default (piece)'}</option>
-                                    {UNITS.map((unit) => (
-                                        <option key={unit} value={unit}>
-                                            {unit}
-                                        </option>
-                                    ))}
-                                </select>
+                                <input
+                                    type="text"
+                                    className="input"
+                                    maxLength={20}
+                                    placeholder="e.g. Per piece"
+                                    {...receiveInput('unit_of_measure')}
+                                />
                             </label>
                         </div>
 
-                        <div className="field-row">
+                        <div className="field-row-split">
                             <label className="field">
-                                <span>Quantity received *</span>
+                                <span>Received qty *</span>
                                 <input
                                     type="number"
                                     min="1"
@@ -963,20 +1131,11 @@ export default function StockIn() {
                                     {...receiveInput('quantity_received')}
                                 />
                             </label>
-                            {selected && (
-                                <div className="field">
-                                    <span>On hand now</span>
-                                    <div className="readonly-value">
-                                        {selected.current_stock} {selected.receiving_unit}
-                                    </div>
-                                </div>
-                            )}
+                            <label className="field">
+                                <span>Note</span>
+                                <input type="text" maxLength={255} placeholder="Delivery receipt #, remarks…" {...receiveInput('note')} />
+                            </label>
                         </div>
-
-                        <label className="field">
-                            <span>Note</span>
-                            <input type="text" maxLength={255} placeholder="Delivery receipt #, remarks…" {...receiveInput('note')} />
-                        </label>
 
                         {receiveError && (
                             <div className="alert alert-error" role="alert">
@@ -988,7 +1147,7 @@ export default function StockIn() {
                         <div className="modal-actions modal-actions-center">
                             <button type="button" className="btn btn-ghost" onClick={resetReceive}>Cancel</button>
                             <button type="submit" className="btn btn-primary" disabled={receiveSubmitting}>
-                                {receiveSubmitting ? 'Recording…' : 'Record stock inventory'}
+                                {receiveSubmitting ? 'Receiving…' : 'Receive'}
                             </button>
                         </div>
                     </form>
@@ -996,31 +1155,119 @@ export default function StockIn() {
             )}
 
             {addOpen && (
-                <Modal
-                    title="New Product"
-                    description="Create a catalogue entry and record its first received stock."
-                    onClose={resetAdd}
-                >
+                <Modal title={(
+                    <span className="activity-detail-title">
+                        <span className="activity-detail-infoicon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 11v5M12 8h.01" />
+                            </svg>
+                        </span>
+                        New Product
+                    </span>
+                )} onClose={resetAdd} noClose loading={suggesting}>
                     <form className="form" onSubmit={handleAdd}>
-                        <label className="field">
-                            <span>New product name *</span>
-                            <input type="text" required maxLength={255} placeholder="e.g. Paint Brush 2in" autoFocus {...addInput('name')} />
-                        </label>
                         <div className="field-row">
                             <label className="field">
-                                <span>SKU (optional)</span>
-                                <input type="text" maxLength={50} placeholder="Auto-generated if blank" {...addInput('sku')} />
+                                <span className="field-label">New product name <InfoTip text="The product name as it will appear in the catalogue." /><span className="text-danger">*</span></span>
+                                <input
+                                    type="text"
+                                    required
+                                    maxLength={255}
+                                    placeholder="e.g. Paint Brush"
+                                    autoFocus
+                                    value={addForm.name}
+                                    onChange={(event) => setAddForm((current) => ({ ...current, name: event.target.value }))}
+                                    onKeyDown={handleNameTab}
+                                />
                             </label>
                             <label className="field">
-                                <span>Category</span>
-                                <input type="text" maxLength={100} placeholder="Uncategorized" {...addInput('category')} />
+                                <span className="field-label">Quantity received <InfoTip text="How many units were received in this stock-in." /><span className="text-danger">*</span></span>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    required
+                                    placeholder="e.g. 10"
+                                    {...addInput('quantity_received')}
+                                />
+                            </label>
+                        </div>
+                        <div className="choice-field">
+                            <span className="field-label">Receiving unit <InfoTip text="The unit each quantity is counted in, such as per piece or per kilo." /></span>
+                            <div className="choice-list">
+                                <label className="choice-item">
+                                    <input
+                                        type="checkbox"
+                                        name="unit_choice"
+                                        checked={addForm.unit_choice === 'piece'}
+                                        onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'piece' ? '' : 'piece' }))}
+                                    />
+                                    <span>Per piece</span>
+                                </label>
+                                <label className="choice-item">
+                                    <input
+                                        type="checkbox"
+                                        name="unit_choice"
+                                        checked={addForm.unit_choice === 'kilogram'}
+                                        onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'kilogram' ? '' : 'kilogram' }))}
+                                    />
+                                    <span>Per kilo</span>
+                                </label>
+                                <div className="choice-item choice-item-other">
+                                    <label className="choice-item-radio">
+                                        <input
+                                            type="checkbox"
+                                            name="unit_choice"
+                                            checked={addForm.unit_choice === 'other'}
+                                            onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'other' ? '' : 'other' }))}
+                                        />
+                                        <span>Other:</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="input choice-item-input"
+                                        maxLength={20}
+                                        placeholder="Please specify"
+                                        value={addForm.unit_other}
+                                        onChange={(event) => setAddForm((current) => ({ ...current, unit_other: event.target.value }))}
+                                        disabled={addForm.unit_choice !== 'other'}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="field-row">
+                            <label className="field">
+                                <span className="field-label">SKU <InfoTip text="Item code used to identify the product." /></span>
+                                <input
+                                    type="text"
+                                    className="mono"
+                                    maxLength={50}
+                                    placeholder={suggestions.sku || 'e.g. PAI-BRU'}
+                                    value={addForm.sku}
+                                    onChange={(event) => setAddForm((current) => ({ ...current, sku: event.target.value.toUpperCase() }))}
+                                    onKeyDown={handleSuggestionTab('sku')}
+                                    disabled={suggesting}
+                                />
+                            </label>
+                            <label className="field">
+                                <span className="field-label">Category <InfoTip text="Groups products for easier filtering." /></span>
+                                <input
+                                    type="text"
+                                    maxLength={100}
+                                    placeholder={suggestions.category || 'e.g. Paint & Sundries'}
+                                    value={addForm.category}
+                                    onChange={(event) => setAddForm((current) => ({ ...current, category: event.target.value }))}
+                                    onKeyDown={handleSuggestionTab('category')}
+                                    disabled={suggesting}
+                                />
                             </label>
                         </div>
                         <div className="field-row">
                             <label className="field">
-                                <span>Supplier</span>
+                                <span className="field-label">Supplier <InfoTip text="Supplier who delivered the stock. Choose 'No supplier' if none." /></span>
                                 <select className="input" {...addInput('supplier_id')}>
-                                    <option value="">No supplier / walk-in</option>
+                                    <option value="">No supplier</option>
                                     {suppliers.map((supplier) => (
                                         <option key={supplier.id} value={supplier.id}>
                                             {supplier.name}
@@ -1028,33 +1275,46 @@ export default function StockIn() {
                                     ))}
                                 </select>
                             </label>
-                            <label className="field">
-                                <span>Receiving unit</span>
-                                <select className="input" {...addInput('unit_of_measure')}>
-                                    <option value="">Default (piece)</option>
-                                    {UNITS.map((unit) => (
-                                        <option key={unit} value={unit}>
-                                            {unit}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
+                            {/* Spacer keeps Supplier at its half-width column now
+                                that Note moved to its own row below. */}
+                            <span aria-hidden="true" />
                         </div>
-                        <label className="field">
-                            <span>Quantity received *</span>
-                            <input
-                                type="number"
-                                min="1"
-                                step="1"
-                                required
-                                placeholder="e.g. 10"
-                                {...addInput('quantity_received')}
-                            />
-                        </label>
-                        <label className="field">
-                            <span>Note</span>
-                            <input type="text" maxLength={255} placeholder="Delivery receipt #, remarks…" {...addInput('note')} />
-                        </label>
+                        <div className="choice-field">
+                            <span className="field-label">Note <InfoTip text="Optional remarks such as delivery receipt number." /></span>
+                            <div className="choice-list">
+                                <label className="choice-item">
+                                    <input
+                                        type="checkbox"
+                                        name="note_type"
+                                        value="received"
+                                        checked={addForm.note_type === 'received'}
+                                        onChange={() => setAddForm((current) => ({ ...current, note_type: current.note_type === 'received' ? '' : 'received' }))}
+                                    />
+                                    <span>Received</span>
+                                </label>
+                                <div className="choice-item choice-item-other">
+                                    <label className="choice-item-radio">
+                                        <input
+                                            type="checkbox"
+                                            name="note_type"
+                                            value="others"
+                                            checked={addForm.note_type === 'others'}
+                                            onChange={() => setAddForm((current) => ({ ...current, note_type: current.note_type === 'others' ? '' : 'others' }))}
+                                        />
+                                        <span>Others:</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="input choice-item-input"
+                                        maxLength={255}
+                                        placeholder="Delivery receipt #, remarks…"
+                                        value={addForm.note}
+                                        onChange={(event) => setAddForm((current) => ({ ...current, note: event.target.value }))}
+                                        disabled={addForm.note_type !== 'others'}
+                                    />
+                                </div>
+                            </div>
+                        </div>
 
                         {addError && (
                             <div className="alert alert-error" role="alert">
@@ -1066,7 +1326,7 @@ export default function StockIn() {
                         <div className="modal-actions modal-actions-center">
                             <button type="button" className="btn btn-ghost" onClick={resetAdd}>Cancel</button>
                             <button type="submit" className="btn btn-primary" disabled={addSubmitting}>
-                                {addSubmitting ? 'Recording…' : 'Record stock inventory'}
+                                {addSubmitting ? 'Receiving…' : 'Receive'}
                             </button>
                         </div>
                     </form>

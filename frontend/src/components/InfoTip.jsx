@@ -49,12 +49,9 @@ export default function InfoTip({ text, children = 'i' }) {
             <span
                 ref={triggerRef}
                 className="field-info"
-                tabIndex={0}
                 aria-label={typeof text === 'string' ? text : undefined}
                 onMouseEnter={() => setOpen(true)}
                 onMouseLeave={() => setOpen(false)}
-                onFocus={() => setOpen(true)}
-                onBlur={() => setOpen(false)}
             >
                 {children}
             </span>

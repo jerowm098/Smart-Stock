@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
 import Modal from '../../components/Modal.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import InfoTip from '../../components/InfoTip.jsx';
@@ -15,7 +14,8 @@ const EMPTY_PRODUCT = {
     price: '',
     current_stock: '',
     reorder_threshold: '',
-    receiving_unit: 'piece',
+    unit_choice: '',
+    unit_other: '',
 };
 
 // Units of measure for the product (mirrors the Stock-In receiving units).
@@ -219,12 +219,6 @@ function stockState(product) {
 }
 
 export default function Products() {
-    const navigate = useNavigate();
-    const location = useLocation();
-    // The Add-product form lives on its own page (/products/new) instead of a
-    // modal, so the topbar breadcrumb can read Dashboard / Products / Add Product.
-    const isAddPage = location.pathname === '/products/new';
-
     const [products, setProducts] = useState([]);
     const [defectCount, setDefectCount] = useState(null);
     const [activity, setActivity] = useState([]);
@@ -246,7 +240,7 @@ export default function Products() {
     const PER_PAGE = 6;
 
     // Id of the product just created — used to scroll to + flash-highlight its
-    // table row after the Add-product page redirects back to the list.
+    // table row after the add modal closes.
     const [highlightId, setHighlightId] = useState(null);
 
     // Transient "+N" / "-N" stock-change badges keyed by product id. Populated by
@@ -256,6 +250,7 @@ export default function Products() {
     const hasLoadedRef = useRef(false);
     const stockDeltaTimer = useRef(null);
 
+    const [addOpen, setAddOpen] = useState(false);
     const [addForm, setAddForm] = useState(EMPTY_PRODUCT);
     const [saving, setSaving] = useState(false);
     const [formError, setFormError] = useState(null);
@@ -633,7 +628,7 @@ export default function Products() {
             if (currentNameRef.current.trim() !== cleanName) {
                 return;
             }
-            if ((addForm.receiving_unit || '').trim() !== cleanUnit) {
+            if ((addForm.unit_choice || '').trim() !== cleanUnit) {
                 return;
             }
             if (s.price != null && s.price !== '') {
@@ -658,11 +653,11 @@ export default function Products() {
         } catch (err) {
             setPriceSuggestion('');
         } finally {
-            if (currentNameRef.current.trim() === cleanName && (addForm.receiving_unit || '').trim() === cleanUnit) {
+            if (currentNameRef.current.trim() === cleanName && (addForm.unit_choice || '').trim() === cleanUnit) {
                 setPriceSuggesting(false);
             }
         }
-    }, [addForm.receiving_unit]);
+    }, [addForm.unit_choice]);
 
     // Auto-suggest while typing: debounce the product name, then call the AI.
     // Clearing the name wipes all ghost suggestions so the fields go blank
@@ -670,7 +665,7 @@ export default function Products() {
     useEffect(() => {
         currentNameRef.current = addForm.name;
 
-        if (!isAddPage) {
+        if (!addOpen) {
             return undefined;
         }
 
@@ -701,10 +696,10 @@ export default function Products() {
 
         // Price suggestion based on (name + unit)
         clearTimeout(priceSuggestTimer.current);
-        if (addForm.receiving_unit) {
+        if (addForm.unit_choice) {
             setPriceSuggesting(true);
             priceSuggestTimer.current = setTimeout(() => {
-                runPriceSuggest(name, addForm.receiving_unit);
+                runPriceSuggest(name, addForm.unit_choice);
             }, 700);
         } else {
             setPriceSuggestion('');
@@ -715,11 +710,11 @@ export default function Products() {
             clearTimeout(suggestTimer.current);
             clearTimeout(priceSuggestTimer.current);
         };
-    }, [addForm.name, isAddPage, addForm.receiving_unit, runSuggest, runPriceSuggest]);
+    }, [addForm.name, addOpen, addForm.unit_choice, runSuggest, runPriceSuggest]);
 
     // Suggest reorder threshold as half of starting stock
     useEffect(() => {
-        if (!isAddPage) {
+        if (!addOpen) {
             setReorderSuggestion('');
             return;
         }
@@ -743,7 +738,7 @@ export default function Products() {
 
         const half = Math.floor(num / 2);
         setReorderSuggestion(String(half));
-    }, [addForm.current_stock, isAddPage]);
+    }, [addForm.current_stock, addOpen]);
 
     // Merge ghost suggestions into any field the admin left blank, so the
     // preview values are used on submit even though they were shown as
@@ -759,7 +754,7 @@ export default function Products() {
             price: addForm.price,
             current_stock: addForm.current_stock,
             reorder_threshold: addForm.reorder_threshold,
-            receiving_unit: addForm.receiving_unit,
+            receiving_unit: addForm.unit_choice === 'other' ? (addForm.unit_other.trim() || null) : addForm.unit_choice,
         };
     }
 
@@ -900,9 +895,9 @@ export default function Products() {
             setPriceSuggesting(false);
             lastAutoSuggestedName.current = '';
             // Remember the new product so the list view can scroll to and
-            // flash-highlight its row after the redirect.
+            // flash-highlight its row.
             setHighlightId(response.product?.id ?? null);
-            navigate('/products');
+            setAddOpen(false);
             await refresh();
         } catch (err) {
             setFormError(err.message);
@@ -912,11 +907,12 @@ export default function Products() {
         }
     }
 
-    // Full reset of the Add-product form + suggestion state, then back to the
-    // catalogue page. Called on Cancel and on the hero Back button.
+    // Full reset of the Add-product form + suggestion state. Called on Cancel,
+    // close (X), and overlay dismiss so reopening starts clean.
     function resetAdd() {
         clearTimeout(suggestTimer.current);
         clearTimeout(priceSuggestTimer.current);
+        setAddOpen(false);
         setAddForm(EMPTY_PRODUCT);
         setSuggestions({});
         setPriceSuggestion('');
@@ -926,7 +922,6 @@ export default function Products() {
         setFormError(null);
         setFieldErrors([]);
         lastAutoSuggestedName.current = '';
-        navigate('/products');
     }
 
     function openEdit(product) {
@@ -1052,134 +1047,6 @@ export default function Products() {
         } finally {
             setReactivateSaving(false);
         }
-    }
-
-    // Add-product page: routed (/products/new) instead of a modal popup so the
-    // topbar breadcrumb can read Dashboard / Products / Add Product. Two stacked
-    // cards, both 520px wide: the Back control, then the popup's own header and
-    // the form combined.
-    if (isAddPage) {
-        return (
-            <div className="page">
-                <div className="page-body">
-                    <section className="card add-product-back">
-                        <button type="button" className="btn btn-ghost" onClick={resetAdd}>
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M19 12H5M12 19l-7-7 7-7" />
-                            </svg>
-                            Back
-                        </button>
-                    </section>
-
-                    <section className="card add-product-card">
-                        <header className="modal-head">
-                            <div className="modal-head-text">
-                                <h3>
-                                    <span className="activity-detail-title">
-                                        <span className="activity-detail-infoicon" aria-hidden="true">
-                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                <circle cx="12" cy="12" r="9" />
-                                                <path d="M12 11v5M12 8h.01" />
-                                            </svg>
-                                        </span>
-                                        Add product
-                                    </span>
-                                </h3>
-                            </div>
-                        </header>
-                        <div className="modal-body">
-                        <form className="form" onSubmit={handleAdd}>
-                            <label className="field">
-                                <span className="field-label">Product name <InfoTip text="What the product is called in the catalogue." />*</span>
-                                <input type="text" required maxLength={255} placeholder="e.g. Cordless Drill 18V" value={addForm.name} onChange={(event) => setAddForm((c) => ({ ...c, name: event.target.value }))} onKeyDown={handleNameTab} autoFocus />
-                            </label>
-                            <div className="field-row">
-                                <label className="field">
-                                    <span className="field-label">Unit of measure <InfoTip text="How this item is counted or sold. AI uses this to suggest a price." />*</span>
-                                    <select
-                                        className="input"
-                                        required
-                                        value={addForm.receiving_unit}
-                                        onChange={(event) => {
-                                            setAddForm((c) => ({ ...c, receiving_unit: event.target.value }));
-                                            setPriceSuggestion('');
-                                        }}
-                                    >
-                                        <option value="" disabled>Select unit</option>
-                                        {UNITS.map((unit) => (
-                                            <option key={unit} value={unit}>{unit}</option>
-                                        ))}
-                                    </select>
-                                </label>
-                                <label className="field">
-                                    <span className="field-label">Starting stock <InfoTip text="How many units are on hand right now. The reorder threshold will suggest half this amount." /></span>
-                                    <input type="number" min="0" step="1" placeholder="0" value={addForm.current_stock} onChange={(event) => setAddForm((c) => ({ ...c, current_stock: event.target.value.replace(/[^0-9]/g, '') }))} />
-                                </label>
-                            </div>
-                            <div className="field-row">
-                                <label className="field">
-                                    <span className="field-label">Item Code <InfoTip text="Leave blank to auto-generate on save." /></span>
-                                    <input type="text" className="mono" maxLength={50} placeholder={suggestions.sku || 'e.g. COR-DRI-18V'} value={addForm.sku} onChange={(event) => setAddForm((c) => ({ ...c, sku: event.target.value.toUpperCase() }))} onKeyDown={handleSuggestionTab('sku')} disabled={suggesting} />
-                                </label>
-                                <label className="field">
-                                    <span className="field-label">Category <InfoTip text="Groups products for easier filtering." /></span>
-                                    <input type="text" maxLength={100} placeholder={suggestions.category || 'e.g. Power Tools'} value={addForm.category} onChange={(event) => setAddForm((c) => ({ ...c, category: event.target.value }))} onKeyDown={handleSuggestionTab('category')} disabled={suggesting} />
-                                </label>
-                            </div>
-                            <div className="field-row">
-                                <label className="field">
-                                    <span className="field-label">Price <InfoTip text="Selling price per unit. AI suggests an amount based on the product name and unit." />*</span>
-                                    <div className="input-prefix-wrap">
-                                        <span className="input-prefix" aria-hidden="true">₱</span>
-                                        <input type="text" inputMode="decimal" className="input" placeholder={priceSuggestion || '0.00'} value={addForm.price} onChange={(event) => {
-                                            const val = event.target.value.replace(/[^0-9.]/g, '');
-                                            setAddForm((c) => ({ ...c, price: val }));
-                                        }} onBlur={(event) => {
-                                            const val = event.target.value.replace(/[^0-9.]/g, '');
-                                            if (val === '' || val === '.') {
-                                                setAddForm((c) => ({ ...c, price: '' }));
-                                                return;
-                                            }
-                                            let num = Number(val);
-                                            const unitLower = (addForm.receiving_unit || '').toLowerCase();
-                                            if ((unitLower === 'piece' || unitLower === 'pc' || unitLower === 'pcs') && num < 2) {
-                                                num = 2;
-                                            }
-                                            if (!Number.isFinite(num) || num < 2) {
-                                                num = 2;
-                                            }
-                                            num = Math.round(num);
-                                            setAddForm((c) => ({ ...c, price: num.toFixed(2) }));
-                                        }} onKeyDown={handleSuggestionTab('price')} disabled={priceSuggesting && !addForm.price} />
-                                    </div>
-                                </label>
-                                <label className="field">
-                                    <span className="field-label">Reorder threshold <InfoTip text="A low-stock alert fires when stock falls to this number." /></span>
-                                    <input type="number" min="0" step="1" placeholder={reorderSuggestion || '0'} value={addForm.reorder_threshold} onChange={(event) => setAddForm((c) => ({ ...c, reorder_threshold: event.target.value.replace(/[^0-9]/g, '') }))} onKeyDown={handleSuggestionTab('reorder_threshold')} />
-                                </label>
-                            </div>
-
-                            {formError && (
-                                <div className="alert alert-error" role="alert">
-                                    <span>{formError}</span>
-                                    <FieldError messages={fieldErrors} />
-                                </div>
-                            )}
-
-                            <div className="modal-actions modal-actions-center">
-                                <button type="submit" className="btn btn-primary" disabled={saving}>
-                                    {saving ? 'Saving…' : 'Add product'}
-                                </button>
-                            </div>
-                        </form>
-                        </div>
-                    </section>
-                </div>
-
-                {message && <Toast tone="success" onClose={() => setMessage(null)}>{message}</Toast>}
-                {error && <Toast tone="error" onClose={() => setError(null)}>{error}</Toast>}
-            </div>
-        );
     }
 
     return (
@@ -1350,7 +1217,7 @@ export default function Products() {
                                 <h3>Add New Product</h3>
                                 <p className="muted">Create a product catalogue entry.</p>
                             </div>
-                            <button type="button" className="btn btn-primary" onClick={() => navigate('/products/new')}>
+                            <button type="button" className="btn btn-primary" onClick={() => { resetAdd(); setAddOpen(true); }}>
                                 Add product
                             </button>
                         </div>
@@ -1493,7 +1360,7 @@ export default function Products() {
                                                     </span>
                                                     {highlightId === product.id && (
                                                         <span className="stock-delta is-up new-item-badge" aria-label="Newly added product">
-                                                            +1 new
+                                                            +1
                                                         </span>
                                                     )}
                                                 </td>
@@ -1625,6 +1492,7 @@ export default function Products() {
                                         <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                 </button>
+                                <span className="page-detail">{Math.min(safePage * PER_PAGE, filtered.length)} of {filtered.length}</span>
                             </div>
                         )}
                     </section>
@@ -1701,12 +1569,139 @@ export default function Products() {
                                                 <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                             </svg>
                                         </button>
+                                        <span className="page-detail">{Math.min(activitySafePage * ACTIVITY_PER_PAGE, activity.length)} of {activity.length}</span>
                                     </div>
                                 )}
                             </>
                         )}
                     </section>
                 </div>
+            )}
+
+            {addOpen && (
+                <Modal title={(
+                    <span className="activity-detail-title">
+                        <span className="activity-detail-infoicon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 11v5M12 8h.01" />
+                            </svg>
+                        </span>
+                        Add product
+                    </span>
+                )} onClose={resetAdd} noClose loading={suggesting}>
+                    <form className="form" onSubmit={handleAdd}>
+                        <div className="field-row">
+                            <label className="field">
+                                <span className="field-label">Product name <InfoTip text="What the product is called in the catalogue." /><span className="text-danger">*</span></span>
+                                <input type="text" required maxLength={255} placeholder="e.g. Cordless Drill 18V" value={addForm.name} onChange={(event) => setAddForm((c) => ({ ...c, name: event.target.value }))} onKeyDown={handleNameTab} autoFocus />
+                            </label>
+                            <label className="field">
+                                <span className="field-label">Starting stock <InfoTip text="How many units are on hand right now. The reorder threshold defaults to half this amount." /></span>
+                                <input type="number" min="0" step="1" placeholder="0" value={addForm.current_stock} onChange={(event) => setAddForm((c) => ({ ...c, current_stock: event.target.value.replace(/[^0-9]/g, '') }))} />
+                            </label>
+                        </div>
+                        <div className="choice-field">
+                            <span className="field-label">Unit of measure <InfoTip text="How this item is counted or sold." /><span className="text-danger">*</span></span>
+                            <div className="choice-list">
+                                <label className="choice-item">
+                                    <input
+                                        type="checkbox"
+                                        name="unit_choice"
+                                        checked={addForm.unit_choice === 'piece'}
+                                        onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'piece' ? '' : 'piece' }))}
+                                    />
+                                    <span>Per piece</span>
+                                </label>
+                                <label className="choice-item">
+                                    <input
+                                        type="checkbox"
+                                        name="unit_choice"
+                                        checked={addForm.unit_choice === 'kilogram'}
+                                        onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'kilogram' ? '' : 'kilogram' }))}
+                                    />
+                                    <span>Per kilo</span>
+                                </label>
+                                <div className="choice-item choice-item-other">
+                                    <label className="choice-item-radio">
+                                        <input
+                                            type="checkbox"
+                                            name="unit_choice"
+                                            checked={addForm.unit_choice === 'other'}
+                                            onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'other' ? '' : 'other' }))}
+                                        />
+                                        <span>Other:</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        className="input choice-item-input"
+                                        maxLength={20}
+                                        placeholder="Please specify"
+                                        value={addForm.unit_other}
+                                        onChange={(event) => setAddForm((current) => ({ ...current, unit_other: event.target.value }))}
+                                        disabled={addForm.unit_choice !== 'other'}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                        <div className="field-row">
+                            <label className="field">
+                                <span className="field-label">Item Code <InfoTip text="A code is assigned if left blank." /></span>
+                                <input type="text" className="mono" maxLength={50} placeholder={suggestions.sku || 'e.g. COR-DRI-18V'} value={addForm.sku} onChange={(event) => setAddForm((c) => ({ ...c, sku: event.target.value.toUpperCase() }))} onKeyDown={handleSuggestionTab('sku')} disabled={suggesting} />
+                            </label>
+                            <label className="field">
+                                <span className="field-label">Category <InfoTip text="Groups products for easier filtering." /></span>
+                                <input type="text" maxLength={100} placeholder={suggestions.category || 'e.g. Power Tools'} value={addForm.category} onChange={(event) => setAddForm((c) => ({ ...c, category: event.target.value }))} onKeyDown={handleSuggestionTab('category')} disabled={suggesting} />
+                            </label>
+                        </div>
+                        <div className="field-row">
+                            <label className="field">
+                                <span className="field-label">Price <InfoTip text="Selling price per unit." /><span className="text-danger">*</span></span>
+                                <div className="input-prefix-wrap">
+                                    <span className="input-prefix" aria-hidden="true">₱</span>
+                                    <input type="text" inputMode="decimal" className="input" placeholder={priceSuggestion || '0.00'} value={addForm.price} onChange={(event) => {
+                                        const val = event.target.value.replace(/[^0-9.]/g, '');
+                                        setAddForm((c) => ({ ...c, price: val }));
+                                    }} onBlur={(event) => {
+                                        const val = event.target.value.replace(/[^0-9.]/g, '');
+                                        if (val === '' || val === '.') {
+                                            setAddForm((c) => ({ ...c, price: '' }));
+                                            return;
+                                        }
+                                        let num = Number(val);
+                                        const unitLower = (addForm.unit_choice || '').toLowerCase();
+                                        if ((unitLower === 'piece' || unitLower === 'pc' || unitLower === 'pcs') && num < 2) {
+                                            num = 2;
+                                        }
+                                        if (!Number.isFinite(num) || num < 2) {
+                                            num = 2;
+                                        }
+                                        num = Math.round(num);
+                                        setAddForm((c) => ({ ...c, price: num.toFixed(2) }));
+                                    }} onKeyDown={handleSuggestionTab('price')} disabled={priceSuggesting && !addForm.price} />
+                                </div>
+                            </label>
+                            <label className="field">
+                                <span className="field-label">Reorder threshold <InfoTip text="A low-stock alert fires when stock falls to this number." /></span>
+                                <input type="number" min="0" step="1" placeholder={reorderSuggestion || '0'} value={addForm.reorder_threshold} onChange={(event) => setAddForm((c) => ({ ...c, reorder_threshold: event.target.value.replace(/[^0-9]/g, '') }))} onKeyDown={handleSuggestionTab('reorder_threshold')} />
+                            </label>
+                        </div>
+
+                        {formError && (
+                            <div className="alert alert-error" role="alert">
+                                <span>{formError}</span>
+                                <FieldError messages={fieldErrors} />
+                            </div>
+                        )}
+
+                        <div className="modal-actions modal-actions-center">
+                            <button type="button" className="btn btn-ghost" onClick={resetAdd}>Cancel</button>
+                            <button type="submit" className="btn btn-primary" disabled={saving}>
+                                {saving ? 'Saving…' : 'Add product'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
             )}
 
             {editProduct && editForm && (
@@ -1731,29 +1726,29 @@ export default function Products() {
                             </div>
                         </div>
                         <label className="field">
-                            <span className="field-label">Product name <InfoTip text="What the product is called in the catalogue." />*</span>
+                            <span className="field-label">Product name <span className="text-danger">*</span></span>
                             <input type="text" required maxLength={255} placeholder="e.g. Cordless Drill 18V" value={editForm.name} onChange={(event) => setEditForm((c) => ({ ...c, name: event.target.value }))} />
                         </label>
                         <div className="field-row">
                             <label className="field">
-                                <span className="field-label">Item Code <InfoTip text="Unique identifier for this product." />*</span>
+                                <span className="field-label">Item Code <span className="text-danger">*</span></span>
                                 <input type="text" className="mono" required maxLength={50} placeholder="Item code" value={editForm.sku} onChange={(event) => setEditForm((c) => ({ ...c, sku: event.target.value.toUpperCase() }))} />
                             </label>
                             <label className="field">
-                                <span className="field-label">Category <InfoTip text="Groups products for easier filtering." /></span>
+                                <span className="field-label">Category</span>
                                 <input type="text" maxLength={100} placeholder="e.g. Power Tools" value={editForm.category} onChange={(event) => setEditForm((c) => ({ ...c, category: event.target.value }))} />
                             </label>
                         </div>
                         <div className="field-row">
                             <label className="field">
-                                <span className="field-label">Price <InfoTip text="Selling price per unit." />*</span>
+                                <span className="field-label">Price <span className="text-danger">*</span></span>
                                 <div className="input-prefix-wrap">
                                     <span className="input-prefix" aria-hidden="true">₱</span>
                                     <input type="text" inputMode="decimal" required className="input" placeholder="0.00" value={editForm.price} onChange={(event) => setEditForm((c) => ({ ...c, price: event.target.value }))} onBlur={(event) => setEditForm((c) => ({ ...c, price: formatPriceInput(event.target.value) }))} />
                                 </div>
                             </label>
                             <label className="field">
-                                <span className="field-label">Unit of measure <InfoTip text="How this item is counted or sold." /></span>
+                                <span className="field-label">Unit of measure</span>
                                 <select className="input" value={editForm.receiving_unit} onChange={(event) => setEditForm((c) => ({ ...c, receiving_unit: event.target.value }))}>
                                     {UNITS.map((unit) => (
                                         <option key={unit} value={unit}>{unit}</option>
@@ -1763,11 +1758,11 @@ export default function Products() {
                         </div>
                         <div className="field-row">
                             <label className="field">
-                                <span className="field-label">Current stock <InfoTip text="Units currently on hand." />*</span>
+                                <span className="field-label">Current stock <span className="text-danger">*</span></span>
                                 <input type="number" required min="0" step="1" placeholder="0" value={editForm.current_stock} onChange={(event) => setEditForm((c) => ({ ...c, current_stock: event.target.value }))} />
                             </label>
                             <label className="field">
-                                <span className="field-label">Reorder threshold <InfoTip text="A low-stock alert fires when stock falls to this number." />*</span>
+                                <span className="field-label">Reorder threshold <span className="text-danger">*</span></span>
                                 <input type="number" required min="0" step="1" placeholder="0" value={editForm.reorder_threshold} onChange={(event) => setEditForm((c) => ({ ...c, reorder_threshold: event.target.value }))} />
                             </label>
                         </div>
@@ -1810,13 +1805,13 @@ export default function Products() {
                             </div>
                         </div>
                         <div className="field">
-                            <span className="field-label">Product <InfoTip text="The product whose stock count will be adjusted." /></span>
+                            <span className="field-label">Product</span>
                             <div className="readonly-value readonly-static">{adjustProduct.name}</div>
                         </div>
                         <div className="field-row">
                             <label className="field">
                                 <span className="field-label">
-                                    Delta <InfoTip text={`Currently ${adjustProduct.current_stock} on hand. Enter a positive number to add or a negative number to subtract.`} /> *
+                                    Delta <span className="text-danger">*</span>
                                 </span>
                                 <input
                                     type="number"
@@ -1830,7 +1825,7 @@ export default function Products() {
                             </label>
                             <label className="field">
                                 <span className="field-label">
-                                    Reason <InfoTip text="Why the stock count is being changed." /> *
+                                    Reason <span className="text-danger">*</span>
                                 </span>
                                 <select
                                     className="input"
@@ -1845,7 +1840,7 @@ export default function Products() {
                         </div>
                         <label className="field">
                             <span className="field-label">
-                                Note <InfoTip text="Optional note saved with this adjustment." />
+                                Note
                             </span>
                             <input
                                 type="text"

@@ -5,6 +5,7 @@ import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
 import Products from './pages/admin/Products.jsx';
 import StockIn from './pages/admin/StockIn.jsx';
+import Dashboard from './pages/admin/Dashboard.jsx';
 import Transactions from './pages/admin/Transactions.jsx';
 import OrderSuggestions from './pages/admin/OrderSuggestions.jsx';
 import Suppliers from './pages/admin/Suppliers.jsx';
@@ -23,8 +24,8 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
                 <Route element={<AppLayout />}>
                     <Route element={<RequireRole role="admin" />}>
+                        <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/products" element={<Products />} />
-                        <Route path="/products/new" element={<Products />} />
                         <Route path="/stock-in" element={<StockIn />} />
                         <Route path="/checkout" element={<AdminPos />} />
                         <Route path="/transactions" element={<Transactions />} />

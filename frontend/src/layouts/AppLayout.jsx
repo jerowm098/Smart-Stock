@@ -22,6 +22,13 @@ import { useAuth } from '../auth/AuthContext.jsx';
  */
 const ADMIN_NAV = [
     {
+        // Overview: standalone tab pinned above every section caption — no
+        // group label (a label-less section renders as a plain list).
+        items: [
+            { to: '/dashboard', label: 'Overview', icon: 'dashboard' },
+        ],
+    },
+    {
         label: 'Management',
         items: [
             { to: '/stock-in', label: 'Stock Inventory', icon: 'inbox' },
@@ -73,6 +80,7 @@ const CASHIER_NAV = [
 function Icon({ name }) {
     const paths = {
         box: 'M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25-2.25M12 13.875V7.5m0 0L4.5 4.5m7.5 3l7.5-3',
+        dashboard: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
         inbox: 'M2.25 13.5h3.86a2.25 2.25 0 012.012 1.244l.256.512a2.25 2.25 0 002.013 1.244h3.218a2.25 2.25 0 002.013-1.244l.256-.512a2.25 2.25 0 012.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 00-2.15-1.588H6.911a2.25 2.25 0 00-2.15 1.588L2.35 13.177a2.25 2.25 0 00-.1.661z',
         receipt: 'M9 14.25l3 3m0 0l3-3m-3 3v-8.25m-6.75 9.75h13.5a2.25 2.25 0 002.25-2.25V3.75l-3 1.5-3-1.5-3 1.5-3-1.5-3 1.5v15a2.25 2.25 0 002.25 2.25z',
         clipboard: 'M9 12h6m-6 3.75h6M9 4.5h6M6.75 6.75h10.5a1.5 1.5 0 011.5 1.5v10.5a1.5 1.5 0 01-1.5 1.5H6.75a1.5 1.5 0 01-1.5-1.5V8.25a1.5 1.5 0 011.5-1.5z',
@@ -115,8 +123,6 @@ export default function AppLayout() {
     const navItems = nav.flatMap((section) => section.items);
     const current = navItems.find((item) => location.pathname.startsWith(item.to));
     const title = current?.label ?? 'Smart-Stock';
-    // Routed sub-pages extend the crumb trail: /products/new = Add Product.
-    const onAddProductPage = location.pathname === '/products/new';
 
     // Close the mobile drawer whenever the route changes.
     useEffect(() => {
@@ -170,28 +176,17 @@ export default function AppLayout() {
                             <path d="M4 7h16M4 12h16M4 17h16" />
                         </svg>
                     </button>
-                    {/* Breadcrumb sa topbar (Dashboard / <Page>) — pumapalit sa lumang topbar-title.
-                        Sub-pages get an extra crumb, e.g. Dashboard / Products / Add Product. */}
+                    {/* Breadcrumb sa topbar (Dashboard / <Page>) — pumapalit sa lumang topbar-title. */}
                     <nav className="topbar-breadcrumb" aria-label="Breadcrumb">
                         <ol className="topbar-breadcrumb-list">
                             <li className="topbar-breadcrumb-item">
-                                <Link to="/stock-in">Dashboard</Link>
+                                <Link to="/dashboard">Dashboard</Link>
                             </li>
-                            {onAddProductPage && (
-                                <li className="topbar-breadcrumb-item">
-                                    <span className="topbar-breadcrumb-separator">/</span>
-                                </li>
-                            )}
-                            {onAddProductPage && (
-                                <li className="topbar-breadcrumb-item">
-                                    <Link to="/products">Products</Link>
-                                </li>
-                            )}
                             <li className="topbar-breadcrumb-item">
                                 <span className="topbar-breadcrumb-separator">/</span>
                             </li>
                             <li className="topbar-breadcrumb-item">
-                                <span className="topbar-breadcrumb-current">{onAddProductPage ? 'Add Product' : title}</span>
+                                <span className="topbar-breadcrumb-current">{title}</span>
                             </li>
                         </ol>
                     </nav>

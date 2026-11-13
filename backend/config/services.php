@@ -53,4 +53,21 @@ return [
         ))),
     ],
 
+    // Google Gemini (OpenAI-compatible) — PRIMARY AI product field suggestions.
+    // The key lives ONLY on the server (never in the React bundle).
+    //
+    // `models` is an ordered fallback chain: the first entry is the primary
+    // model, and if it errors the next one is tried in turn.
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+        'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta/openai'),
+        'models' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', env(
+                'GEMINI_MODELS',
+                'gemini-2.5-flash-lite,gemini-3.5-flash-lite,gemini-3.1-flash-lite'
+            ))
+        ))),
+    ],
+
 ];
