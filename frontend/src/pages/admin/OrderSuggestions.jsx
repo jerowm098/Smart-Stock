@@ -362,9 +362,6 @@ export default function OrderSuggestions() {
                                 <span key={i} className="skeleton" style={{ width: 86, height: 32, borderRadius: 8 }} />
                             ))}
                         </div>
-                        <div className="tabs-actions" aria-hidden="true">
-                            <span className="skeleton" style={{ width: 118, height: 38, borderRadius: 8 }} />
-                        </div>
                     </section>
 
                     {/* Order Suggestions table skeleton */}
@@ -374,6 +371,7 @@ export default function OrderSuggestions() {
                                 <span className="skeleton skeleton-lg" style={{ marginBottom: 8 }} />
                                 <span className="skeleton skeleton-line skeleton-sm" />
                             </div>
+                            <span className="skeleton" style={{ width: 118, height: 38, borderRadius: 8 }} />
                         </div>
                         <div className="table-shell">
                             <table className="table" aria-hidden="true">
@@ -517,7 +515,7 @@ export default function OrderSuggestions() {
                         </div>
                     </section>
 
-                    {/* Status tabs card — tab selection left, Run forecast right */}
+                    {/* Status tabs card — tab selection only (Run forecast lives in the table card header) */}
                     <section className="card padded tabs-card">
                         <div className="mode-tabs" role="tablist">
                             {TABS.map((tab) => (
@@ -531,16 +529,6 @@ export default function OrderSuggestions() {
                                 </button>
                             ))}
                         </div>
-                        <div className="tabs-actions">
-                            <button
-                                type="button"
-                                className="btn btn-primary"
-                                onClick={runForecast}
-                                disabled={forecasting}
-                            >
-                                {forecasting ? 'Computing…' : 'Run forecast'}
-                            </button>
-                        </div>
                     </section>
 
                     {/* Order Suggestions Table */}
@@ -550,6 +538,14 @@ export default function OrderSuggestions() {
                                 <h3>Order Suggestions</h3>
                                 <p className="muted">Suggested restocks with demand, urgency and estimated cost.</p>
                             </div>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                onClick={runForecast}
+                                disabled={forecasting}
+                            >
+                                {forecasting ? 'Computing…' : 'Run forecast'}
+                            </button>
                         </div>
 
                         <div className="table-shell">

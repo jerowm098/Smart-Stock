@@ -6,6 +6,7 @@
     "scripts": {
         "dev": "vite",
         "build": "vite build",
+        "build:spa": "vite build --base=/app/",
         "preview": "vite preview"
     },
     "dependencies": {

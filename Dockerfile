@@ -45,9 +45,12 @@ WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
 
-# Ngayon copy ang source at i-build (output: /app/dist, base=/app/)
+# Ngayon copy ang source at i-build (output: /app/dist, asset base=/app/
+# para sa nginx /app/assets sa loob ng container — tingnan ang "build:spa"
+# script sa frontend/package.json; ang lokal na `npm run build` ay base '/'
+# para sa `npx vite preview` sa localhost:4173).
 COPY frontend/ ./
-RUN npm run build
+RUN npm run build:spa
 
 # ------------------------------------------------------------------
 #  STAGE 3: Production image (nginx + php-fpm + supervisor)
