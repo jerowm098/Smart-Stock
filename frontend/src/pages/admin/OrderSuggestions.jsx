@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../../components/Modal.jsx';
+import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import Alert, { Toast } from '../../components/Feedback.jsx';
-import { downloadFile, get, post, validationMessages } from '../../lib/api.js';
+import { downloadFile, del, get, post, validationMessages } from '../../lib/api.js';
 import { formatPeso } from '../../lib/format.js';
 
 const TABS = [
@@ -125,6 +126,11 @@ export default function OrderSuggestions() {
     const [activity, setActivity] = useState([]);
     const [activityDetail, setActivityDetail] = useState(null);
     const [activityPage, setActivityPage] = useState(1);
+    const [clearConfirm, setClearConfirm] = useState(false);
+    const [clearing, setClearing] = useState(false);
+    const [clearError, setClearError] = useState(null);
+    const [activityOptionsOpen, setActivityOptionsOpen] = useState(false);
+    const activityOptionsRef = useRef(null);
     const ACTIVITY_PER_PAGE = 3;
 
     const load = useCallback(async (silent = false) => {
@@ -155,6 +161,55 @@ export default function OrderSuggestions() {
     }, [load]);
 
     const refresh = useCallback(() => load(true), [load]);
+
+    // Options dropdown (kebab) on the Recent Activity card header: closes on
+    // outside click and Escape, same behaviour as the topbar menus.
+    useEffect(() => {
+        if (!activityOptionsOpen) {
+            return;
+        }
+
+        const onDown = (event) => {
+            if (activityOptionsRef.current && !activityOptionsRef.current.contains(event.target)) {
+                setActivityOptionsOpen(false);
+            }
+        };
+
+        const onKey = (event) => {
+            if (event.key === 'Escape') {
+                setActivityOptionsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onKey);
+
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [activityOptionsOpen]);
+
+    async function handleClearActivity() {
+        setClearing(true);
+        setClearError(null);
+
+        try {
+            const response = await del(
+                '/api/activity/recent?actions=suggestion_ordered,suggestion_dismissed',
+            );
+
+            setClearConfirm(false);
+            setActivity([]);
+            setActivityPage(1);
+            setMessage(response?.message ?? 'Activity list cleared.');
+            await refresh();
+        } catch (err) {
+            setClearError(validationMessages(err)[0] ?? err.message ?? 'Could not clear the activity list.');
+        } finally {
+            setClearing(false);
+        }
+    }
 
     async function act(suggestion, action) {
         setBusyId(suggestion.id);
@@ -688,11 +743,56 @@ export default function OrderSuggestions() {
                                 <h3>Recent Activity List</h3>
                                 <p className="muted">See recent order suggestion actions.</p>
                             </div>
+                            <div className="activity-options" ref={activityOptionsRef}>
+                                <button
+                                    type="button"
+                                    className="icon-btn is-outlined"
+                                    onClick={() => setActivityOptionsOpen((open) => !open)}
+                                    aria-haspopup="menu"
+                                    aria-expanded={activityOptionsOpen}
+                                    aria-label="Activity options"
+                                >
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+                                        <circle cx="12" cy="5" r="1.7" />
+                                        <circle cx="12" cy="12" r="1.7" />
+                                        <circle cx="12" cy="19" r="1.7" />
+                                    </svg>
+                                </button>
+                                {activityOptionsOpen && (
+                                    <div className="activity-options-panel" role="menu" aria-label="Activity options">
+                                        <button
+                                            type="button"
+                                            className="activity-options-item activity-options-danger"
+                                            role="menuitem"
+                                            onClick={() => {
+                                                setActivityOptionsOpen(false);
+                                                setClearError(null);
+                                                setClearConfirm(true);
+                                            }}
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                <path d="M3 6h18" />
+                                                <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                                <path d="M10 11v6" />
+                                                <path d="M14 11v6" />
+                                            </svg>
+                                            <span>Clear activity</span>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         {activity.length === 0 ? (
-                            <p className="muted activity-empty">
-                                No activity recorded yet. Mark a suggestion as ordered or dismiss one and it will show up here.
-                            </p>
+                            <div className="table-empty">
+                                <span className="table-empty-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M9 12h6m-6 3.75h6M9 4.5h6M6.75 6.75h10.5a1.5 1.5 0 011.5 1.5v10.5a1.5 1.5 0 01-1.5 1.5H6.75a1.5 1.5 0 01-1.5-1.5V8.25a1.5 1.5 0 011.5-1.5z" />
+                                    </svg>
+                                </span>
+                                <p className="table-empty-title">No suggestion activity yet</p>
+                                <p className="table-empty-sub">Mark a suggestion as ordered or dismiss one and it will show up here.</p>
+                            </div>
                         ) : (
                             <>
                                 <div className="activity-shell">
@@ -824,6 +924,25 @@ export default function OrderSuggestions() {
                     <button type="button" className="btn btn-ghost" onClick={() => setActivityDetail(null)}>Close</button>
                 </div>
             </Modal>
+        )}
+
+        {clearConfirm && (
+            <ConfirmDialog
+                tone="danger"
+                title="Clear activity list?"
+                description="This permanently deletes the order suggestion activity history from the activity log. This action cannot be undone."
+                confirmLabel="Clear"
+                loadingLabel="Clearing…"
+                loading={clearing}
+                error={clearError}
+                onConfirm={handleClearActivity}
+                onCancel={() => {
+                    if (!clearing) {
+                        setClearConfirm(false);
+                        setClearError(null);
+                    }
+                }}
+            />
         )}
         </>
     );

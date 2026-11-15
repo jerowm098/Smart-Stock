@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\ActivityLog;
 use App\Models\Product;
+use App\Models\Sale;
 use App\Models\StockAdjustment;
 use App\Models\StockIn;
+use App\Models\Supplier;
 use App\Models\User;
 
 /**
@@ -188,6 +190,336 @@ class ActivityLogger
                 'delta' => (int) $adjustment->delta,
                 'stock_before' => (int) $adjustment->stock_before,
                 'stock_after' => (int) $adjustment->stock_after,
+                'changes' => $changes,
+            ],
+        ]);
+    }
+
+    /**
+     * Sale completed on either POS till (Admin or Cashier).
+     *
+     * Scoped to the POS Checkout page's Recent Activity List: the default
+     * Products feed excludes `sale_completed`, and Transactions remains the
+     * source of truth for sale records. `meta.items` keeps the receipt lines
+     * so the detail popup can list what was sold without a second request.
+     *
+     * @param  array<int, array{name?:string,quantity:int,unit_price:float,line_total:float}>  $lines
+     */
+    public static function saleCompleted(User $user, Sale $sale, array $lines = []): void
+    {
+        $receipt = 'SS-' . str_pad((string) $sale->id, 6, '0', STR_PAD_LEFT);
+        $channel = $sale->channel === 'admin' ? 'Admin POS' : 'Cashier POS';
+        $total   = number_format((float) $sale->total_amount, 2);
+
+        $items = array_map(fn (array $line) => [
+            'name'       => $line['name'] ?? 'Item',
+            'quantity'   => (int) ($line['quantity'] ?? 0),
+            'unit_price' => (float) ($line['unit_price'] ?? 0),
+            'line_total' => (float) ($line['line_total'] ?? 0),
+        ], $lines);
+
+        $changes = [
+            ['field' => 'receipt', 'text' => "Receipt {$receipt}"],
+            ['field' => 'channel', 'text' => "Channel {$channel}"],
+            ['field' => 'total', 'text' => "Total \u{20B1}{$total}"],
+        ];
+
+        foreach ($items as $item) {
+            $linePrice = number_format($item['unit_price'], 2);
+            $changes[] = [
+                'field' => 'item',
+                'text'  => "{$item['quantity']}\u{00D7} {$item['name']} @ \u{20B1}{$linePrice}",
+            ];
+        }
+
+        self::log($user, 'sale_completed', "Completed sale #{$receipt} ({$channel})", [
+            'subject_type' => 'sale',
+            'subject_id'   => $sale->id,
+            'subject_name' => $receipt,
+            'meta' => [
+                'receipt_no'     => $receipt,
+                'channel'        => $sale->channel,
+                'total_amount'   => (float) $sale->total_amount,
+                'payment_amount' => (float) $sale->payment_amount,
+                'change_amount'  => (float) $sale->change_amount,
+                'items'          => $items,
+                'changes'        => $changes,
+            ],
+        ]);
+    }
+
+    /**
+     * Suppliers page feed: a new supplier joined the directory.
+     */
+    public static function supplierCreated(User $user, Supplier $supplier): void
+    {
+        $changes = array_values(array_filter([
+            ['field' => 'name', 'text' => 'Name "'.$supplier->name.'"'],
+            $supplier->contact_person
+                ? ['field' => 'contact_person', 'text' => 'Contact '.$supplier->contact_person]
+                : null,
+            $supplier->phone
+                ? ['field' => 'phone', 'text' => 'Phone '.$supplier->phone]
+                : null,
+            $supplier->email
+                ? ['field' => 'email', 'text' => 'Email '.$supplier->email]
+                : null,
+            ['field' => 'is_active', 'text' => 'Status Active'],
+        ]));
+
+        self::log($user, 'supplier_created', "Added new supplier {$supplier->name}", [
+            'subject_type' => 'supplier',
+            'subject_id' => $supplier->id,
+            'subject_name' => $supplier->name,
+            'meta' => [
+                'contact_person' => $supplier->contact_person,
+                'phone' => $supplier->phone,
+                'email' => $supplier->email,
+                'changes' => $changes,
+            ],
+        ]);
+    }
+
+    /**
+     * Suppliers page feed: a supplier was removed (soft-deactivated) from the
+     * active directory. Stock-in history keeps the reference.
+     */
+    public static function supplierRemoved(User $user, Supplier $supplier): void
+    {
+        self::log($user, 'supplier_removed', "Removed supplier {$supplier->name}", [
+            'subject_type' => 'supplier',
+            'subject_id' => $supplier->id,
+            'subject_name' => $supplier->name,
+            'meta' => [
+                'changes' => [
+                    ['field' => 'is_active', 'text' => 'Status Active → Removed'],
+                    ['field' => 'visibility', 'text' => 'Hidden from the Supplier List and Stock-In'],
+                    ['field' => 'history', 'text' => 'Past stock-in records keep this supplier'],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Users page feed: a new account was provisioned by an Admin.
+     */
+    public static function userCreated(User $actor, User $account): void
+    {
+        self::log($actor, 'user_created', "Created account for {$account->name}", [
+            'subject_type' => 'user',
+            'subject_id' => $account->id,
+            'subject_name' => $account->name,
+            'meta' => [
+                'username' => $account->username,
+                'role' => $account->role,
+                'changes' => [
+                    ['field' => 'name', 'text' => 'Name "'.$account->name.'"'],
+                    ['field' => 'username', 'text' => 'Username '.$account->username],
+                    ['field' => 'email', 'text' => 'Email '.$account->email],
+                    ['field' => 'role', 'text' => 'Role '.ucfirst((string) $account->role)],
+                    ['field' => 'is_active', 'text' => 'Status Active'],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Users page feed: an account's details or role changed.
+     *
+     * @param  array<string,mixed>  $before  account attributes snapshot BEFORE update
+     * @param  bool  $passwordChanged  true when the same save also rotated the password
+     *                                 (self-service Account modal); the password itself is never logged.
+     */
+    public static function userUpdated(User $actor, User $account, array $before, bool $passwordChanged = false): void
+    {
+        $changes = [];
+
+        foreach (['name', 'username', 'email', 'role'] as $field) {
+            $old = $before[$field] ?? null;
+            $new = $account->{$field};
+            if ($old !== null && (string) $old !== (string) $new) {
+                $changes[] = [
+                    'field' => $field,
+                    'text' => ucfirst($field).' '.($old !== '' ? $old : '—').' → '.($new !== '' ? $new : '—'),
+                ];
+            }
+        }
+
+        if ($passwordChanged) {
+            $changes[] = ['field' => 'password', 'text' => 'Password changed'];
+        }
+
+        if ($changes === []) {
+            return;
+        }
+
+        $parts = array_map(fn (array $change) => $change['text'], $changes);
+
+        self::log($actor, 'user_updated', "Updated account for {$account->name}: ".implode('; ', $parts), [
+            'subject_type' => 'user',
+            'subject_id' => $account->id,
+            'subject_name' => $account->name,
+            'meta' => ['changes' => $changes],
+        ]);
+    }
+
+    /**
+     * Users page feed: an account was deactivated (history is preserved).
+     */
+    public static function userDeactivated(User $actor, User $account): void
+    {
+        self::log($actor, 'user_deactivated', "Deactivated account for {$account->name}", [
+            'subject_type' => 'user',
+            'subject_id' => $account->id,
+            'subject_name' => $account->name,
+            'meta' => [
+                'changes' => [
+                    ['field' => 'is_active', 'text' => 'Status Active → Inactive'],
+                    ['field' => 'access', 'text' => 'Cannot sign in until reactivated'],
+                    ['field' => 'history', 'text' => 'Past sales stay linked to this account'],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Users page feed: an account was reactivated.
+     */
+    public static function userReactivated(User $actor, User $account): void
+    {
+        self::log($actor, 'user_reactivated', "Reactivated account for {$account->name}", [
+            'subject_type' => 'user',
+            'subject_id' => $account->id,
+            'subject_name' => $account->name,
+            'meta' => [
+                'changes' => [
+                    ['field' => 'is_active', 'text' => 'Status Inactive → Active'],
+                    ['field' => 'access', 'text' => 'Can sign in again'],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Users page feed: an Admin manually reset a password.
+     *
+     * The password itself is never logged — only the fact that it changed.
+     */
+    public static function userPasswordReset(User $actor, User $account): void
+    {
+        self::log($actor, 'user_password_reset', "Reset password for {$account->name}", [
+            'subject_type' => 'user',
+            'subject_id' => $account->id,
+            'subject_name' => $account->name,
+            'meta' => [
+                'changes' => [
+                    ['field' => 'password', 'text' => 'Password reset by Admin'],
+                    ['field' => 'access', 'text' => 'Previous password no longer works'],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Backups page feed: an on-demand backup completed successfully.
+     */
+    public static function backupCreated(User $user, ?string $filename, int $keep = 7): void
+    {
+        $name = $filename ?: 'Database backup';
+
+        self::log($user, 'backup_created', $filename ? "Created backup {$filename}" : 'Created a database backup', [
+            'subject_type' => 'backup',
+            'subject_id' => null,
+            'subject_name' => $name,
+            'meta' => [
+                'filename' => $filename,
+                'keep' => $keep,
+                'changes' => array_values(array_filter([
+                    $filename ? ['field' => 'file', 'text' => 'File '.$filename] : null,
+                    ['field' => 'retention', 'text' => 'Keep the newest '.$keep.' backups'],
+                    ['field' => 'storage', 'text' => 'Stored in the database and on the server'],
+                ])),
+            ],
+        ]);
+    }
+
+    /**
+     * Backups page feed: a backup file was deleted.
+     */
+    public static function backupDeleted(User $user, string $filename): void
+    {
+        self::log($user, 'backup_deleted', "Deleted backup {$filename}", [
+            'subject_type' => 'backup',
+            'subject_id' => null,
+            'subject_name' => $filename,
+            'meta' => [
+                'filename' => $filename,
+                'changes' => [
+                    ['field' => 'file', 'text' => 'File '.$filename],
+                    ['field' => 'storage', 'text' => 'Removed from the database and server storage'],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Backups page feed: a backup file was downloaded.
+     */
+    public static function backupDownloaded(User $user, string $filename): void
+    {
+        self::log($user, 'backup_downloaded', "Downloaded backup {$filename}", [
+            'subject_type' => 'backup',
+            'subject_id' => null,
+            'subject_name' => $filename,
+            'meta' => [
+                'filename' => $filename,
+                'changes' => [
+                    ['field' => 'file', 'text' => 'File '.$filename],
+                    ['field' => 'format', 'text' => 'JSON database dump'],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Transactions page feed: the admin exported the transaction history as CSV.
+     *
+     * Scoped to the Transactions page's Recent Activity List — the page shows
+     * export events (not sales) so the audit trail names every download of the
+     * sales report. meta keeps the applied filters and the exported row count.
+     *
+     * @param  array<string, string|null>  $filters  search/cashier/channel/date_from/date_to
+     */
+    public static function transactionsExported(User $user, string $filename, int $rows, array $filters = []): void
+    {
+        $changes = [
+            ['field' => 'file', 'text' => 'File '.$filename],
+            ['field' => 'rows', 'text' => $rows.' transaction'.($rows === 1 ? '' : 's').' exported'],
+            ['field' => 'format', 'text' => 'CSV file (Excel-compatible)'],
+        ];
+
+        $filterLines = array_values(array_filter([
+            ! empty($filters['search']) ? ['field' => 'search', 'text' => 'Search "'.$filters['search'].'"'] : null,
+            ! empty($filters['cashier']) ? ['field' => 'cashier', 'text' => 'Cashier '.$filters['cashier']] : null,
+            ! empty($filters['channel']) ? ['field' => 'channel', 'text' => 'Channel '.($filters['channel'] === 'admin' ? 'Admin POS' : 'Cashier POS')] : null,
+            ! empty($filters['date_from']) ? ['field' => 'date_from', 'text' => 'From '.$filters['date_from']] : null,
+            ! empty($filters['date_to']) ? ['field' => 'date_to', 'text' => 'To '.$filters['date_to']] : null,
+        ]));
+
+        if ($filterLines === []) {
+            $changes[] = ['field' => 'scope', 'text' => 'All transactions (no filters)'];
+        } else {
+            $changes = array_merge($changes, $filterLines);
+        }
+
+        self::log($user, 'transactions_exported', "Exported {$rows} transactions to {$filename}", [
+            'subject_type' => 'export',
+            'subject_id' => null,
+            'subject_name' => $filename,
+            'meta' => [
+                'filename' => $filename,
+                'rows' => $rows,
+                'filters' => $filters,
                 'changes' => $changes,
             ],
         ]);

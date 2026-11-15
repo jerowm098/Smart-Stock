@@ -67,12 +67,11 @@ export async function api(path, { method = 'GET', body, headers = {}, signal } =
 
 /** Landing page for each role after signing in.
  *
- * The Admin lands on Stock Inventory — the topmost sidebar group's first
- * page and the daily entry point (receiving deliveries). The Cashier lands
- * on POS, their only surface.
+ * The Admin lands on Overview (/dashboard) — the first sidebar tab and the
+ * app's landing page. The Cashier lands on POS, their only surface.
  */
 export function homeFor(user) {
-    return user?.role === 'admin' ? '/stock-in' : '/pos';
+    return user?.role === 'admin' ? '/dashboard' : '/pos';
 }
 
 /* --------------------------------------------------------------------------
@@ -110,6 +109,44 @@ export function downloadFile(path, params = {}) {
     document.body.appendChild(link);
     link.click();
     link.remove();
+}
+
+/**
+ * Async variant of downloadFile: fetches the file with the session cookie,
+ * surfaces HTTP errors as thrown Error objects (same shape as `api()`), then
+ * triggers the browser download from a Blob once the body has arrived.
+ * Resolves with the filename so callers can confirm the export in a toast.
+ */
+export async function exportFile(path, params = {}) {
+    const response = await fetch(`${BASE}${withQuery(path, params)}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        const error = new Error(data?.message || `Export failed (${response.status})`);
+        error.status = response.status;
+        error.errors = data?.errors ?? null;
+        throw error;
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') ?? '';
+    const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? 'export.csv';
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+
+    return filename;
 }
 
 /** Flatten a Laravel validation error payload into displayable lines. */

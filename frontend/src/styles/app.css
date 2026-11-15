@@ -1445,6 +1445,12 @@ html.landing-page body {
     text-align: center;
 }
 
+/* Solid surface empty state: the area under the header reads as an empty
+   white table body (same color as the rows), not the soft shell tint. */
+.table-empty-solid {
+    background: var(--surface);
+}
+
 .table-empty-icon {
     display: flex;
     align-items: center;
@@ -1754,6 +1760,48 @@ html.landing-page body {
 /* Adjust stock modal: slightly narrower than the default 520px. */
 .modal-adjust { width: min(440px, 100%); }
 .modal-edit   { width: min(460px, 100%); }
+
+/* Self-service account modal (header account menu). */
+.modal-account { width: min(460px, 100%); }
+
+/* Users page forms (Create account / Edit / Reset password). The default
+   520px felt too wide for these short forms, so they share a narrower sheet. */
+.modal-user-form { width: min(440px, 100%); }
+
+/* Reset password holds only two stacked fields — narrower still. */
+.modal-reset { width: min(360px, 100%); }
+
+/* Read-only identity field (Account modal → Role). Matches the read-only
+   fields used on the other pages (`.readonly-value`): same soft blue-grey
+   surface, but with a solid 1px border instead of the old dashed line. The
+   value is still selectable/clickable — it is just not editable. */
+.readonly-field {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-height: 40px;
+    padding: 4px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg-soft);
+    cursor: default;
+    user-select: text;
+}
+
+/* "Change password" block inside the account modal: separated from the
+   profile fields by a soft divider, with a stacked title + helper line. */
+.account-section {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 2px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+}
+
+.account-section-title { display: flex; flex-direction: column; gap: 2px; }
+.account-section-title span { font-size: 13.5px; font-weight: 700; color: var(--text); }
+.account-section-title small { font-size: 12.5px; }
 
 /* Receipt popup after checkout: a receipt is a narrow slip, so it does not
    need the default 520px width. */
@@ -2515,9 +2563,77 @@ html.landing-page body {
 /* --------------------------------------------------------------------------
    Recent Activity (Products page) — vertical row list
    -------------------------------------------------------------------------- */
-.recent-activity .activity-empty {
-    padding: 8px 2px 2px;
+
+/* Kebab options dropdown on the Recent Activity card header (main wrapper,
+   never inside the nested .activity-shell box). */
+.activity-options { position: relative; flex-shrink: 0; }
+
+.activity-options .icon-btn[aria-expanded='true'] {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.activity-options-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    /* Flexible width: hug the widest menu item so labels stay on one line,
+       but never narrower than the old fixed size (or absurdly wide). */
+    width: max-content;
+    min-width: 190px;
+    max-width: 260px;
+    padding: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    z-index: 150;
+    animation: notifOpen 0.14s ease;
+}
+
+.activity-options-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: 9px;
     font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text);
+    text-align: left;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+/* Base hover for regular (non-danger) menu items — the same blue overlay
+   scale as table rows and nav links. The danger variant below overrides. */
+.activity-options-item:hover {
+    background: var(--row-hover);
+}
+
+.activity-options-item:hover svg {
+    color: var(--text);
+}
+
+.activity-options-item svg {
+    width: 17px;
+    height: 17px;
+    flex-shrink: 0;
+    color: var(--muted);
+}
+
+/* Menu labels never wrap to a second line. */
+.activity-options-item span {
+    white-space: nowrap;
+}
+
+.activity-options-danger:hover {
+    background: rgba(185, 28, 28, 0.08);
+    color: var(--danger-text);
+}
+
+.activity-options-danger:hover svg {
+    color: var(--danger-text);
 }
 
 /* Nested wrapper box around the activity rows (mirrors .filter-shell / .table-shell) */

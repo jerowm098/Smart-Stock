@@ -1,12 +1,116 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../../components/Modal.jsx';
+import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import InfoTip from '../../components/InfoTip.jsx';
+import Tooltip from '../../components/Tooltip.jsx';
 import Alert, { Toast } from '../../components/Feedback.jsx';
 import MessageDialog from '../../components/MessageDialog.jsx';
-import { get, post, put, validationMessages } from '../../lib/api.js';
+import { del, get, post, put, validationMessages } from '../../lib/api.js';
 
 const EMPTY_CREATE = { name: '', username: '', email: '', role: 'cashier', password: '', password_confirmation: '' };
 const PER_PAGE = 6;
+
+// Recent Activity: action → colour tone + short verb, mirroring Products.
+const ACTIVITY_TONE = {
+    user_created: 'ok',
+    user_updated: 'info',
+    user_deactivated: 'danger',
+    user_reactivated: 'ok',
+    user_password_reset: 'warn',
+};
+
+const ACTIVITY_VERB = {
+    user_created: 'Created account for',
+    user_updated: 'Updated account for',
+    user_deactivated: 'Deactivated',
+    user_reactivated: 'Reactivated',
+    user_password_reset: 'Reset password for',
+};
+
+const ACTIVITY_ICONS = {
+    user_created: (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="9" cy="8" r="4" />
+            <path d="M2 21a7 7 0 0 1 14 0" />
+            <path d="M19 8v6M16 11h6" />
+        </svg>
+    ),
+    user_updated: (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+        </svg>
+    ),
+    user_deactivated: (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M8 12h8" />
+        </svg>
+    ),
+    user_reactivated: (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6 9 17l-5-5" />
+        </svg>
+    ),
+    user_password_reset: (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="7.5" cy="15.5" r="4.5" />
+            <path d="M10.7 12.3 21 2" />
+            <path d="m17 6 3 3" />
+        </svg>
+    ),
+    default: (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8h.01M11 12h1v4h1" />
+        </svg>
+    ),
+};
+
+// One-line row summary, e.g. "Created account for Juan Dela Cruz".
+function activitySummary(item) {
+    const verb = ACTIVITY_VERB[item.action];
+    if (verb && item.subject_name) {
+        return `${verb} ${item.subject_name}`;
+    }
+    const full = String(item.description ?? '');
+    const colon = full.indexOf(':');
+    return colon > 0 ? full.slice(0, colon) : full;
+}
+
+// The "changes made" lines for the detail popup.
+function activityChanges(item) {
+    const explicit = item?.meta?.changes;
+    if (Array.isArray(explicit) && explicit.length > 0) {
+        return explicit.map((change) => change.text ?? String(change));
+    }
+
+    const meta = item?.meta ?? {};
+    const lines = [];
+
+    switch (item?.action) {
+        case 'user_created':
+            if (meta.username) lines.push(`Username ${meta.username}`);
+            if (meta.role) lines.push(`Role ${meta.role}`);
+            lines.push('Status Active');
+            break;
+        case 'user_deactivated':
+            lines.push('Status Active → Inactive');
+            lines.push('Cannot sign in until reactivated');
+            break;
+        case 'user_reactivated':
+            lines.push('Status Inactive → Active');
+            lines.push('Can sign in again');
+            break;
+        case 'user_password_reset':
+            lines.push('Password reset by Admin');
+            break;
+        default:
+            break;
+    }
+
+    return lines;
+}
 
 export default function Users() {
     const [users, setUsers] = useState([]);
@@ -16,6 +120,22 @@ export default function Users() {
     const [error, setError] = useState(null);
     const [message, setMessage] = useState(null);
     const [busyId, setBusyId] = useState(null);
+    const [deactivateUser, setDeactivateUser] = useState(null);
+    const [deactivateError, setDeactivateError] = useState(null);
+    const [activateUser, setActivateUser] = useState(null);
+    const [activateError, setActivateError] = useState(null);
+
+    // Recent Activity List state.
+    const [activity, setActivity] = useState([]);
+    const [activityDetail, setActivityDetail] = useState(null);
+    const [activityPage, setActivityPage] = useState(1);
+    const [activityOptionsOpen, setActivityOptionsOpen] = useState(false);
+    const activityOptionsRef = useRef(null);
+    const [clearConfirm, setClearConfirm] = useState(false);
+    const [clearing, setClearing] = useState(false);
+    const [clearError, setClearError] = useState(null);
+    const [toast, setToast] = useState(null);
+    const ACTIVITY_PER_PAGE = 3;
 
     const [addOpen, setAddOpen] = useState(false);
     const [createForm, setCreateForm] = useState(EMPTY_CREATE);
@@ -48,10 +168,19 @@ export default function Users() {
         setError(null);
 
         try {
-            const [list, session] = await Promise.all([get('/api/users'), get('/api/auth/user')]);
+            const [list, session, feed] = await Promise.all([
+                get('/api/users'),
+                get('/api/auth/user'),
+                // Users page owns its slice of the audit feed.
+                get('/api/activity/recent', {
+                    limit: 12,
+                    actions: 'user_created,user_updated,user_deactivated,user_reactivated,user_password_reset',
+                }).catch(() => null),
+            ]);
             setUsers(list.users ?? []);
             setRoles(list.roles ?? ['admin', 'cashier']);
             setMe(session.user);
+            setActivity(Array.isArray(feed) ? feed : []);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -62,6 +191,34 @@ export default function Users() {
     useEffect(() => {
         load();
     }, [load]);
+
+    // Options dropdown (kebab) on the Recent Activity card header: closes on
+    // outside click and Escape, same behaviour as the other admin pages.
+    useEffect(() => {
+        if (!activityOptionsOpen) {
+            return;
+        }
+
+        const onDown = (event) => {
+            if (activityOptionsRef.current && !activityOptionsRef.current.contains(event.target)) {
+                setActivityOptionsOpen(false);
+            }
+        };
+
+        const onKey = (event) => {
+            if (event.key === 'Escape') {
+                setActivityOptionsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onKey);
+
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [activityOptionsOpen]);
 
     /** Column sort: 1st click asc → 2nd desc → 3rd back to the default order. */
     function toggleSort(field) {
@@ -84,34 +241,46 @@ export default function Users() {
     }, [sortBy, sortDir]);
 
     const sortedUsers = useMemo(() => {
-        if (!sortBy) {
-            return users;
-        }
+        // The signed-in account ("Currently Using") is intentionally NOT part
+        // of this table — it is maintained from the header account menu
+        // instead. Everything here is another account, ordered by recent
+        // activity (newest update first) until a column sort is applied.
+        const rows = me ? users.filter((user) => user.id !== me.id) : users;
 
-        const dir = sortDir === 'asc' ? 1 : -1;
-        return [...users].sort((a, b) => {
-            // Date comparison for the last update (ISO timestamp from the API)
-            if (sortBy === 'updated') {
-                return ((Date.parse(a.updated_at_iso ?? '') || 0) - (Date.parse(b.updated_at_iso ?? '') || 0)) * dir;
+        const sortRows = (list) => {
+            if (!sortBy) {
+                return [...list].sort(
+                    (a, b) => ((Date.parse(b.updated_at_iso ?? '') || 0) - (Date.parse(a.updated_at_iso ?? '') || 0)),
+                );
             }
 
-            // Status sorts by the label shown in the cell (Active / Inactive)
-            if (sortBy === 'status') {
-                const av = a.is_active ? 'Active' : 'Inactive';
-                const bv = b.is_active ? 'Active' : 'Inactive';
+            const dir = sortDir === 'asc' ? 1 : -1;
+            return [...list].sort((a, b) => {
+                // Date comparison for the last update (ISO timestamp from the API)
+                if (sortBy === 'updated') {
+                    return ((Date.parse(a.updated_at_iso ?? '') || 0) - (Date.parse(b.updated_at_iso ?? '') || 0)) * dir;
+                }
+
+                // Status sorts by the label shown in the cell (Active / Inactive)
+                if (sortBy === 'status') {
+                    const av = a.is_active ? 'Active' : 'Inactive';
+                    const bv = b.is_active ? 'Active' : 'Inactive';
+                    if (av < bv) return -1 * dir;
+                    if (av > bv) return 1 * dir;
+                    return 0;
+                }
+
+                // String comparison for account, email and role
+                const av = String(a[sortBy] ?? '').toLowerCase();
+                const bv = String(b[sortBy] ?? '').toLowerCase();
                 if (av < bv) return -1 * dir;
                 if (av > bv) return 1 * dir;
                 return 0;
-            }
+            });
+        };
 
-            // String comparison for account, email and role
-            const av = String(a[sortBy] ?? '').toLowerCase();
-            const bv = String(b[sortBy] ?? '').toLowerCase();
-            if (av < bv) return -1 * dir;
-            if (av > bv) return 1 * dir;
-            return 0;
-        });
-    }, [users, sortBy, sortDir]);
+        return sortRows(rows);
+    }, [users, sortBy, sortDir, me]);
 
     const lastPage = Math.max(1, Math.ceil(sortedUsers.length / PER_PAGE));
     const safePage = Math.min(page, lastPage);
@@ -119,6 +288,19 @@ export default function Users() {
         () => sortedUsers.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE),
         [sortedUsers, safePage]
     );
+
+    // Recent Activity pagination (3 rows per page, matching Products).
+    const activityLastPage = Math.max(1, Math.ceil(activity.length / ACTIVITY_PER_PAGE));
+    const activitySafePage = Math.min(activityPage, activityLastPage);
+    const pagedActivity = useMemo(
+        () => activity.slice((activitySafePage - 1) * ACTIVITY_PER_PAGE, activitySafePage * ACTIVITY_PER_PAGE),
+        [activity, activitySafePage, ACTIVITY_PER_PAGE]
+    );
+
+    // Keep the activity page in range when the feed shrinks.
+    useEffect(() => {
+        setActivityPage(1);
+    }, [activity.length]);
 
     // Reserve exactly one full page (6 rows) of height, mirroring Stock
     // Inventory and Backups. Measured from the rendered table so it stays
@@ -182,17 +364,46 @@ export default function Users() {
         }
     }
 
-    async function handleStatus(user, action) {
-        setBusyId(user.id);
-        setMessage(null);
-        setError(null);
+    // Activate asks through the ConfirmDialog too (tone="info"), mirroring
+    // the Products page reactivate flow.
+    async function handleActivateConfirm() {
+        const target = activateUser;
+        if (!target) return;
+
+        setBusyId(target.id);
+        setActivateError(null);
 
         try {
-            const response = await post(`/api/users/${user.id}/${action}`);
+            const response = await post(`/api/users/${target.id}/activate`);
+
+            setActivateUser(null);
             setMessage(response.message);
             await load();
         } catch (err) {
-            setError(err.message);
+            setActivateError(validationMessages(err)[0] ?? err.message ?? 'Could not activate the account.');
+        } finally {
+            setBusyId(null);
+        }
+    }
+
+    // Deactivate asks through the reusable ConfirmDialog (never the browser's
+    // native confirm), mirroring the Products page flow. Activate stays a
+    // direct one-click action.
+    async function handleDeactivateConfirm() {
+        const target = deactivateUser;
+        if (!target) return;
+
+        setBusyId(target.id);
+        setDeactivateError(null);
+
+        try {
+            const response = await post(`/api/users/${target.id}/deactivate`);
+
+            setDeactivateUser(null);
+            setMessage(response.message);
+            await load();
+        } catch (err) {
+            setDeactivateError(validationMessages(err)[0] ?? err.message ?? 'Could not deactivate the account.');
         } finally {
             setBusyId(null);
         }
@@ -212,6 +423,26 @@ export default function Users() {
             setResetError(validationMessages(err)[0] ?? err.message);
         } finally {
             setResetting(false);
+        }
+    }
+
+    async function handleClearActivity() {
+        setClearing(true);
+        setClearError(null);
+
+        try {
+            const response = await del(
+                '/api/activity/recent?actions=user_created,user_updated,user_deactivated,user_reactivated,user_password_reset',
+            );
+
+            setClearConfirm(false);
+            setActivity([]);
+            setActivityPage(1);
+            setToast(response?.message ?? 'Activity list cleared.');
+        } catch (err) {
+            setClearError(validationMessages(err)[0] ?? err.message ?? 'Could not clear the activity list.');
+        } finally {
+            setClearing(false);
         }
     }
 
@@ -260,6 +491,7 @@ export default function Users() {
 
             {message && <Toast tone="success" onClose={() => setMessage(null)}>{message}</Toast>}
             {error && <Alert tone="error" onClose={() => setError(null)}>{error}</Alert>}
+            {toast && <Toast tone="success" onClose={() => setToast(null)}>{toast}</Toast>}
 
             {loading ? (
                 /* Loading phase: the hero above stays put (its loadbar is the
@@ -334,10 +566,23 @@ export default function Users() {
                 <div className="filter-head">
                     <div>
                         <h3>User Accounts</h3>
-                        <p className="muted">Every account with its role, status and last update.</p>
+                        <p className="muted">Every other account with its role, status and last update.</p>
                     </div>
                 </div>
-                {!loading && !error && (
+                {!loading && !error && sortedUsers.length === 0 && (
+                    <div className="table-empty">
+                        <span className="table-empty-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="9" cy="8" r="4" />
+                                <path d="M2 21a7 7 0 0 1 14 0" />
+                                <path d="M19 8v6M16 11h6" />
+                            </svg>
+                        </span>
+                        <p className="table-empty-title">No other accounts yet</p>
+                        <p className="table-empty-sub">Create an account with the Add Account panel above and it will show up here.</p>
+                    </div>
+                )}
+                {!loading && !error && sortedUsers.length > 0 && (
                     <div className="table-shell">
                         <div className="table-wrap data-rows-6" ref={wrapRef}>
                             <table className="table" ref={tableRef}>
@@ -366,8 +611,6 @@ export default function Users() {
                                 </thead>
                                 <tbody>
                                     {pagedUsers.map((user) => {
-                                        const isSelf = me?.id === user.id;
-
                                         return (
                                             <tr key={user.id} className={user.is_active ? undefined : 'row-inactive'}>
                                                 <td>
@@ -387,37 +630,58 @@ export default function Users() {
                                                 </td>
                                                 <td className="muted">{user.updated_at}</td>
                                                 <td className="text-right actions-cell">
-                                                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => openEdit(user)}>
-                                                        Edit
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="btn btn-ghost btn-sm"
-                                                        onClick={() => setResetUser(user)}
+                                                    <Tooltip
+                                                        label={user.is_active ? 'Edit' : 'Reactivate first'}
+                                                        className="btn btn-ghost btn-sm action-icon-btn"
                                                         disabled={!user.is_active}
-                                                        title={user.is_active ? 'Reset password' : 'Reactivate first'}
+                                                        onClick={() => openEdit(user)}
                                                     >
-                                                        Reset password
-                                                    </button>
+                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M12 20h9" />
+                                                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                                        </svg>
+                                                    </Tooltip>
+                                                    <Tooltip
+                                                        label={user.is_active ? 'Reset password' : 'Reactivate first'}
+                                                        className="btn btn-ghost btn-sm action-icon-btn"
+                                                        disabled={!user.is_active}
+                                                        onClick={() => setResetUser(user)}
+                                                    >
+                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z" />
+                                                            <circle cx="16.5" cy="7.5" r=".5" fill="currentColor" />
+                                                        </svg>
+                                                    </Tooltip>
                                                     {user.is_active ? (
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-ghost btn-sm btn-danger-text action-toggle"
-                                                            disabled={isSelf || busyId === user.id}
-                                                            title={isSelf ? 'You cannot deactivate your own account.' : 'Deactivate'}
-                                                            onClick={() => handleStatus(user, 'deactivate')}
-                                                        >
-                                                            Deactivate
-                                                        </button>
-                                                    ) : (
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-ghost btn-sm btn-success-text action-toggle"
+                                                        <Tooltip
+                                                            label="Deactivate"
+                                                            className="btn btn-ghost btn-sm btn-danger-text action-toggle action-icon-btn"
                                                             disabled={busyId === user.id}
-                                                            onClick={() => handleStatus(user, 'activate')}
+                                                            onClick={() => {
+                                                                setDeactivateError(null);
+                                                                setDeactivateUser(user);
+                                                            }}
                                                         >
-                                                            Activate
-                                                        </button>
+                                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <circle cx="12" cy="12" r="9" />
+                                                                <path d="m5.6 5.6 12.8 12.8" />
+                                                            </svg>
+                                                        </Tooltip>
+                                                    ) : (
+                                                        <Tooltip
+                                                            label="Activate"
+                                                            className="btn btn-ghost btn-sm btn-success-text action-toggle action-icon-btn"
+                                                            disabled={busyId === user.id}
+                                                            onClick={() => {
+                                                                setActivateError(null);
+                                                                setActivateUser(user);
+                                                            }}
+                                                        >
+                                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <circle cx="12" cy="12" r="9" />
+                                                                <path d="m8.5 12 2.5 2.5 4.5-5" />
+                                                            </svg>
+                                                        </Tooltip>
                                                     )}
                                                 </td>
                                             </tr>
@@ -457,12 +721,142 @@ export default function Users() {
                     </div>
                 )}
             </section>
+
+            <section className="card padded recent-activity">
+                <div className="filter-head">
+                    <div>
+                        <h3>Recent Activity List</h3>
+                        <p className="muted">See the account changes you made recently.</p>
+                    </div>
+                    <div className="activity-options" ref={activityOptionsRef}>
+                        <button
+                            type="button"
+                            className="icon-btn is-outlined"
+                            onClick={() => setActivityOptionsOpen((open) => !open)}
+                            aria-haspopup="menu"
+                            aria-expanded={activityOptionsOpen}
+                            aria-label="Activity options"
+                        >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+                                <circle cx="12" cy="5" r="1.7" />
+                                <circle cx="12" cy="12" r="1.7" />
+                                <circle cx="12" cy="19" r="1.7" />
+                            </svg>
+                        </button>
+                        {activityOptionsOpen && (
+                            <div className="activity-options-panel" role="menu" aria-label="Activity options">
+                                <button
+                                    type="button"
+                                    className="activity-options-item activity-options-danger"
+                                    role="menuitem"
+                                    onClick={() => {
+                                        setActivityOptionsOpen(false);
+                                        setClearError(null);
+                                        setClearConfirm(true);
+                                    }}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M3 6h18" />
+                                        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                        <path d="M10 11v6" />
+                                        <path d="M14 11v6" />
+                                    </svg>
+                                    <span>Clear activity</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {activity.length === 0 ? (
+                    <div className="table-empty">
+                        <span className="table-empty-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="9" cy="8" r="4" />
+                                <path d="M2 21a7 7 0 0 1 14 0" />
+                                <path d="M17 11h5M19.5 8.5v5" />
+                            </svg>
+                        </span>
+                        <p className="table-empty-title">No account activity yet</p>
+                        <p className="table-empty-sub">Create, edit or deactivate an account and it will show up here.</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="activity-shell">
+                            <ul className="activity-list">
+                                {pagedActivity.map((item) => {
+                                    const tone = ACTIVITY_TONE[item.action] ?? 'neutral';
+                                    return (
+                                        <li key={item.id}>
+                                            <button
+                                                type="button"
+                                                className="activity-row"
+                                                onClick={() => setActivityDetail(item)}
+                                                aria-label={`View details: ${activitySummary(item)}`}
+                                            >
+                                                <span className={`activity-icon activity-icon-${tone}`} aria-hidden="true">
+                                                    {ACTIVITY_ICONS[item.action] ?? ACTIVITY_ICONS.default}
+                                                </span>
+                                                <div className="activity-body">
+                                                    <p className="activity-desc">{activitySummary(item)}</p>
+                                                    <p className="activity-meta muted">
+                                                        <span className="activity-user">{item.user_name}</span>
+                                                        {item.user_role && <span className="activity-role">{item.user_role}</span>}
+                                                    </p>
+                                                </div>
+                                                <time
+                                                    className="activity-time muted"
+                                                    dateTime={item.created_at ?? undefined}
+                                                    title={item.created_at ? new Date(item.created_at).toLocaleString() : undefined}
+                                                >
+                                                    {item.created_at_human ?? ''}
+                                                </time>
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+
+                        {activity.length > ACTIVITY_PER_PAGE && (
+                            <div className="pagination">
+                                <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm page-btn"
+                                    disabled={activitySafePage <= 1}
+                                    onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+                                    aria-label="Previous page"
+                                >
+                                    <svg className="page-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                        <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </button>
+                                <span className="page-count">{activitySafePage}</span>
+                                <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm page-btn"
+                                    disabled={activitySafePage >= activityLastPage}
+                                    onClick={() => setActivityPage((p) => Math.min(activityLastPage, p + 1))}
+                                    aria-label="Next page"
+                                >
+                                    <svg className="page-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                        <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </button>
+                                <span className="page-detail">{Math.min(activitySafePage * ACTIVITY_PER_PAGE, activity.length)} of {activity.length}</span>
+                            </div>
+                        )}
+                    </>
+                )}
+            </section>
             </>
             )}
 
             {addOpen && (
                 <Modal
                     title="Create account"
+                    className="modal-user-form"
                     onClose={() => {
                         // Keep the form open while the nested error dialog is up,
                         // otherwise one Escape press would close both dialogs.
@@ -567,7 +961,7 @@ export default function Users() {
                                         required
                                         minLength={6}
                                         autoComplete="new-password"
-                                        placeholder="Minimum 6 characters"
+                                        placeholder="******"
                                         value={createForm.password}
                                         onChange={createSet('password')}
                                     />
@@ -591,7 +985,7 @@ export default function Users() {
                                         required
                                         minLength={6}
                                         autoComplete="new-password"
-                                        placeholder="Re-enter password"
+                                        placeholder="******"
                                         value={createForm.password_confirmation}
                                         onChange={createSet('password_confirmation')}
                                     />
@@ -627,7 +1021,7 @@ export default function Users() {
             )}
 
             {editUser && editForm && (
-                <Modal title={`Edit @${editUser.username}`} onClose={() => setEditUser(null)}>
+                <Modal title="Edit Account" className="modal-user-form" onClose={() => setEditUser(null)}>
                     <form className="form" onSubmit={handleEdit}>
                         <label className="field">
                             <span>Full name *</span>
@@ -693,8 +1087,12 @@ export default function Users() {
             )}
 
             {resetUser && (
-                <Modal title={`Reset password — @${resetUser.username}`} onClose={() => setResetUser(null)}>
+                <Modal title="Reset password" className="modal-user-form modal-reset" onClose={() => setResetUser(null)}>
                     <form className="form" onSubmit={handleReset}>
+                        <div className="field">
+                            <span className="field-label">Username</span>
+                            <div className="readonly-field">{resetUser.username}</div>
+                        </div>
                         <label className="field">
                             <span>New password *</span>
                             <div className="input-with-action">
@@ -747,6 +1145,126 @@ export default function Users() {
                         </div>
                     </form>
                 </Modal>
+            )}
+
+            {activityDetail && (
+                <Modal
+                    title={(
+                        <span className="activity-detail-title">
+                            <span className="activity-detail-infoicon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M12 11v5M12 8h.01" />
+                                </svg>
+                            </span>
+                            Activity details
+                        </span>
+                    )}
+                    className="modal-activity"
+                    noClose
+                    onClose={() => setActivityDetail(null)}
+                >
+                    <dl className="activity-detail-list">
+                        <div className="activity-detail-item">
+                            <dt>Action</dt>
+                            <dd>{ACTIVITY_VERB[activityDetail.action] ?? activityDetail.action}</dd>
+                        </div>
+                        <div className="activity-detail-item">
+                            <dt>By</dt>
+                            <dd>
+                                {activityDetail.user_name}
+                                {activityDetail.user_role && <span className="activity-role">{activityDetail.user_role}</span>}
+                            </dd>
+                        </div>
+                        <div className="activity-detail-item">
+                            <dt>When</dt>
+                            <dd>
+                                {activityDetail.created_at
+                                    ? new Date(activityDetail.created_at).toLocaleString()
+                                    : activityDetail.created_at_human}
+                            </dd>
+                        </div>
+                        {activityDetail.subject_name && (
+                            <div className="activity-detail-item">
+                                <dt>Account</dt>
+                                <dd>{activityDetail.subject_name}</dd>
+                            </div>
+                        )}
+                        {activityChanges(activityDetail).length > 0 && (
+                            <div className="activity-detail-item">
+                                <dt>Changes made</dt>
+                                <dd>
+                                    <ul className="activity-detail-changes">
+                                        {activityChanges(activityDetail).map((text, index) => (
+                                            <li key={`${text}-${index}`}>{text}</li>
+                                        ))}
+                                    </ul>
+                                </dd>
+                            </div>
+                        )}
+                    </dl>
+
+                    <div className="modal-actions modal-actions-center">
+                        <button type="button" className="btn btn-ghost" onClick={() => setActivityDetail(null)}>Close</button>
+                    </div>
+                </Modal>
+            )}
+
+            {activateUser && (
+                <ConfirmDialog
+                    tone="info"
+                    title={<>Activate <strong>{activateUser.name}</strong>?</>}
+                    description="This reactivates the account so it can sign in again."
+                    confirmLabel="Activate"
+                    loadingLabel="Activating…"
+                    loading={busyId === activateUser?.id}
+                    error={activateError}
+                    onConfirm={handleActivateConfirm}
+                    onCancel={() => {
+                        if (busyId !== activateUser?.id) {
+                            setActivateUser(null);
+                            setActivateError(null);
+                        }
+                    }}
+                />
+            )}
+
+            {deactivateUser && (
+                <ConfirmDialog
+                    tone="danger"
+                    title={<>Deactivate <strong>{deactivateUser.name}</strong>?</>}
+                    description="This deactivates the account so it can no longer sign in. Its history is preserved and the account can be reactivated at any time."
+                    confirmLabel="Deactivate"
+                    loadingLabel="Deactivating…"
+                    loading={busyId === deactivateUser?.id}
+                    error={deactivateError}
+                    onConfirm={handleDeactivateConfirm}
+                    onCancel={() => {
+                        if (busyId !== deactivateUser?.id) {
+                            setDeactivateUser(null);
+                            setDeactivateError(null);
+                        }
+                    }}
+                />
+            )}
+
+            {clearConfirm && (
+                <ConfirmDialog
+                    tone="danger"
+                    title="Clear activity list?"
+                    description="This permanently deletes the account activity history from the activity log. The accounts themselves are not affected. This action cannot be undone."
+                    confirmLabel="Clear"
+                    loadingLabel="Clearing…"
+                    loading={clearing}
+                    error={clearError}
+                    onConfirm={handleClearActivity}
+                    onCancel={() => {
+                        if (!clearing) {
+                            setClearConfirm(false);
+                            setClearError(null);
+                        }
+                    }}
+                />
             )}
         </div>
     );

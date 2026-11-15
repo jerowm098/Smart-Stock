@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Alert from '../../components/Feedback.jsx';
+import ConfirmDialog from '../../components/ConfirmDialog.jsx';
+import Alert, { Toast } from '../../components/Feedback.jsx';
 import Modal from '../../components/Modal.jsx';
-import { downloadFile, get } from '../../lib/api.js';
+import { del, exportFile, get, validationMessages } from '../../lib/api.js';
 import { formatPeso } from '../../lib/format.js';
 
 const PER_PAGE = 6;
+
+// Recent Activity rows shown per page (matches the other admin pages).
+const ACTIVITY_PER_PAGE = 3;
 
 // Column → row-field accessors for the client-side table sort.
 const SORT_FIELDS = {
@@ -30,6 +34,65 @@ function highlight(text, needle) {
     );
 }
 
+// ── Recent Activity (export feed) ────────────────────────────────────────────
+// Transactions owns the `transactions_exported` slice of the audit log: one
+// row per "Export CSV" click, rendered exactly like the Products page feed.
+// Sales themselves are NOT listed here — the table above is the sales record.
+
+// Recent Activity: action → colour tone + short verb, mirroring Products.
+const ACTIVITY_TONE = {
+    transactions_exported: 'ok',
+};
+
+const ACTIVITY_VERB = {
+    transactions_exported: 'Exported transactions',
+};
+
+const ACTIVITY_ICONS = {
+    transactions_exported: (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <path d="M7 10l5 5 5-5" />
+            <path d="M12 15V3" />
+        </svg>
+    ),
+    default: (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8h.01M11 12h1v4h1" />
+        </svg>
+    ),
+};
+
+// One-line row summary, e.g. "Exported transactions (82)".
+function activitySummary(item) {
+    if (item.action === 'transactions_exported') {
+        const rows = item?.meta?.rows;
+        return rows != null ? `Exported transactions (${rows})` : 'Exported transactions';
+    }
+
+    const verb = ACTIVITY_VERB[item.action];
+    if (verb && item.subject_name) {
+        return `${verb} ${item.subject_name}`;
+    }
+    return String(item.description ?? 'Export activity');
+}
+
+// The "changes made" lines for the detail popup (file, rows, filters).
+function activityChanges(item) {
+    const explicit = item?.meta?.changes;
+    if (Array.isArray(explicit) && explicit.length > 0) {
+        return explicit.map((change) => change.text ?? String(change));
+    }
+
+    const meta = item?.meta ?? {};
+    const lines = [];
+    if (meta.filename) lines.push(`File ${meta.filename}`);
+    if (meta.rows != null) lines.push(`${meta.rows} transactions exported`);
+    lines.push('CSV file (Excel-compatible)');
+    return lines;
+}
+
 export default function Transactions() {
     const [filters, setFilters] = useState({ search: '', cashier_id: '', channel: '', date_from: '', date_to: '' });
     const [searchInput, setSearchInput] = useState('');
@@ -40,6 +103,18 @@ export default function Transactions() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [viewing, setViewing] = useState(null);
+
+    // Recent Activity List (sales feed) state.
+    const [activity, setActivity] = useState([]);
+    const [activityDetail, setActivityDetail] = useState(null);
+    const [activityPage, setActivityPage] = useState(1);
+    const [activityOptionsOpen, setActivityOptionsOpen] = useState(false);
+    const activityOptionsRef = useRef(null);
+    const [clearConfirm, setClearConfirm] = useState(false);
+    const [clearing, setClearing] = useState(false);
+    const [clearError, setClearError] = useState(null);
+    const [exporting, setExporting] = useState(false);
+    const [toast, setToast] = useState(null);
 
     // Guards against out-of-order responses: only the newest request may write
     // state, otherwise a slow earlier keystroke can overwrite fresh results.
@@ -85,20 +160,42 @@ export default function Transactions() {
         });
     }, [data, sortBy, sortDir]);
 
+    // Recent Activity pagination (3 rows per page, matching Products).
+    const activityLastPage = Math.max(1, Math.ceil(activity.length / ACTIVITY_PER_PAGE));
+    const activitySafePage = Math.min(activityPage, activityLastPage);
+    const pagedActivity = useMemo(
+        () => activity.slice((activitySafePage - 1) * ACTIVITY_PER_PAGE, activitySafePage * ACTIVITY_PER_PAGE),
+        [activity, activitySafePage],
+    );
+
+    // Keep the activity page in range when the feed shrinks.
+    useEffect(() => {
+        setActivityPage(1);
+    }, [activity.length]);
+
     const load = useCallback(async () => {
         const id = ++requestId.current;
         setLoading(true);
         setError(null);
 
         try {
-            const response = await get('/api/dashboard/transactions', {
-                page,
-                per_page: PER_PAGE,
-                ...filters,
-            });
+            const [response, feed] = await Promise.all([
+                get('/api/dashboard/transactions', {
+                    page,
+                    per_page: PER_PAGE,
+                    ...filters,
+                }),
+                // Transactions owns the transactions_exported slice of the
+                // audit feed; a feed failure must never blank the table.
+                get('/api/activity/recent', {
+                    limit: 12,
+                    actions: 'transactions_exported',
+                }).catch(() => null),
+            ]);
 
             if (id !== requestId.current) return;
             setData(response);
+            setActivity(Array.isArray(feed) ? feed : []);
         } catch (err) {
             if (id !== requestId.current) return;
             setError(err.message);
@@ -110,6 +207,84 @@ export default function Transactions() {
     useEffect(() => {
         load();
     }, [load]);
+
+    // Options dropdown (kebab) on the Recent Activity card header: closes on
+    // outside click and Escape, same behaviour as the other admin pages.
+    useEffect(() => {
+        if (!activityOptionsOpen) {
+            return undefined;
+        }
+
+        const onDown = (event) => {
+            if (activityOptionsRef.current && !activityOptionsRef.current.contains(event.target)) {
+                setActivityOptionsOpen(false);
+            }
+        };
+
+        const onKey = (event) => {
+            if (event.key === 'Escape') {
+                setActivityOptionsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onKey);
+
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [activityOptionsOpen]);
+
+    // Export CSV with real feedback (same convention as the other pages):
+    // loading state on the button, success/error toast, then a silent refresh
+    // of the Recent Activity feed so the new export row appears immediately —
+    // no page reload, no skeleton phase, no scroll jump.
+    async function handleExport() {
+        if (exporting) return;
+        setExporting(true);
+
+        try {
+            await exportFile('/api/dashboard/transactions/export', filters);
+            setToast({ tone: 'success', text: 'Transactions exported successfully.' });
+
+            // Silent feed refresh — never flips the page-level loading flag.
+            const feed = await get('/api/activity/recent', {
+                limit: 12,
+                actions: 'transactions_exported',
+            }).catch(() => null);
+
+            if (Array.isArray(feed)) {
+                setActivity(feed);
+                setActivityPage(1);
+            }
+        } catch (err) {
+            setToast({
+                tone: 'error',
+                text: validationMessages(err)[0] ?? err.message ?? 'Could not export transactions.',
+            });
+        } finally {
+            setExporting(false);
+        }
+    }
+
+    async function handleClearActivity() {
+        setClearing(true);
+        setClearError(null);
+
+        try {
+            const response = await del('/api/activity/recent?actions=transactions_exported');
+
+            setClearConfirm(false);
+            setActivity([]);
+            setActivityPage(1);
+            setToast({ tone: 'success', text: response?.message ?? 'Activity list cleared.' });
+        } catch (err) {
+            setClearError(validationMessages(err)[0] ?? err.message ?? 'Could not clear the activity list.');
+        } finally {
+            setClearing(false);
+        }
+    }
 
     // Debounce the search box so typing doesn't fire a request per keystroke.
     useEffect(() => {
@@ -248,6 +423,33 @@ export default function Transactions() {
                             <span className="skeleton" style={{ width: 34, height: 34 }} />
                         </div>
                     </section>
+
+                    {/* Recent Activity skeleton */}
+                    <section className="card padded recent-activity">
+                        <div className="filter-head">
+                            <div>
+                                <span className="skeleton skeleton-lg" style={{ marginBottom: 8 }} />
+                                <span className="skeleton skeleton-line skeleton-sm" />
+                            </div>
+                            <span className="skeleton" style={{ width: 38, height: 38, borderRadius: 9 }} />
+                        </div>
+                        <div className="activity-shell">
+                            <ul className="activity-list">
+                                {[0, 1, 2].map((i) => (
+                                    <li key={i}>
+                                        <div className="activity-row" aria-hidden="true">
+                                            <span className="skeleton" style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0 }} />
+                                            <div className="activity-body">
+                                                <span className="skeleton skeleton-line" style={{ width: '55%', marginBottom: 8 }} />
+                                                <span className="skeleton skeleton-line skeleton-sm" style={{ width: '35%' }} />
+                                            </div>
+                                            <span className="skeleton skeleton-line" style={{ width: 90, height: 10, flexShrink: 0 }} />
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </section>
                 </div>
             ) : (
             <>
@@ -260,9 +462,10 @@ export default function Transactions() {
                     <button
                         type="button"
                         className="btn btn-primary"
-                        onClick={() => downloadFile('/api/dashboard/transactions/export', filters)}
+                        onClick={handleExport}
+                        disabled={exporting}
                     >
-                        Export CSV
+                        {exporting ? 'Exporting…' : 'Export CSV'}
                     </button>
                 </div>
             </section>
@@ -336,6 +539,7 @@ export default function Transactions() {
             </section>
 
             {error && <Alert tone="error">{error}</Alert>}
+            {toast && <Toast tone={toast.tone} onClose={() => setToast(null)}>{toast.text}</Toast>}
 
             <section className="card padded">
                 <div className="filter-head">
@@ -471,6 +675,136 @@ export default function Transactions() {
                     </div>
                 )}
             </section>
+
+            {/* Recent Activity List — export feed (transactions_exported rows only) */}
+            <section className="card padded recent-activity">
+                <div className="filter-head">
+                    <div>
+                        <h3>Recent Activity List</h3>
+                        <p className="muted">See the transaction exports you made recently.</p>
+                    </div>
+                    <div className="activity-options" ref={activityOptionsRef}>
+                        <button
+                            type="button"
+                            className="icon-btn is-outlined"
+                            onClick={() => setActivityOptionsOpen((open) => !open)}
+                            aria-haspopup="menu"
+                            aria-expanded={activityOptionsOpen}
+                            aria-label="Activity options"
+                        >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+                                <circle cx="12" cy="5" r="1.7" />
+                                <circle cx="12" cy="12" r="1.7" />
+                                <circle cx="12" cy="19" r="1.7" />
+                            </svg>
+                        </button>
+                        {activityOptionsOpen && (
+                            <div className="activity-options-panel" role="menu" aria-label="Activity options">
+                                <button
+                                    type="button"
+                                    className="activity-options-item activity-options-danger"
+                                    role="menuitem"
+                                    onClick={() => {
+                                        setActivityOptionsOpen(false);
+                                        setClearError(null);
+                                        setClearConfirm(true);
+                                    }}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M3 6h18" />
+                                        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                        <path d="M10 11v6" />
+                                        <path d="M14 11v6" />
+                                    </svg>
+                                    <span>Clear activity</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {activity.length === 0 ? (
+                    <div className="table-empty">
+                        <span className="table-empty-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <path d="M7 10l5 5 5-5" />
+                                <path d="M12 15V3" />
+                            </svg>
+                        </span>
+                        <p className="table-empty-title">No export activity yet</p>
+                        <p className="table-empty-sub">Export the transaction list as CSV and it will show up here.</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="activity-shell">
+                            <ul className="activity-list">
+                                {pagedActivity.map((item) => {
+                                    const tone = ACTIVITY_TONE[item.action] ?? 'neutral';
+                                    return (
+                                        <li key={item.id}>
+                                            <button
+                                                type="button"
+                                                className="activity-row"
+                                                onClick={() => setActivityDetail(item)}
+                                                aria-label={`View details: ${activitySummary(item)}`}
+                                            >
+                                                <span className={`activity-icon activity-icon-${tone}`} aria-hidden="true">
+                                                    {ACTIVITY_ICONS[item.action] ?? ACTIVITY_ICONS.default}
+                                                </span>
+                                                <div className="activity-body">
+                                                    <p className="activity-desc">{activitySummary(item)}</p>
+                                                    <p className="activity-meta muted">
+                                                        <span className="activity-user">{item.user_name}</span>
+                                                        {item.user_role && <span className="activity-role">{item.user_role}</span>}
+                                                    </p>
+                                                </div>
+                                                <time
+                                                    className="activity-time muted"
+                                                    dateTime={item.created_at ?? undefined}
+                                                    title={item.created_at ? new Date(item.created_at).toLocaleString() : undefined}
+                                                >
+                                                    {item.created_at_human ?? ''}
+                                                </time>
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+
+                        {activity.length > ACTIVITY_PER_PAGE && (
+                            <div className="pagination">
+                                <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm page-btn"
+                                    disabled={activitySafePage <= 1}
+                                    onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+                                    aria-label="Previous page"
+                                >
+                                    <svg className="page-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                        <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </button>
+                                <span className="page-count">{activitySafePage}</span>
+                                <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm page-btn"
+                                    disabled={activitySafePage >= activityLastPage}
+                                    onClick={() => setActivityPage((p) => Math.min(activityLastPage, p + 1))}
+                                    aria-label="Next page"
+                                >
+                                    <svg className="page-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                        <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </button>
+                                <span className="page-detail">{Math.min(activitySafePage * ACTIVITY_PER_PAGE, activity.length)} of {activity.length}</span>
+                            </div>
+                        )}
+                    </>
+                )}
+            </section>
             </>
             )}
 
@@ -543,6 +877,88 @@ export default function Transactions() {
                         <button type="button" className="btn btn-ghost" onClick={() => setViewing(null)}>Close</button>
                     </div>
                 </Modal>
+            )}
+
+            {activityDetail && (
+                <Modal
+                    title={(
+                        <span className="activity-detail-title">
+                            <span className="activity-detail-infoicon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M12 11v5M12 8h.01" />
+                                </svg>
+                            </span>
+                            Activity details
+                        </span>
+                    )}
+                    className="modal-activity"
+                    noClose
+                    onClose={() => setActivityDetail(null)}
+                >
+                    <dl className="activity-detail-list">
+                        <div className="activity-detail-item">
+                            <dt>Action</dt>
+                            <dd>{ACTIVITY_VERB[activityDetail.action] ?? activityDetail.action}</dd>
+                        </div>
+                        <div className="activity-detail-item">
+                            <dt>By</dt>
+                            <dd>
+                                {activityDetail.user_name}
+                                {activityDetail.user_role && <span className="activity-role">{activityDetail.user_role}</span>}
+                            </dd>
+                        </div>
+                        <div className="activity-detail-item">
+                            <dt>When</dt>
+                            <dd>
+                                {activityDetail.created_at
+                                    ? new Date(activityDetail.created_at).toLocaleString()
+                                    : activityDetail.created_at_human}
+                            </dd>
+                        </div>
+                        {activityDetail.subject_name && (
+                            <div className="activity-detail-item">
+                                <dt>File</dt>
+                                <dd className="mono">{activityDetail.subject_name}</dd>
+                            </div>
+                        )}
+                        {activityChanges(activityDetail).length > 0 && (
+                            <div className="activity-detail-item">
+                                <dt>Export made</dt>
+                                <dd>
+                                    <ul className="activity-detail-changes">
+                                        {activityChanges(activityDetail).map((text, index) => (
+                                            <li key={`${text}-${index}`}>{text}</li>
+                                        ))}
+                                    </ul>
+                                </dd>
+                            </div>
+                        )}
+                    </dl>
+
+                    <div className="modal-actions modal-actions-center">
+                        <button type="button" className="btn btn-ghost" onClick={() => setActivityDetail(null)}>Close</button>
+                    </div>
+                </Modal>
+            )}
+
+            {clearConfirm && (
+                <ConfirmDialog
+                    tone="danger"
+                    title="Clear activity list?"
+                    description="This permanently deletes the export activity history from the activity log. Exported CSV files are not affected. This action cannot be undone."
+                    confirmLabel="Clear"
+                    loadingLabel="Clearing…"
+                    loading={clearing}
+                    error={clearError}
+                    onConfirm={handleClearActivity}
+                    onCancel={() => {
+                        if (!clearing) {
+                            setClearConfirm(false);
+                            setClearError(null);
+                        }
+                    }}
+                />
             )}
         </div>
     );

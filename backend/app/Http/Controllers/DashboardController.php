@@ -6,6 +6,8 @@ use App\Models\Product;
 use App\Models\Sale;
 use App\Models\StockIn;
 use App\Models\Supplier;
+use App\Models\User;
+use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -505,6 +507,17 @@ class DashboardController extends Controller
         $sales = $query->limit(5000)->get();
 
         $filename = 'smart-stock-transactions-' . now()->format('Ymd-His') . '.csv';
+
+        // Audit the export (Transactions page feed): who downloaded the sales
+        // report, with which filters and how many rows. Best-effort — a logging
+        // failure must never break the download.
+        ActivityLogger::safe(fn () => ActivityLogger::transactionsExported($user, $filename, $sales->count(), [
+            'search'    => $search !== '' ? $search : null,
+            'cashier'   => $cashierId ? User::find($cashierId)?->name : null,
+            'channel'   => $channel,
+            'date_from' => $dateFrom,
+            'date_to'   => $dateTo,
+        ]));
 
         $headers = [
             'Content-Type'        => 'text/csv; charset=UTF-8',

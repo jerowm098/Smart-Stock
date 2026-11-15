@@ -24,7 +24,7 @@ Ginagamit natin ang **3 layers** sa loob ng isang container:
 | **PHP-FPM** | Nagpapatakbo ng Laravel PHP code (may `pdo_pgsql`) | [`docker/php/www.conf`](docker/php/www.conf) |
 | **Supervisor** | Process manager — parehong pinapatakbo ang Nginx + PHP-FPM sa iisang container | [`docker/supervisor/supervisord.conf`](docker/supervisor/supervisord.conf) |
 
-> **Database:** Production ay Supabase PostgreSQL only (`DB_CONNECTION=pgsql`). Local development ay maaaring XAMPP MariaDB (`DB_CONNECTION=mysql`, `DB_DATABASE=smartstock_db`) — gamitin ang `php artisan db:copy-from-supabase` para kopyahin ang data pababa. Walang SQLite file sa local o prod. Ang SQLite config sa [`config/database.php`](config/database.php) ay testing only (`phpunit.xml` memory).
+> **Database:** Supabase PostgreSQL lang, pareho sa local at production (`DB_CONNECTION=pgsql`, `SUPABASE_DB_*`). Walang local MySQL/MariaDB at walang SQLite file — ang local dev ay gumagamit ng parehong Supabase rows na nakikita ng Render. Ang SQLite config sa [`config/database.php`](config/database.php) ay testing only (`phpunit.xml` memory).
 
 ---
 
@@ -49,9 +49,7 @@ Ginagamit natin ang **3 layers** sa loob ng isang container:
 5. Kapag 500 pa rin ang login: tingnan ang **Logs** tab — laging nasa
    doon ang eksaktong exception.
 
-> **Pangalan ng keys:** pagsapit ng refactor na ito, ang Supabase connection
-> (pgsql) ay `SUPABASE_DB_*` palagi — sa local `.env` at sa Render, magkapareho.
-> Ang `DB_*` keys ay para na lang sa local XAMPP MySQL (`DB_CONNECTION=mysql`).
+> **Pangalan ng keys:** ang Supabase connection (pgsql) ay `SUPABASE_DB_*` palagi — sa local `.env` at sa Render, magkapareho. Walang `DB_*` MySQL keys; `DB_CONNECTION=pgsql` lang ang kailangan.
 
 > Bakit Session pooler (5432) at hindi Transaction pooler (6543)?
 > Gumagamit ang Laravel ng prepared statements na sumasabog sa transaction
@@ -103,31 +101,31 @@ Maling akala ang `SUPABASE_URL + ANON_KEY` — pang-JS client lang yun. Ang kail
 
 Supabase Dashboard > Project Settings > Database > Connect button > piliin ang URI tab. Huwag i-type ng mano-mano — i-copy paste ang host/port/user.
 
-| Mode | `DB_HOST` | `DB_PORT` | `DB_USERNAME` | Gamit |
+| Mode | `SUPABASE_DB_HOST` | `SUPABASE_DB_PORT` | `SUPABASE_DB_USERNAME` | Gamit |
 |---|---|---|---|---|
 | Direct | `db.xxxxx.supabase.co` | `5432` | `postgres` | Migrate kung IPv6-ready ang network mo |
-| Session pooler | `aws-0-ap-southeast-1.pooler.supabase.com` (kopyahin ang exact sa modal) | `5432` | `postgres.xxxxx` | Migrate sa Globe IPv4 + prod fallback |
-| Transaction pooler | `aws-0-ap-southeast-1.pooler.supabase.com` | `6543` | `postgres.xxxxx` | Prod runtime sa Render only, hindi pang-migrate |
+| Session pooler | `aws-0-ap-southeast-1.pooler.supabase.com` (kopyahin ang exact sa modal) | `5432` | `postgres.xxxxx` | Local dev + migrate + prod (recommended) |
+| Transaction pooler | `aws-0-ap-southeast-1.pooler.supabase.com` | `6543` | `postgres.xxxxx` | Runtime queries lang, hindi pang-migrate |
 
 | Variable | Saan kukunin |
 |---|---|
 | `DB_CONNECTION=pgsql` | Fixed |
-| `DB_DATABASE` | `postgres` (default) |
-| `DB_PASSWORD` | Database password na ginawa mo (i-reset kung nakalimutan) |
-| `DB_SSLMODE=require` | Fixed, lagi require sa Supabase |
+| `SUPABASE_DB_DATABASE` | `postgres` (default) |
+| `SUPABASE_DB_PASSWORD` | Database password na ginawa mo (i-reset kung nakalimutan) |
+| `SUPABASE_DB_SSLMODE=require` | Fixed, lagi require sa Supabase |
 
-Local template nasa [`.env.example`](.env.example). Prod template nasa [`render.yaml`](render.yaml) na may `sync: false` sa `DB_HOST` at `DB_PASSWORD` (secret, hindi naka-commit).
+Local template nasa [`.env.example`](.env.example). Prod template nasa [`render.yaml`](render.yaml) na may `sync: false` sa `SUPABASE_DB_HOST` at `SUPABASE_DB_PASSWORD` (secret, hindi naka-commit).
 
 ---
 
 ## STEP 1 — I-connect ang local `.env` sa Supabase (mula scratch)
 
 1. Supabase Dashboard > piliin ang project mo > pindutin ang Connect button sa taas.
-2. Piliin ang Transaction Pooler / Session Pooler > URI tab.
+2. Piliin ang Session Pooler > URI tab.
 3. Kopyahin ang host, port, user — huwag i-type ng mano-mano.
-4. Sa Globe IPv4 (katulad ng `nslookup` mo na IPv6-only ang Direct), gamitin ang Session pooler pang-migrate:
-   `DB_HOST=aws-0-ap-southeast-1.pooler.supabase.com`, `DB_PORT=5432`, `DB_USERNAME=postgres.xxxxx`
-5. Ilagay ang totoong `DB_PASSWORD` sa [`.env`](.env:37), siguraduhing walang `DB_URL` na naka-set (nag-o-override ito sa host/port/user).
+4. Gamitin ang Session pooler pang-local, pareho rin sa Render:
+   `SUPABASE_DB_HOST=aws-0-ap-southeast-1.pooler.supabase.com`, `SUPABASE_DB_PORT=5432`, `SUPABASE_DB_USERNAME=postgres.xxxxx`
+5. Ilagay ang totoong `SUPABASE_DB_PASSWORD` sa [`.env`](.env), siguraduhing walang `SUPABASE_DB_URL` na naka-set (nag-o-override ito sa host/port/user).
 6. Run `php artisan config:clear`, tapos `php artisan migrate --force`.
 7. Check sa Supabase Dashboard > Table Editor kung may `users, products, sales` na.
 
@@ -172,14 +170,14 @@ git push origin main
 | `CACHE_STORE` | `file` | Walang Redis |
 | `QUEUE_CONNECTION` | `null` | Walang worker |
 | `DB_CONNECTION` | `pgsql` | Supabase |
-| `DB_HOST` | pooler host mula sa Connect modal | Supabase host |
-| `DB_PORT` | `6543` sa prod (Transaction pooler) | Direct vs pooler |
-| `DB_DATABASE` | `postgres` | DB name |
-| `DB_USERNAME` | `postgres.xxxxx` sa pooler | DB user |
-| `DB_PASSWORD` | *(secret, sync false)* | DB password |
-| `DB_SSLMODE` | `require` | SSL |
+| `SUPABASE_DB_HOST` | pooler host mula sa Connect modal | Supabase host |
+| `SUPABASE_DB_PORT` | `5432` (Session pooler) | Safe para sa runtime + auto-migrate |
+| `SUPABASE_DB_DATABASE` | `postgres` | DB name |
+| `SUPABASE_DB_USERNAME` | `postgres.xxxxx` sa pooler | DB user |
+| `SUPABASE_DB_PASSWORD` | *(secret, sync false)* | DB password |
+| `SUPABASE_DB_SSLMODE` | `require` | SSL |
 
-> Kailangan mong i-set manually: **`APP_KEY`, `DB_HOST`, `DB_PASSWORD`**. Ang iba ay may default na sa [`Dockerfile`](Dockerfile) at [`render.yaml`](render.yaml).
+> Kailangan mong i-set manually: **`APP_KEY`, `SUPABASE_DB_HOST`, `SUPABASE_DB_PASSWORD`**. Ang iba ay may default na sa [`Dockerfile`](Dockerfile) at [`render.yaml`](render.yaml).
 
 ---
 
@@ -190,12 +188,12 @@ git push origin main
 | **`could not find driver: pgsql`** | Walang `pdo_pgsql` | Naayos na sa Dockerfile (`pdo_pgsql + libpq-dev`). Rebuild image. Local XAMPP: enable `extension=pdo_pgsql` sa `php.ini`. |
 | **`No application encryption key`** | Walang `APP_KEY` | I-set sa Render env vars |
 | **`Connection refused` / 502** | Hindi naka-listen sa `$PORT` | Auto sa entrypoint, check logs |
-| **`password authentication failed`** | Maling `DB_PASSWORD` o user | I-reset sa Supabase Database Settings, update sa Render |
-| **`connection timed out`** | Maling `DB_HOST` o port | Gamitin ang URI sa Supabase Settings > Database |
-| **`(ENOTFOUND) tenant/user postgres.xxxxx not found`** | Maling host/user combo o paused project, o Transaction pooler (6543) ang ginamit pang-migrate | Kopyahin ulit ang exact host/port/user sa Connect modal. Pang-migrate: Session pooler (5432) o Direct (5432), hindi 6543. I-unpause ang project kung paused. Burahin ang `DB_URL` kung naka-set. |
+| **`password authentication failed`** | Maling `SUPABASE_DB_PASSWORD` o user | I-reset sa Supabase Database Settings, update sa Render |
+| **`connection timed out`** | Maling `SUPABASE_DB_HOST` o port | Gamitin ang URI sa Supabase Settings > Database |
+| **`(ENOTFOUND) tenant/user postgres.xxxxx not found`** | Maling host/user combo o paused project, o Transaction pooler (6543) ang ginamit pang-migrate | Kopyahin ulit ang exact host/port/user sa Connect modal. Pang-migrate: Session pooler (5432) o Direct (5432), hindi 6543. I-unpause ang project kung paused. Burahin ang `SUPABASE_DB_URL` kung naka-set. |
 | **`Unknown host / could not translate host db.xxxxx.supabase.co`** | Direct host ay IPv6-only, Globe IPv4 hindi maka-resolve | Gamitin ang Session pooler host (IPv4-ready) pang-local, hindi Direct |
 
-> Dahil naka-`sync: false` ang `APP_KEY`, `DB_HOST`, `DB_PASSWORD` sa [render.yaml](render.yaml), i-set pa rin sila manually sa dashboard pagkatapos ng Blueprint deploy.
+> Dahil naka-`sync: false` ang `APP_KEY`, `SUPABASE_DB_HOST`, `SUPABASE_DB_PASSWORD` sa [render.yaml](render.yaml), i-set pa rin sila manually sa dashboard pagkatapos ng Blueprint deploy.
 
 ---
 

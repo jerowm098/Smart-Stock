@@ -90,7 +90,7 @@ class AuthController extends Controller
             // SPA landing path per role. Admin -> Stock Inventory (the first
             // sidebar page, daily entry point), cashier -> POS. Mirrors the
             // SPA homeFor() helper.
-            'redirect' => $user->isAdmin() ? '/stock-in' : '/pos',
+            'redirect' => $user->isAdmin() ? '/dashboard' : '/pos',
             'user'    => [
                 'id'       => $user->id,
                 'name'     => $user->name,

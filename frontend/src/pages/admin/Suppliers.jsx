@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Modal from '../../components/Modal.jsx';
-import Alert, { FieldError } from '../../components/Feedback.jsx';
+import ConfirmDialog from '../../components/ConfirmDialog.jsx';
+import Alert, { FieldError, Toast } from '../../components/Feedback.jsx';
 import { del, get, post, validationMessages } from '../../lib/api.js';
 import { formatDate } from '../../lib/format.js';
 
@@ -16,6 +17,76 @@ const SORT_FIELDS = {
     added: (supplier) => supplier.created_at,
 };
 
+// Recent Activity: action → colour tone + short verb, mirroring Products.
+const ACTIVITY_TONE = {
+    supplier_created: 'ok',
+    supplier_removed: 'danger',
+};
+
+const ACTIVITY_VERB = {
+    supplier_created: 'Added',
+    supplier_removed: 'Removed',
+};
+
+const ACTIVITY_ICONS = {
+    supplier_created: (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12h14" />
+        </svg>
+    ),
+    supplier_removed: (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M8 12h8" />
+        </svg>
+    ),
+    default: (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8h.01M11 12h1v4h1" />
+        </svg>
+    ),
+};
+
+// One-line row summary, e.g. "Added Acme Hardware".
+function activitySummary(item) {
+    const verb = ACTIVITY_VERB[item.action];
+    if (verb && item.subject_name) {
+        return `${verb} ${item.subject_name}`;
+    }
+    const full = String(item.description ?? '');
+    const colon = full.indexOf(':');
+    return colon > 0 ? full.slice(0, colon) : full;
+}
+
+// The "changes made" lines for the detail popup.
+function activityChanges(item) {
+    const explicit = item?.meta?.changes;
+    if (Array.isArray(explicit) && explicit.length > 0) {
+        return explicit.map((change) => change.text ?? String(change));
+    }
+
+    const meta = item?.meta ?? {};
+    const lines = [];
+
+    switch (item?.action) {
+        case 'supplier_created':
+            if (meta.contact_person) lines.push(`Contact ${meta.contact_person}`);
+            if (meta.phone) lines.push(`Phone ${meta.phone}`);
+            if (meta.email) lines.push(`Email ${meta.email}`);
+            lines.push('Status Active');
+            break;
+        case 'supplier_removed':
+            lines.push('Status Active → Removed');
+            lines.push('Hidden from the Supplier List and Stock-In');
+            break;
+        default:
+            break;
+    }
+
+    return lines;
+}
+
 export default function Suppliers() {
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -29,6 +100,18 @@ export default function Suppliers() {
     const [fieldErrors, setFieldErrors] = useState([]);
     const [deletingId, setDeletingId] = useState(null);
 
+    // Recent Activity List state.
+    const [activity, setActivity] = useState([]);
+    const [activityDetail, setActivityDetail] = useState(null);
+    const [activityPage, setActivityPage] = useState(1);
+    const [activityOptionsOpen, setActivityOptionsOpen] = useState(false);
+    const activityOptionsRef = useRef(null);
+    const [clearConfirm, setClearConfirm] = useState(false);
+    const [clearing, setClearing] = useState(false);
+    const [clearError, setClearError] = useState(null);
+    const [toast, setToast] = useState(null);
+    const ACTIVITY_PER_PAGE = 3;
+
     const [sortBy, setSortBy] = useState(null);
     const [sortDir, setSortDir] = useState(null);
     const [page, setPage] = useState(1);
@@ -41,8 +124,17 @@ export default function Suppliers() {
         setError(null);
 
         try {
-            const rows = await get('/api/suppliers/active');
+            const [rows, feed] = await Promise.all([
+                get('/api/suppliers/active'),
+                // Suppliers page owns its slice of the audit feed.
+                get('/api/activity/recent', {
+                    limit: 12,
+                    actions: 'supplier_created,supplier_removed',
+                }).catch(() => null),
+            ]);
+
             setSuppliers(Array.isArray(rows) ? rows : []);
+            setActivity(Array.isArray(feed) ? feed : []);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -53,6 +145,34 @@ export default function Suppliers() {
     useEffect(() => {
         load();
     }, [load]);
+
+    // Options dropdown (kebab) on the Recent Activity card header: closes on
+    // outside click and Escape, same behaviour as the other admin pages.
+    useEffect(() => {
+        if (!activityOptionsOpen) {
+            return;
+        }
+
+        const onDown = (event) => {
+            if (activityOptionsRef.current && !activityOptionsRef.current.contains(event.target)) {
+                setActivityOptionsOpen(false);
+            }
+        };
+
+        const onKey = (event) => {
+            if (event.key === 'Escape') {
+                setActivityOptionsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onKey);
+
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [activityOptionsOpen]);
 
     /** Column sort: 1st click asc → 2nd desc → 3rd back to the default order. */
     function toggleSort(field) {
@@ -106,6 +226,19 @@ export default function Suppliers() {
         () => sortedSuppliers.slice((safePage - 1) * PER_PAGE, safePage * PER_PAGE),
         [sortedSuppliers, safePage]
     );
+
+    // Recent Activity pagination (3 rows per page, matching Products).
+    const activityLastPage = Math.max(1, Math.ceil(activity.length / ACTIVITY_PER_PAGE));
+    const activitySafePage = Math.min(activityPage, activityLastPage);
+    const pagedActivity = useMemo(
+        () => activity.slice((activitySafePage - 1) * ACTIVITY_PER_PAGE, activitySafePage * ACTIVITY_PER_PAGE),
+        [activity, activitySafePage, ACTIVITY_PER_PAGE]
+    );
+
+    // Keep the activity page in range when the feed shrinks.
+    useEffect(() => {
+        setActivityPage(1);
+    }, [activity.length]);
 
     // Reserve exactly one full page (6 rows) of height, mirroring Stock
     // Inventory, Backups and Users. Measured from the rendered table so it
@@ -175,6 +308,24 @@ export default function Suppliers() {
         }
     }
 
+    async function handleClearActivity() {
+        setClearing(true);
+        setClearError(null);
+
+        try {
+            const response = await del('/api/activity/recent?actions=supplier_created,supplier_removed');
+
+            setClearConfirm(false);
+            setActivity([]);
+            setActivityPage(1);
+            setToast(response?.message ?? 'Activity list cleared.');
+        } catch (err) {
+            setClearError(validationMessages(err)[0] ?? err.message ?? 'Could not clear the activity list.');
+        } finally {
+            setClearing(false);
+        }
+    }
+
     const setField = (name) => (event) => setForm((current) => ({ ...current, [name]: event.target.value }));
 
     return (
@@ -191,6 +342,7 @@ export default function Suppliers() {
 
             {message && <Alert tone="success" onClose={() => setMessage(null)}>{message}</Alert>}
             {error && <Alert tone="error" onClose={() => setError(null)}>{error}</Alert>}
+            {toast && <Toast tone="success" onClose={() => setToast(null)}>{toast}</Toast>}
 
             {loading ? (
                 /* Loading phase: the hero above stays put (its loadbar is the
@@ -360,6 +512,136 @@ export default function Suppliers() {
                     </div>
                 )}
             </section>
+
+            <section className="card padded recent-activity">
+                <div className="filter-head">
+                    <div>
+                        <h3>Recent Activity List</h3>
+                        <p className="muted">See the supplier changes you made recently.</p>
+                    </div>
+                    <div className="activity-options" ref={activityOptionsRef}>
+                        <button
+                            type="button"
+                            className="icon-btn is-outlined"
+                            onClick={() => setActivityOptionsOpen((open) => !open)}
+                            aria-haspopup="menu"
+                            aria-expanded={activityOptionsOpen}
+                            aria-label="Activity options"
+                        >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+                                <circle cx="12" cy="5" r="1.7" />
+                                <circle cx="12" cy="12" r="1.7" />
+                                <circle cx="12" cy="19" r="1.7" />
+                            </svg>
+                        </button>
+                        {activityOptionsOpen && (
+                            <div className="activity-options-panel" role="menu" aria-label="Activity options">
+                                <button
+                                    type="button"
+                                    className="activity-options-item activity-options-danger"
+                                    role="menuitem"
+                                    onClick={() => {
+                                        setActivityOptionsOpen(false);
+                                        setClearError(null);
+                                        setClearConfirm(true);
+                                    }}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M3 6h18" />
+                                        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                        <path d="M10 11v6" />
+                                        <path d="M14 11v6" />
+                                    </svg>
+                                    <span>Clear activity</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {activity.length === 0 ? (
+                    <div className="table-empty">
+                        <span className="table-empty-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M3 7.5h11v9H3z" />
+                                <path d="M14 10.5h4l3 3v3h-7z" />
+                                <circle cx="7" cy="17.5" r="1.5" />
+                                <circle cx="17.5" cy="17.5" r="1.5" />
+                            </svg>
+                        </span>
+                        <p className="table-empty-title">No supplier activity yet</p>
+                        <p className="table-empty-sub">Add or remove a supplier and it will show up here.</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="activity-shell">
+                            <ul className="activity-list">
+                                {pagedActivity.map((item) => {
+                                    const tone = ACTIVITY_TONE[item.action] ?? 'neutral';
+                                    return (
+                                        <li key={item.id}>
+                                            <button
+                                                type="button"
+                                                className="activity-row"
+                                                onClick={() => setActivityDetail(item)}
+                                                aria-label={`View details: ${activitySummary(item)}`}
+                                            >
+                                                <span className={`activity-icon activity-icon-${tone}`} aria-hidden="true">
+                                                    {ACTIVITY_ICONS[item.action] ?? ACTIVITY_ICONS.default}
+                                                </span>
+                                                <div className="activity-body">
+                                                    <p className="activity-desc">{activitySummary(item)}</p>
+                                                    <p className="activity-meta muted">
+                                                        <span className="activity-user">{item.user_name}</span>
+                                                        {item.user_role && <span className="activity-role">{item.user_role}</span>}
+                                                    </p>
+                                                </div>
+                                                <time
+                                                    className="activity-time muted"
+                                                    dateTime={item.created_at ?? undefined}
+                                                    title={item.created_at ? new Date(item.created_at).toLocaleString() : undefined}
+                                                >
+                                                    {item.created_at_human ?? ''}
+                                                </time>
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+
+                        {activity.length > ACTIVITY_PER_PAGE && (
+                            <div className="pagination">
+                                <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm page-btn"
+                                    disabled={activitySafePage <= 1}
+                                    onClick={() => setActivityPage((p) => Math.max(1, p - 1))}
+                                    aria-label="Previous page"
+                                >
+                                    <svg className="page-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                        <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </button>
+                                <span className="page-count">{activitySafePage}</span>
+                                <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm page-btn"
+                                    disabled={activitySafePage >= activityLastPage}
+                                    onClick={() => setActivityPage((p) => Math.min(activityLastPage, p + 1))}
+                                    aria-label="Next page"
+                                >
+                                    <svg className="page-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                        <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </button>
+                                <span className="page-detail">{Math.min(activitySafePage * ACTIVITY_PER_PAGE, activity.length)} of {activity.length}</span>
+                            </div>
+                        )}
+                    </>
+                )}
+            </section>
             </>
             )}
 
@@ -402,6 +684,88 @@ export default function Suppliers() {
                         </div>
                     </form>
                 </Modal>
+            )}
+
+            {activityDetail && (
+                <Modal
+                    title={(
+                        <span className="activity-detail-title">
+                            <span className="activity-detail-infoicon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <circle cx="12" cy="12" r="9" />
+                                    <path d="M12 11v5M12 8h.01" />
+                                </svg>
+                            </span>
+                            Activity details
+                        </span>
+                    )}
+                    className="modal-activity"
+                    noClose
+                    onClose={() => setActivityDetail(null)}
+                >
+                    <dl className="activity-detail-list">
+                        <div className="activity-detail-item">
+                            <dt>Action</dt>
+                            <dd>{ACTIVITY_VERB[activityDetail.action] ?? activityDetail.action}</dd>
+                        </div>
+                        <div className="activity-detail-item">
+                            <dt>By</dt>
+                            <dd>
+                                {activityDetail.user_name}
+                                {activityDetail.user_role && <span className="activity-role">{activityDetail.user_role}</span>}
+                            </dd>
+                        </div>
+                        <div className="activity-detail-item">
+                            <dt>When</dt>
+                            <dd>
+                                {activityDetail.created_at
+                                    ? new Date(activityDetail.created_at).toLocaleString()
+                                    : activityDetail.created_at_human}
+                            </dd>
+                        </div>
+                        {activityDetail.subject_name && (
+                            <div className="activity-detail-item">
+                                <dt>Supplier</dt>
+                                <dd>{activityDetail.subject_name}</dd>
+                            </div>
+                        )}
+                        {activityChanges(activityDetail).length > 0 && (
+                            <div className="activity-detail-item">
+                                <dt>Changes made</dt>
+                                <dd>
+                                    <ul className="activity-detail-changes">
+                                        {activityChanges(activityDetail).map((text, index) => (
+                                            <li key={`${text}-${index}`}>{text}</li>
+                                        ))}
+                                    </ul>
+                                </dd>
+                            </div>
+                        )}
+                    </dl>
+
+                    <div className="modal-actions modal-actions-center">
+                        <button type="button" className="btn btn-ghost" onClick={() => setActivityDetail(null)}>Close</button>
+                    </div>
+                </Modal>
+            )}
+
+            {clearConfirm && (
+                <ConfirmDialog
+                    tone="danger"
+                    title="Clear activity list?"
+                    description="This permanently deletes the supplier activity history from the activity log. The suppliers themselves are not affected. This action cannot be undone."
+                    confirmLabel="Clear"
+                    loadingLabel="Clearing…"
+                    loading={clearing}
+                    error={clearError}
+                    onConfirm={handleClearActivity}
+                    onCancel={() => {
+                        if (!clearing) {
+                            setClearConfirm(false);
+                            setClearError(null);
+                        }
+                    }}
+                />
             )}
         </div>
     );

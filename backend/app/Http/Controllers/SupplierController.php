@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Supplier;
+use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -43,6 +44,8 @@ class SupplierController extends Controller
 
         $supplier = Supplier::create($validated);
 
+        ActivityLogger::safe(fn () => ActivityLogger::supplierCreated($user, $supplier));
+
         return response()->json(['message' => 'Supplier added successfully', 'supplier' => $supplier], 201);
     }
 
@@ -63,6 +66,8 @@ class SupplierController extends Controller
         }
 
         $supplier->update(['is_active' => false]);
+
+        ActivityLogger::safe(fn () => ActivityLogger::supplierRemoved($user, $supplier));
 
         return response()->json(['message' => 'Supplier deleted successfully.']);
     }

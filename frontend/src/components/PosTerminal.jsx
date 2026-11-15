@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Modal from './Modal.jsx';
 import MessageDialog from './MessageDialog.jsx';
+import PosRecentActivity from './PosRecentActivity.jsx';
 import Alert, { Toast } from './Feedback.jsx';
 import { get, post, validationMessages } from '../lib/api.js';
 import { formatPeso } from '../lib/format.js';
@@ -35,6 +36,9 @@ export default function PosTerminal({ channel = 'cashier' }) {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    // Bumped after every successful checkout so the admin Recent Activity
+    // List refetches and shows the new sale immediately.
+    const [salesVersion, setSalesVersion] = useState(0);
 
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('');
@@ -358,6 +362,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
 
             setCart([]);
             setPayment('');
+            setSalesVersion((value) => value + 1);
         } catch (err) {
             if (err.status === 401) {
                 navigate('/login', { replace: true });
@@ -861,6 +866,8 @@ export default function PosTerminal({ channel = 'cashier' }) {
                 </div>
             </div>
             )}
+
+            {!loading && isAdmin && <PosRecentActivity refreshKey={salesVersion} />}
 
             {receipt && (
                 <Modal

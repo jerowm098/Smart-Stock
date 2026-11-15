@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -108,10 +109,20 @@ class BackupController extends Controller
         $keep = max(1, min(30, $keep));
 
         $exit = Artisan::call('backup:run', ['--keep' => $keep]);
+        $output = trim(Artisan::output());
+
+        if ($exit === 0) {
+            // The command prints "Backup created: <filename> (N tables)" — pull
+            // the filename out so the feed row can name the exact dump.
+            preg_match('/(smart-stock-backup-\d{8}-\d{6}\.json)/', $output, $matches);
+            $filename = $matches[1] ?? null;
+
+            ActivityLogger::safe(fn () => ActivityLogger::backupCreated($user, $filename, $keep));
+        }
 
         return response()->json([
             'success' => $exit === 0,
-            'output' => trim(Artisan::output()),
+            'output' => $output,
         ], $exit === 0 ? 200 : 500);
     }
 
@@ -124,10 +135,18 @@ class BackupController extends Controller
             return response()->json(['message' => 'Invalid backup filename.'], 422);
         }
 
-        // Database copy first — this is the one that survives redeploys.
+        $user = Auth::user();
+
+        // Database copy first - this is the one that survives redeploys.
         if (Schema::hasTable('backups')) {
             $row = DB::table('backups')->where('filename', $file)->first();
             if ($row) {
+                // Audit the download (Backups page feed) - best-effort, a
+                // logging failure must never block the file transfer.
+                if ($user) {
+                    ActivityLogger::safe(fn () => ActivityLogger::backupDownloaded($user, $file));
+                }
+
                 return response((string) $row->content, 200, [
                     'Content-Type' => 'application/json',
                     'Content-Disposition' => 'attachment; filename="' . $file . '"',
@@ -139,6 +158,10 @@ class BackupController extends Controller
         $path = $this->backupDir() . DIRECTORY_SEPARATOR . $file;
         if (! is_file($path)) {
             return response()->json(['message' => 'Backup not found.'], 404);
+        }
+
+        if ($user) {
+            ActivityLogger::safe(fn () => ActivityLogger::backupDownloaded($user, $file));
         }
 
         return response()->download($path, $file);
@@ -169,7 +192,82 @@ class BackupController extends Controller
             return response()->json(['message' => 'Backup not found.'], 404);
         }
 
+        $user = Auth::user();
+        if ($user) {
+            ActivityLogger::safe(fn () => ActivityLogger::backupDeleted($user, $file));
+        }
+
         return response()->json(['message' => 'Backup deleted.', 'file' => $file]);
+    }
+
+    /**
+     * Demo helper: generate 7 sample backup rows so the Backup Files list can
+     * be reviewed without running real dumps. Seeds are DB-only (no files on
+     * disk) with staggered timestamps, one minute apart, so the list shows a
+     * realistic newest-first ordering.
+     */
+    public function seed(): JsonResponse
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        if (! Schema::hasTable('backups')) {
+            return response()->json(['message' => 'The backups table is not available.'], 422);
+        }
+
+        $now = time();
+
+        for ($i = 6; $i >= 0; $i--) {
+            $ts = $now - ($i * 60);
+            $filename = 'smart-stock-backup-' . date('Ymd-His', $ts) . '.json';
+            $content = json_encode([
+                'note' => 'Sample seed data (not a real dump)',
+                'generated_at' => date('Y-m-d H:i:s', $ts),
+                'tables' => new \stdClass(),
+            ]);
+
+            DB::table('backups')->updateOrInsert(
+                ['filename' => $filename],
+                [
+                    'size_bytes' => strlen((string) $content),
+                    'content' => (string) $content,
+                    'created_at' => date('Y-m-d H:i:s', $ts),
+                    'updated_at' => date('Y-m-d H:i:s', $ts),
+                ],
+            );
+        }
+
+        return response()->json(['message' => '7 sample backups added.']);
+    }
+
+    /**
+     * Delete every backup: all database rows plus any dump files on disk.
+     */
+    public function destroyAll(): JsonResponse
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $deleted = 0;
+
+        if (Schema::hasTable('backups')) {
+            $deleted = DB::table('backups')->delete();
+        }
+
+        $dir = $this->backupDir();
+        foreach (glob($dir . DIRECTORY_SEPARATOR . 'smart-stock-backup-*') ?: [] as $path) {
+            @unlink($path);
+        }
+
+        return response()->json([
+            'message' => $deleted > 0
+                ? "All backups deleted ({$deleted})."
+                : 'No backups to delete.',
+        ]);
     }
 
     protected function humanSize(int $bytes): string

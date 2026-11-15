@@ -10,19 +10,18 @@ return [
     | Default Database Connection Name
     |--------------------------------------------------------------------------
     |
-    | Local development runs on XAMPP MariaDB (DB_CONNECTION=mysql,
-    | DB_DATABASE=smartstock_db). Production targets Supabase
-    | PostgreSQL (DB_CONNECTION=pgsql).
+    | Supabase PostgreSQL is the ONE database for every environment:
+    | local development AND the Render deploy. Walang local MySQL/MariaDB
+    | na hiwalay — kapag nag-login/sale ka sa local, nasa Supabase agad.
     |
-    | Supabase mode: set DB_CONNECTION=pgsql + SUPABASE_DB_HOST/
+    | Set DB_CONNECTION=pgsql + SUPABASE_DB_HOST/
     | SUPABASE_DB_PORT/SUPABASE_DB_DATABASE/SUPABASE_DB_USERNAME/
     | SUPABASE_DB_PASSWORD/SUPABASE_DB_SSLMODE=require
     | Kunin sa Supabase Dashboard > Connect > Session pooler string.
     | Hindi ito SUPABASE_URL + ANON_KEY (pang-JS client lang yun).
     |
     | NAMING RULE: kapag Supabase, SUPABASE_DB_* palagi — same names sa
-    | local .env at sa Render env vars (kaya walang kalituhan kung alin
-    | ang MySQL credentials at kung alin ang Supabase).
+    | local .env at sa Render env vars.
     |
     | DALAWANG MODE (parehong Supabase, magkaibang host/user/port):
     |  1) DIRECT (pang-migrate sa IPv6-ready network):
@@ -41,7 +40,8 @@ return [
     | Database Connections
     |--------------------------------------------------------------------------
     |
-    | pgsql = live Supabase (primary).
+    | pgsql = live Supabase (primary, local + production).
+    | mysql/mariadb/sqlsrv = legacy scaffolding, NOT used by this app.
     | sqlite = testing only (phpunit :memory:), hindi primary.
     |
     */
@@ -52,8 +52,7 @@ return [
             'driver' => 'pgsql',
             // Supabase connection. SINASADYANG SUPABASE_DB_* ang mga variable
             // names (hindi DB_*) para pareho ang naming sa local .env at sa
-            // Render: kung Supabase, SUPABASE_DB_* palagi. Ang DB_* keys ay
-            // para lang sa local XAMPP MySQL (DB_CONNECTION=mysql).
+            // Render env vars.
             'url' => env('SUPABASE_DB_URL'),
             'host' => env('SUPABASE_DB_HOST', '127.0.0.1'),
             'port' => env('SUPABASE_DB_PORT', '5432'),
@@ -75,10 +74,8 @@ return [
         ],
 
         'supabase' => [
-            // Read-only source used by `php artisan db:copy-from-supabase`.
-            // Local development runs on XAMPP MariaDB (see the mysql block);
-            // this connection keeps a handle on the hosted PostgreSQL data so
-            // it can be copied down without touching the original rows.
+            // Alias of the same Supabase database (kept so older references
+            // still resolve). Not a separate source anymore.
             'driver' => 'pgsql',
             'host' => env('SUPABASE_DB_HOST', ''),
             'port' => env('SUPABASE_DB_PORT', '5432'),

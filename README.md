@@ -6,7 +6,7 @@ receiving, and demand-based restocking suggestions.
 ## Architecture
 
 ```
-Browser (React SPA)  ──HTTP/JSON──►  Laravel API  ──PDO──►  MySQL / PostgreSQL
+Browser (React SPA)  ──HTTP/JSON──►  Laravel API  ──PDO──►  Supabase PostgreSQL
 ```
 
 - **`backend/`** — Laravel 12 **pure JSON API** (walang Blade pages).
@@ -22,7 +22,7 @@ Browser (React SPA)  ──HTTP/JSON──►  Laravel API  ──PDO──►  
 Smart-Stock/
 ├── backend/               Laravel 12 JSON API
 │   ├── app/                 Controllers, Models, Services, Middleware
-│   ├── bootstrap/  config/  app config (database.php: mysql local / pgsql prod)
+│   ├── bootstrap/  config/  app config (database.php: pgsql = Supabase, local + prod)
 │   ├── database/            migrations + seeders
 │   ├── docker/              nginx, php-fpm, supervisor, entrypoint
 │   ├── public/              front controller + built SPA (public/app, gitignored)
@@ -45,7 +45,7 @@ Smart-Stock/
 ## Local development
 
 ```bash
-# 1. Start XAMPP MySQL (hindi na kailangan ang Apache)
+# 1. Supabase na ang database — wala nang XAMPP MySQL na kailangang i-start
 
 # 2. Backend API (terminal 1)
 cd backend
@@ -67,7 +67,6 @@ composer install + SPA build + nginx/php-fpm. Isang service lang.
 ## Useful commands
 
 ```bash
-php artisan db:copy-from-supabase --force   # refresh local data from Supabase (sa backend/)
 php artisan migrate --force                 # run new migrations (sa backend/)
 ```
 

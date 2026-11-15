@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FieldError, Toast } from '../../components/Feedback.jsx';
-import { get, post, validationMessages } from '../../lib/api.js';
+import { get, post, del, validationMessages } from '../../lib/api.js';
 import { timeAgo } from '../../lib/format.js';
 import Modal from '../../components/Modal.jsx';
+import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import Tooltip from '../../components/Tooltip.jsx';
 import InfoTip from '../../components/InfoTip.jsx';
 
@@ -185,7 +186,40 @@ export default function StockIn() {
     const [activity, setActivity] = useState([]);
     const [activityDetail, setActivityDetail] = useState(null);
     const [activityPage, setActivityPage] = useState(1);
+    const [clearConfirm, setClearConfirm] = useState(false);
+    const [clearing, setClearing] = useState(false);
+    const [clearError, setClearError] = useState(null);
+    const [activityOptionsOpen, setActivityOptionsOpen] = useState(false);
+    const activityOptionsRef = useRef(null);
     const ACTIVITY_PER_PAGE = 3;
+
+    // Options dropdown (kebab) on the Recent Activity card header: closes on
+    // outside click and Escape, same behaviour as the topbar menus.
+    useEffect(() => {
+        if (!activityOptionsOpen) {
+            return;
+        }
+
+        const onDown = (event) => {
+            if (activityOptionsRef.current && !activityOptionsRef.current.contains(event.target)) {
+                setActivityOptionsOpen(false);
+            }
+        };
+
+        const onKey = (event) => {
+            if (event.key === 'Escape') {
+                setActivityOptionsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onKey);
+
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [activityOptionsOpen]);
 
     const refresh = useCallback(async () => {
         const [productsRes, suppliersRes, statsRes, feedRes] = await Promise.allSettled([
@@ -489,6 +523,25 @@ export default function StockIn() {
             return;
         }
         acceptAllSuggestions();
+    }
+
+    async function handleClearActivity() {
+        setClearing(true);
+        setClearError(null);
+
+        try {
+            const response = await del('/api/activity/recent?actions=stock_received');
+
+            setClearConfirm(false);
+            setActivity([]);
+            setActivityPage(1);
+            setToast(response?.message ?? 'Activity list cleared.');
+            await refresh();
+        } catch (err) {
+            setClearError(validationMessages(err)[0] ?? err.message ?? 'Could not clear the activity list.');
+        } finally {
+            setClearing(false);
+        }
     }
 
     function stockInToast(response) {
@@ -958,6 +1011,45 @@ export default function StockIn() {
                             <h3>Recent Activity List</h3>
                             <p className="muted">See the things you did recently.</p>
                         </div>
+                        <div className="activity-options" ref={activityOptionsRef}>
+                            <button
+                                type="button"
+                                className="icon-btn is-outlined"
+                                onClick={() => setActivityOptionsOpen((open) => !open)}
+                                aria-haspopup="menu"
+                                aria-expanded={activityOptionsOpen}
+                                aria-label="Activity options"
+                            >
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+                                    <circle cx="12" cy="5" r="1.7" />
+                                    <circle cx="12" cy="12" r="1.7" />
+                                    <circle cx="12" cy="19" r="1.7" />
+                                </svg>
+                            </button>
+                            {activityOptionsOpen && (
+                                <div className="activity-options-panel" role="menu" aria-label="Activity options">
+                                    <button
+                                        type="button"
+                                        className="activity-options-item activity-options-danger"
+                                        role="menuitem"
+                                        onClick={() => {
+                                            setActivityOptionsOpen(false);
+                                            setClearError(null);
+                                            setClearConfirm(true);
+                                        }}
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <path d="M3 6h18" />
+                                            <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                            <path d="M10 11v6" />
+                                            <path d="M14 11v6" />
+                                        </svg>
+                                        <span>Clear activity</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                     {activity.length === 0 ? (
                         <div className="table-empty">
@@ -1393,6 +1485,25 @@ export default function StockIn() {
                         <button type="button" className="btn btn-ghost" onClick={() => setActivityDetail(null)}>Close</button>
                     </div>
                 </Modal>
+            )}
+
+            {clearConfirm && (
+                <ConfirmDialog
+                    tone="danger"
+                    title="Clear activity list?"
+                    description="This permanently deletes the stock receiving history from the activity log. This action cannot be undone."
+                    confirmLabel="Clear"
+                    loadingLabel="Clearing…"
+                    loading={clearing}
+                    error={clearError}
+                    onConfirm={handleClearActivity}
+                    onCancel={() => {
+                        if (!clearing) {
+                            setClearConfirm(false);
+                            setClearError(null);
+                        }
+                    }}
+                />
             )}
         </div>
     );

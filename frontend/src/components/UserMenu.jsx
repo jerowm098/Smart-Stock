@@ -2,20 +2,26 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext.jsx';
 import { titleCaseName } from '../lib/format.js';
+import AccountDialog from './AccountDialog.jsx';
+import { Toast } from './Feedback.jsx';
 
 /**
  * Topbar account menu — replaces the old sidebar-footer user box.
  *
  * Trigger pill (avatar + name + chevron) on the right side of the topbar,
  * next to the theme toggle. Opens a dropdown with the account identity
- * (name, @username, role) and a Sign out action. Same open/close behaviour
- * as the notification bell: outside click and Escape close it.
+ * (name, @username, role), an "Account" action that edits the CURRENTLY USING
+ * account in a modal (the Users page only handles the other accounts) and a
+ * Sign out action. Same open/close behaviour as the notification bell:
+ * outside click and Escape close it.
  */
 export default function UserMenu() {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
+    const [accountOpen, setAccountOpen] = useState(false);
+    const [toast, setToast] = useState(null);
     const wrapRef = useRef(null);
 
     useEffect(() => {
@@ -61,6 +67,7 @@ export default function UserMenu() {
 
     return (
         <div className="user-menu" ref={wrapRef}>
+            {toast && <Toast tone="success" onClose={() => setToast(null)}>{toast}</Toast>}
             <button
                 type="button"
                 className={`user-menu-btn${open ? ' is-open' : ''}`}
@@ -93,6 +100,22 @@ export default function UserMenu() {
 
                     <button
                         type="button"
+                        className="user-menu-item"
+                        role="menuitem"
+                        onClick={() => {
+                            setOpen(false);
+                            setAccountOpen(true);
+                        }}
+                    >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="8" r="4" />
+                            <path d="M4 21a8 8 0 0 1 16 0" />
+                        </svg>
+                        <span>Account</span>
+                    </button>
+
+                    <button
+                        type="button"
                         className="user-menu-item user-menu-signout"
                         role="menuitem"
                         disabled={busy}
@@ -105,6 +128,16 @@ export default function UserMenu() {
                         <span>{busy ? 'Signing out…' : 'Sign out'}</span>
                     </button>
                 </div>
+            )}
+
+            {accountOpen && (
+                <AccountDialog
+                    onClose={() => setAccountOpen(false)}
+                    onSaved={(message) => {
+                        setAccountOpen(false);
+                        setToast(message);
+                    }}
+                />
             )}
         </div>
     );

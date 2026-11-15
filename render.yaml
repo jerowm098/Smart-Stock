@@ -50,7 +50,7 @@ services:
         value: stderr
 
       # --- Supabase PostgreSQL (primary, walang SQLite) ---
-      # ANG MGA VALUE DITO AY SUPABASE - HINDI ang local XAMPP MySQL!
+      # ANG MGA VALUE DITO AY SUPABASE - HINDI local MySQL!
       # (Kung may nag-input ng 127.0.0.1/root/3306 dito, 500 agad ang login.)
       # PANGALAN NG KEYS: SUPABASE_DB_* - eksaktong kapareho ng sa local
       # .env, kaya walang kalituhan. Walang naka-commit na credentials dito -

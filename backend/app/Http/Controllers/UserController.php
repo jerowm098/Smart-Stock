@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -55,6 +56,8 @@ class UserController extends Controller
             'is_active'=> true,
         ]);
 
+        ActivityLogger::safe(fn () => ActivityLogger::userCreated($request->user(), $user));
+
         return response()->json([
             'message' => 'Account created successfully.',
             'user'    => $this->present($user),
@@ -91,7 +94,11 @@ class UserController extends Controller
             ]);
         }
 
+        $before = $user->only(['name', 'username', 'email', 'role']);
+
         $user->fill($data)->save();
+
+        ActivityLogger::safe(fn () => ActivityLogger::userUpdated($request->user(), $user, $before));
 
         return response()->json([
             'message' => 'Account updated successfully.',
@@ -112,6 +119,8 @@ class UserController extends Controller
 
         $user->update(['is_active' => false]);
 
+        ActivityLogger::safe(fn () => ActivityLogger::userDeactivated($request->user(), $user));
+
         return response()->json([
             'message' => 'Account deactivated. Historical transactions remain linked to this user.',
             'user'    => $this->present($user->fresh()),
@@ -124,6 +133,8 @@ class UserController extends Controller
     public function activate(Request $request, User $user): JsonResponse
     {
         $user->update(['is_active' => true]);
+
+        ActivityLogger::safe(fn () => ActivityLogger::userReactivated($request->user(), $user));
 
         return response()->json([
             'message' => 'Account reactivated.',
@@ -147,6 +158,8 @@ class UserController extends Controller
         ]);
 
         $user->update(['password' => Hash::make($data['password'])]);
+
+        ActivityLogger::safe(fn () => ActivityLogger::userPasswordReset($request->user(), $user));
 
         return response()->json([
             'message' => 'Password reset successfully.',

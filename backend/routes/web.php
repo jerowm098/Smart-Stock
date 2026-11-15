@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\DashboardController;
@@ -102,6 +103,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/activity/recent', [ActivityLogController::class, 'recent'])
         ->name('activity.recent')
         ->middleware(EnsureUserIsAdmin::class);
+    // Destructive: clears a page-scoped slice of the feed (?actions=...).
+    Route::delete('/api/activity/recent', [ActivityLogController::class, 'clear'])
+        ->name('activity.clear')
+        ->middleware(EnsureUserIsAdmin::class);
 
     // SS-88: Stock-In / Receiving API endpoint
     Route::post('/api/inventory/stock-in', [InventoryController::class, 'storeStockIn'])
@@ -120,6 +125,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/pos/products', [PosCheckoutController::class, 'catalog'])
         ->name('pos.products')
         ->middleware(EnsureUserIsCashier::class);
+
+    // Self-service account settings for the signed-in user (Admin or Cashier).
+    // The header account menu edits the "Currently Using" account from here;
+    // /api/users remains the Admin-only surface for every OTHER account.
+    Route::put('/api/account', [AccountController::class, 'update'])->name('account.update');
 
     // User management API (Admin only) — BRD (Account Management)
     Route::get('/api/users', [UserController::class, 'list'])->name('users.index')->middleware(EnsureUserIsAdmin::class);
@@ -183,6 +193,12 @@ Route::middleware('auth')->group(function () {
         ->middleware(EnsureUserIsAdmin::class);
     Route::delete('/api/backups/{file}', [BackupController::class, 'destroy'])
         ->name('backups.destroy')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::post('/api/backups/seed', [BackupController::class, 'seed'])
+        ->name('backups.seed')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::delete('/api/backups', [BackupController::class, 'destroyAll'])
+        ->name('backups.destroyAll')
         ->middleware(EnsureUserIsAdmin::class);
     // BRD (Account Management / Inventory) Security: "No Staff account shall be
     // able to read or modify Admin dashboard data by any route, including direct
