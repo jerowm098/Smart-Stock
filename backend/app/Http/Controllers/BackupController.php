@@ -105,10 +105,44 @@ class BackupController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        $keep = (int) $request->input('keep', 7);
-        $keep = max(1, min(30, $keep));
+        $validated = $request->validate([
+            'keep' => ['nullable', 'integer', 'min:1', 'max:30'],
+            'range' => ['nullable', 'string', 'in:all,1d,1w,1m,custom'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
+        ]);
 
-        $exit = Artisan::call('backup:run', ['--keep' => $keep]);
+        $keep = (int) ($validated['keep'] ?? 7);
+        $range = $validated['range'] ?? 'all';
+        $from = null;
+        $to = null;
+
+        if ($range === '1d') {
+            $from = now()->subDay()->toDateString();
+            $to = now()->toDateString();
+        } elseif ($range === '1w') {
+            $from = now()->subDays(7)->toDateString();
+            $to = now()->toDateString();
+        } elseif ($range === '1m') {
+            $from = now()->subDays(30)->toDateString();
+            $to = now()->toDateString();
+        } elseif ($range === 'custom') {
+            $from = $validated['from'] ?? null;
+            $to = $validated['to'] ?? null;
+        }
+
+        $params = [
+            '--keep' => $keep,
+            '--range' => $range,
+        ];
+        if ($from) {
+            $params['--from'] = $from;
+        }
+        if ($to) {
+            $params['--to'] = $to;
+        }
+
+        $exit = Artisan::call('backup:run', $params);
         $output = trim(Artisan::output());
 
         if ($exit === 0) {

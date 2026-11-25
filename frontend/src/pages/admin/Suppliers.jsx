@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import Modal from '../../components/Modal.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import Alert, { FieldError, Toast } from '../../components/Feedback.jsx';
@@ -90,6 +91,7 @@ function activityChanges(item) {
 export default function Suppliers() {
     const [suppliers, setSuppliers] = useState([]);
     const [loading, setLoading] = useState(true);
+    usePageLoadbar(loading);
     const [error, setError] = useState(null);
     const [message, setMessage] = useState(null);
 
@@ -330,8 +332,7 @@ export default function Suppliers() {
 
     return (
         <div className="page">
-            <section className={`page-hero${loading ? ' is-loading' : ''}`}>
-                <div className="page-loadbar" aria-hidden="true" />
+            <section className="page-hero">
                 <header className="page-head">
                     <div>
                         <h2>Suppliers</h2>

@@ -1295,20 +1295,20 @@ html.landing-page body {
 .page-hero .page-head h2,
 .page-hero .page-head p { text-align: left; }
 
-/* Sliding load bar (same full-width even band as the modal loadbar).
-   Pinned to the hero's bottom edge so it reads as a progress underline. */
+/* Single global sliding load bar pinned to the top edge of the browser
+   viewport (same full-width even band as the modal loadbar).
+   Mounted only while loading (keyed per run) so every click/reload starts
+   cleanly from 0% (translateX(-100%)) with zero idle GPU animation. */
 .page-loadbar {
-    position: absolute;
-    bottom: 0;
+    position: fixed;
+    top: 0;
     left: 0;
+    right: 0;
     height: 3px;
-    width: 100%;
+    z-index: 9999;
     overflow: hidden;
-    opacity: 0;
-    transition: opacity 0.15s ease;
+    pointer-events: none;
 }
-.page-hero.is-loading .page-loadbar { opacity: 1; }
-.page-hero.is-loading .page-loadbar::before { animation-play-state: running; }
 .page-loadbar::before {
     content: '';
     position: absolute;
@@ -1317,11 +1317,7 @@ html.landing-page body {
     height: 100%;
     width: 100%;
     background: linear-gradient(90deg, var(--primary) 0%, var(--primary-2) 100%);
-    animation: page-loadbar-run 1.4s linear infinite;
-    /* Idle pages must not keep a compositor animation running — an always-on
-       transform inside the scrolled content forces constant re-compositing and
-       reads as "jelly" on laptop GPUs during touchpad scrolling. */
-    animation-play-state: paused;
+    animation: page-loadbar-run 0.75s linear infinite;
 }
 @keyframes page-loadbar-run {
     from { transform: translateX(-100%); }
@@ -1396,7 +1392,20 @@ html.landing-page body {
 .sort-header {
     cursor: pointer;
     user-select: none;
+    white-space: nowrap;
     transition: color 0.15s ease;
+}
+
+.sort-indicator {
+    display: inline-block;
+    width: 1.15em;
+    margin-left: 3px;
+    text-align: center;
+    visibility: hidden;
+}
+
+.sort-indicator.is-active {
+    visibility: visible;
 }
 
 .sort-header:hover {

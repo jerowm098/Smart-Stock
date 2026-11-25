@@ -167,6 +167,87 @@ class UserController extends Controller
     }
 
     /**
+     * Add 7 sample user accounts (demo/testing data, mirrors BackupController::seed).
+     */
+    public function seed(Request $request): JsonResponse
+    {
+        $samples = [
+            ['name' => 'Maria Santos', 'prefix' => 'msantos', 'role' => 'cashier'],
+            ['name' => 'Juan Dela Cruz', 'prefix' => 'jdelacruz', 'role' => 'cashier'],
+            ['name' => 'Ana Reyes', 'prefix' => 'areyes', 'role' => 'cashier'],
+            ['name' => 'Carlo Mendoza', 'prefix' => 'cmendoza', 'role' => 'cashier'],
+            ['name' => 'Liza Bautista', 'prefix' => 'lbautista', 'role' => 'cashier'],
+            ['name' => 'Mark Villanueva', 'prefix' => 'mvillanueva', 'role' => 'admin'],
+            ['name' => 'Grace Navarro', 'prefix' => 'gnavarro', 'role' => 'admin'],
+        ];
+
+        $hash = Hash::make('123456');
+        $created = 0;
+
+        foreach ($samples as $sample) {
+            $suffix = 1;
+            do {
+                $username = $sample['prefix'] . ($suffix === 1 ? '' : $suffix);
+                $email = $username . '@smartstock.local';
+                $exists = User::where('username', $username)->orWhere('email', $email)->exists();
+                $suffix++;
+            } while ($exists);
+
+            User::create([
+                'name' => $sample['name'],
+                'username' => $username,
+                'email' => $email,
+                'password' => $hash,
+                'role' => $sample['role'],
+                'is_active' => true,
+            ]);
+            $created++;
+        }
+
+        return response()->json([
+            'message' => "{$created} sample users added.",
+        ], 201);
+    }
+
+    /**
+     * Delete all other user accounts (never deletes the currently signed-in admin,
+     * and gracefully preserves any user protected by transaction FK constraints).
+     */
+    public function destroyAll(Request $request): JsonResponse
+    {
+        $me = $request->user();
+        $others = User::where('id', '!=', $me->id)->get();
+
+        if ($others->isEmpty()) {
+            return response()->json(['message' => 'No other users to delete.']);
+        }
+
+        $deleted = 0;
+        $skipped = 0;
+
+        foreach ($others as $other) {
+            try {
+                $other->delete();
+                $deleted++;
+            } catch (\Illuminate\Database\QueryException) {
+                $skipped++;
+            }
+        }
+
+        if ($deleted === 0 && $skipped > 0) {
+            return response()->json([
+                'message' => "Could not delete {$skipped} user(s) because they have linked transaction history.",
+            ], 422);
+        }
+
+        $msg = $skipped > 0
+            ? "Deleted {$deleted} user(s) ({$skipped} kept due to linked transaction history)."
+            : "All other users deleted ({$deleted}).";
+
+        return response()->json(['message' => $msg]);
+    }
+
+    /**
      * Shared validation for account creation.
      */
     private function validateCreate(Request $request): array

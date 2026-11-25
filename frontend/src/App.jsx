@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom';
 import { ProtectedRoute, RequireRole } from './components/Guards.jsx';
+import { PageLoadbarProvider } from './components/PageLoadbar.jsx';
 import AppLayout from './layouts/AppLayout.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
@@ -17,32 +18,34 @@ import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
     return (
-        <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
+        <PageLoadbarProvider>
+            <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
 
-            <Route element={<ProtectedRoute />}>
-                <Route element={<AppLayout />}>
-                    <Route element={<RequireRole role="admin" />}>
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/products" element={<Products />} />
-                        <Route path="/stock-in" element={<StockIn />} />
-                        <Route path="/checkout" element={<AdminPos />} />
-                        <Route path="/transactions" element={<Transactions />} />
-                        <Route path="/order-suggestions" element={<OrderSuggestions />} />
-                        <Route path="/suppliers" element={<Suppliers />} />
-                        <Route path="/users" element={<Users />} />
-                        <Route path="/backups" element={<Backups />} />
-                    </Route>
+                <Route element={<ProtectedRoute />}>
+                    <Route element={<AppLayout />}>
+                        <Route element={<RequireRole role="admin" />}>
+                            <Route path="/dashboard" element={<Dashboard />} />
+                            <Route path="/products" element={<Products />} />
+                            <Route path="/stock-in" element={<StockIn />} />
+                            <Route path="/checkout" element={<AdminPos />} />
+                            <Route path="/transactions" element={<Transactions />} />
+                            <Route path="/order-suggestions" element={<OrderSuggestions />} />
+                            <Route path="/suppliers" element={<Suppliers />} />
+                            <Route path="/users" element={<Users />} />
+                            <Route path="/backups" element={<Backups />} />
+                        </Route>
 
-                    <Route element={<RequireRole role="cashier" />}>
-                        <Route path="/pos" element={<Pos />} />
+                        <Route element={<RequireRole role="cashier" />}>
+                            <Route path="/pos" element={<Pos />} />
+                        </Route>
                     </Route>
                 </Route>
-            </Route>
 
-            <Route path="*" element={<NotFound />} />
-        </Routes>
+                <Route path="*" element={<NotFound />} />
+            </Routes>
+        </PageLoadbarProvider>
     );
 }
 

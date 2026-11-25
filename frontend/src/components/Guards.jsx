@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { homeFor } from '../lib/api.js';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { usePageLoadbar } from './PageLoadbar.jsx';
 
 export function FullPageLoader({ label = 'Loading…' }) {
     return (
@@ -15,9 +16,10 @@ export function FullPageLoader({ label = 'Loading…' }) {
 export function ProtectedRoute() {
     const { user, loading } = useAuth();
     const location = useLocation();
+    usePageLoadbar(loading);
 
     if (loading) {
-        return <FullPageLoader label="Checking session…" />;
+        return null;
     }
 
     if (!user) {
@@ -30,9 +32,10 @@ export function ProtectedRoute() {
 /** Only the given role may pass; everyone else lands on their own home. */
 export function RequireRole({ role }) {
     const { user, loading } = useAuth();
+    usePageLoadbar(loading);
 
     if (loading) {
-        return <FullPageLoader label="Checking session…" />;
+        return null;
     }
 
     if (!user) {

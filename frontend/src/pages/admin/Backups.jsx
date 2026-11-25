@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import Modal from '../../components/Modal.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import Alert, { Toast } from '../../components/Feedback.jsx';
@@ -103,6 +104,7 @@ function activityChangesLabel(action) {
 export default function Backups() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    usePageLoadbar(loading);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(null);
     const [running, setRunning] = useState(false);
@@ -113,6 +115,11 @@ export default function Backups() {
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     const [deleteError, setDeleteError] = useState(null);
     const [keep, setKeep] = useState(7);
+    const [runModalOpen, setRunModalOpen] = useState(false);
+    const [backupRange, setBackupRange] = useState('all');
+    const [backupFrom, setBackupFrom] = useState('');
+    const [backupTo, setBackupTo] = useState('');
+    const [runModalError, setRunModalError] = useState(null);
     const [sortBy, setSortBy] = useState(null);
     const [sortDir, setSortDir] = useState(null);
     const [page, setPage] = useState(1);
@@ -267,26 +274,89 @@ export default function Backups() {
         setActivityPage(1);
     }, [activity.length]);
 
-    async function runBackup() {
+    function isoDateOffset(daysAgo = 0) {
+        const d = new Date();
+        d.setDate(d.getDate() - daysAgo);
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+    }
+
+    function handleRangeChange(nextRange) {
+        setBackupRange(nextRange);
+        setRunModalError(null);
+        if (nextRange === '1d') {
+            setBackupFrom(isoDateOffset(1));
+            setBackupTo(isoDateOffset(0));
+        } else if (nextRange === '1w') {
+            setBackupFrom(isoDateOffset(7));
+            setBackupTo(isoDateOffset(0));
+        } else if (nextRange === '1m') {
+            setBackupFrom(isoDateOffset(30));
+            setBackupTo(isoDateOffset(0));
+        } else if (nextRange === 'all') {
+            setBackupFrom('');
+            setBackupTo('');
+        } else if (nextRange === 'custom') {
+            if (!backupFrom) setBackupFrom(isoDateOffset(7));
+            if (!backupTo) setBackupTo(isoDateOffset(0));
+        }
+    }
+
+    function openRunModal() {
+        setRunModalError(null);
+        setRunModalOpen(true);
+    }
+
+    async function runBackup(event) {
+        event?.preventDefault();
+
+        if (backupRange === 'custom') {
+            if (!backupFrom || !backupTo) {
+                setRunModalError('Please select both From and To dates.');
+                return;
+            }
+            if (backupFrom > backupTo) {
+                setRunModalError('The "From" date cannot be later than the "To" date.');
+                return;
+            }
+        }
+
         setRunning(true);
+        setRunModalError(null);
         setSuccess(null);
         setError(null);
 
-        try {
-            const response = await post('/api/backups/run', { keep });
+        const rangeLabels = {
+            all: 'all database records',
+            '1d': 'the last 1 day',
+            '1w': 'the last 1 week',
+            '1m': 'the last 1 month',
+            custom: `${backupFrom} to ${backupTo}`,
+        };
 
-            if (response.success) {
-                setSuccess({
-                    title: 'Backup created successfully',
-                    description: 'A new database dump has been saved to the server.',
-                });
-            } else {
-                setError(response.output || 'The backup did not complete.');
+        try {
+            const payload = { keep, range: backupRange };
+            if (backupRange === 'custom') {
+                payload.from = backupFrom;
+                payload.to = backupTo;
             }
 
-            await load();
+            const response = await post('/api/backups/run', payload);
+
+            if (response.success) {
+                setRunModalOpen(false);
+                setSuccess({
+                    title: 'Backup created successfully',
+                    description: `A new database dump (${rangeLabels[backupRange] ?? 'selected range'}) has been saved to the server.`,
+                });
+                await load();
+            } else {
+                setRunModalError(response.output || 'The backup did not complete.');
+            }
         } catch (err) {
-            setError(err.payload?.output || err.message);
+            setRunModalError(validationMessages(err)[0] ?? err.payload?.output ?? err.message);
         } finally {
             setRunning(false);
         }
@@ -414,8 +484,7 @@ export default function Backups() {
 
     return (
         <div className="page">
-            <section className={`page-hero${loading ? ' is-loading' : ''}`}>
-                <div className="page-loadbar" aria-hidden="true" />
+            <section className="page-hero">
                 <header className="page-head">
                     <div>
                         <h2>Backups</h2>
@@ -490,7 +559,7 @@ export default function Backups() {
                         <h3>Run Backup Now</h3>
                         <p className="muted">Create an immediate on-demand backup of the entire database.</p>
                     </div>
-                    <button type="button" className="btn btn-primary" onClick={runBackup} disabled={running}>
+                    <button type="button" className="btn btn-primary" onClick={openRunModal} disabled={running}>
                         {running ? 'Running…' : 'Run backup now'}
                     </button>
                 </header>
@@ -580,25 +649,37 @@ export default function Backups() {
                                             className="sort-header"
                                             onClick={() => toggleSort('name')}
                                         >
-                                            File{sortBy === 'name' && sortDir === 'asc' ? ' ▲' : sortBy === 'name' ? ' ▼' : ''}
+                                            File
+                                            <span className={`sort-indicator${sortBy === 'name' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'name' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('type')}
                                         >
-                                            Type{sortBy === 'type' && sortDir === 'asc' ? ' ▲' : sortBy === 'type' ? ' ▼' : ''}
+                                            Type
+                                            <span className={`sort-indicator${sortBy === 'type' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'type' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header text-right"
                                             onClick={() => toggleSort('size')}
                                         >
-                                            Size{sortBy === 'size' && sortDir === 'asc' ? ' ▲' : sortBy === 'size' ? ' ▼' : ''}
+                                            Size
+                                            <span className={`sort-indicator${sortBy === 'size' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'size' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('created')}
                                         >
-                                            Created{sortBy === 'created' && sortDir === 'asc' ? ' ▲' : sortBy === 'created' ? ' ▼' : ''}
+                                            Created
+                                            <span className={`sort-indicator${sortBy === 'created' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'created' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="text-right">Actions</th>
                                     </tr>
@@ -915,6 +996,97 @@ export default function Backups() {
                         }
                     }}
                 />
+            )}
+
+            {runModalOpen && (
+                <Modal
+                    title="Run Backup Now"
+                    className="modal-user-form"
+                    noClose
+                    loading={running}
+                    onClose={() => {
+                        if (!running) {
+                            setRunModalOpen(false);
+                            setRunModalError(null);
+                        }
+                    }}
+                >
+                    <form className="form" onSubmit={runBackup} noValidate>
+                        {runModalError && (
+                            <Alert tone="error" onClose={() => setRunModalError(null)}>
+                                {runModalError}
+                            </Alert>
+                        )}
+
+                        <div className="field">
+                            <label htmlFor="backup-range">Data range</label>
+                            <select
+                                id="backup-range"
+                                value={backupRange}
+                                onChange={(e) => handleRangeChange(e.target.value)}
+                                disabled={running}
+                            >
+                                <option value="all">All data (Full backup)</option>
+                                <option value="1d">Per 1 day (Last 24 hours)</option>
+                                <option value="1w">Per 1 week (Last 7 days)</option>
+                                <option value="1m">Per 1 month (Last 30 days)</option>
+                                <option value="custom">Custom date range</option>
+                            </select>
+                        </div>
+
+                        {backupRange === 'custom' && (
+                            <>
+                                <div className="field">
+                                    <label htmlFor="backup-from">From date</label>
+                                    <input
+                                        id="backup-from"
+                                        type="date"
+                                        value={backupFrom}
+                                        max={backupTo || undefined}
+                                        disabled={running}
+                                        onChange={(e) => {
+                                            setBackupRange('custom');
+                                            setBackupFrom(e.target.value);
+                                            setRunModalError(null);
+                                        }}
+                                    />
+                                </div>
+                                <div className="field">
+                                    <label htmlFor="backup-to">To date</label>
+                                    <input
+                                        id="backup-to"
+                                        type="date"
+                                        value={backupTo}
+                                        min={backupFrom || undefined}
+                                        disabled={running}
+                                        onChange={(e) => {
+                                            setBackupRange('custom');
+                                            setBackupTo(e.target.value);
+                                            setRunModalError(null);
+                                        }}
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        <div className="modal-actions modal-actions-center">
+                            <button
+                                type="button"
+                                className="btn btn-ghost"
+                                disabled={running}
+                                onClick={() => {
+                                    setRunModalOpen(false);
+                                    setRunModalError(null);
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button type="submit" className="btn btn-primary" disabled={running}>
+                                {running ? 'Running…' : 'Run backup'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
             )}
 
             {downloadConfirm && (

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import { Link } from 'react-router-dom';
 import { get } from '../../lib/api.js';
 import { formatPeso } from '../../lib/format.js';
@@ -11,6 +12,7 @@ export default function Dashboard() {
     const [stats, setStats] = useState(null);
     const [suggestions, setSuggestions] = useState([]);
     const [loading, setLoading] = useState(true);
+    usePageLoadbar(loading);
     const [error, setError] = useState(null);
     const [page, setPage] = useState(1);
 
@@ -56,8 +58,7 @@ export default function Dashboard() {
             {/* Permanent hero header (matches the Stock Inventory page): the
                 hero stays put while the body loads and carries its own load
                 bar — it is NOT part of the skeleton phase below. */}
-            <section className={`page-hero${loading ? ' is-loading' : ''}`}>
-                <div className="page-loadbar" aria-hidden="true" />
+            <section className="page-hero">
                 <header className="page-head">
                     <div>
                         <h2>Dashboard</h2>

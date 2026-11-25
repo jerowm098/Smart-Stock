@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import Modal from '../../components/Modal.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import InfoTip from '../../components/InfoTip.jsx';
@@ -117,6 +118,7 @@ export default function Users() {
     const [roles, setRoles] = useState(['admin', 'cashier']);
     const [me, setMe] = useState(null);
     const [loading, setLoading] = useState(true);
+    usePageLoadbar(loading);
     const [error, setError] = useState(null);
     const [message, setMessage] = useState(null);
     const [busyId, setBusyId] = useState(null);
@@ -131,6 +133,13 @@ export default function Users() {
     const [activityPage, setActivityPage] = useState(1);
     const [activityOptionsOpen, setActivityOptionsOpen] = useState(false);
     const activityOptionsRef = useRef(null);
+    const [usersOptionsOpen, setUsersOptionsOpen] = useState(false);
+    const usersOptionsRef = useRef(null);
+    const [seeding, setSeeding] = useState(false);
+    const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+    const [deletingAll, setDeletingAll] = useState(false);
+    const [deleteAllError, setDeleteAllError] = useState(null);
+    const [emptyNotice, setEmptyNotice] = useState(null);
     const [clearConfirm, setClearConfirm] = useState(false);
     const [clearing, setClearing] = useState(false);
     const [clearError, setClearError] = useState(null);
@@ -195,7 +204,7 @@ export default function Users() {
     // Options dropdown (kebab) on the Recent Activity card header: closes on
     // outside click and Escape, same behaviour as the other admin pages.
     useEffect(() => {
-        if (!activityOptionsOpen) {
+        if (!activityOptionsOpen && !usersOptionsOpen) {
             return;
         }
 
@@ -203,11 +212,15 @@ export default function Users() {
             if (activityOptionsRef.current && !activityOptionsRef.current.contains(event.target)) {
                 setActivityOptionsOpen(false);
             }
+            if (usersOptionsRef.current && !usersOptionsRef.current.contains(event.target)) {
+                setUsersOptionsOpen(false);
+            }
         };
 
         const onKey = (event) => {
             if (event.key === 'Escape') {
                 setActivityOptionsOpen(false);
+                setUsersOptionsOpen(false);
             }
         };
 
@@ -218,7 +231,39 @@ export default function Users() {
             document.removeEventListener('mousedown', onDown);
             document.removeEventListener('keydown', onKey);
         };
-    }, [activityOptionsOpen]);
+    }, [activityOptionsOpen, usersOptionsOpen]);
+
+    async function handleSeedUsers() {
+        if (seeding) return;
+        setSeeding(true);
+
+        try {
+            const response = await post('/api/users/seed');
+            setToast(response?.message ?? '7 sample users added.');
+            await load();
+        } catch (err) {
+            setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample users.');
+        } finally {
+            setSeeding(false);
+        }
+    }
+
+    async function handleDeleteAllConfirm() {
+        if (deletingAll) return;
+        setDeletingAll(true);
+        setDeleteAllError(null);
+
+        try {
+            const response = await del('/api/users');
+            setDeleteAllConfirm(false);
+            setToast(response?.message ?? 'All other users deleted.');
+            await load();
+        } catch (err) {
+            setDeleteAllError(validationMessages(err)[0] ?? err.message ?? 'Could not delete users.');
+        } finally {
+            setDeletingAll(false);
+        }
+    }
 
     /** Column sort: 1st click asc → 2nd desc → 3rd back to the default order. */
     function toggleSort(field) {
@@ -479,8 +524,7 @@ export default function Users() {
 
     return (
         <div className="page">
-            <section className={`page-hero${loading ? ' is-loading' : ''}`}>
-                <div className="page-loadbar" aria-hidden="true" />
+            <section className="page-hero">
                 <header className="page-head">
                     <div>
                         <h2>Users</h2>
@@ -568,43 +612,115 @@ export default function Users() {
                         <h3>User Accounts</h3>
                         <p className="muted">Every other account with its role, status and last update.</p>
                     </div>
-                </div>
-                {!loading && !error && sortedUsers.length === 0 && (
-                    <div className="table-empty">
-                        <span className="table-empty-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="9" cy="8" r="4" />
-                                <path d="M2 21a7 7 0 0 1 14 0" />
-                                <path d="M19 8v6M16 11h6" />
+                    <div className="activity-options" ref={usersOptionsRef}>
+                        <button
+                            type="button"
+                            className="icon-btn is-outlined"
+                            onClick={() => setUsersOptionsOpen((open) => !open)}
+                            aria-haspopup="menu"
+                            aria-expanded={usersOptionsOpen}
+                            aria-label="User account options"
+                        >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+                                <circle cx="12" cy="5" r="1.7" />
+                                <circle cx="12" cy="12" r="1.7" />
+                                <circle cx="12" cy="19" r="1.7" />
                             </svg>
-                        </span>
-                        <p className="table-empty-title">No other accounts yet</p>
-                        <p className="table-empty-sub">Create an account with the Add Account panel above and it will show up here.</p>
+                        </button>
+                        {usersOptionsOpen && (
+                            <div className="activity-options-panel" role="menu" aria-label="User account options">
+                                <button
+                                    type="button"
+                                    className="activity-options-item"
+                                    role="menuitem"
+                                    disabled={seeding || deletingAll}
+                                    onClick={() => {
+                                        setUsersOptionsOpen(false);
+                                        handleSeedUsers();
+                                    }}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                        <circle cx="9" cy="7" r="4" />
+                                        <line x1="19" y1="8" x2="19" y2="14" />
+                                        <line x1="22" y1="11" x2="16" y2="11" />
+                                    </svg>
+                                    <span>Add 7 sample users</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="activity-options-item activity-options-danger"
+                                    role="menuitem"
+                                    disabled={seeding || deletingAll}
+                                    onClick={() => {
+                                        setUsersOptionsOpen(false);
+
+                                        if (sortedUsers.length === 0) {
+                                            setEmptyNotice({
+                                                title: 'No users to delete',
+                                                description: 'There are no other user accounts in the table. Add an account or add the 7 sample users first.',
+                                            });
+                                            return;
+                                        }
+
+                                        setDeleteAllError(null);
+                                        setDeleteAllConfirm(true);
+                                    }}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M3 6h18" />
+                                        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                        <path d="M10 11v6" />
+                                        <path d="M14 11v6" />
+                                    </svg>
+                                    <span>Delete all users</span>
+                                </button>
+                            </div>
+                        )}
                     </div>
-                )}
-                {!loading && !error && sortedUsers.length > 0 && (
+                </div>
+                {!loading && !error && (
                     <div className="table-shell">
-                        <div className="table-wrap data-rows-6" ref={wrapRef}>
+                        <div className={sortedUsers.length > 0 ? 'table-wrap data-rows-6' : 'table-wrap'} ref={wrapRef}>
                             <table className="table" ref={tableRef}>
                                 <thead>
                                     <tr>
                                         <th className="sort-header" onClick={() => toggleSort('name')}>
-                                            Full name{sortBy === 'name' && sortDir === 'asc' ? ' ▲' : sortBy === 'name' ? ' ▼' : ''}
+                                            Full name
+                                            <span className={`sort-indicator${sortBy === 'name' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'name' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('username')}>
-                                            Username{sortBy === 'username' && sortDir === 'asc' ? ' ▲' : sortBy === 'username' ? ' ▼' : ''}
+                                            Username
+                                            <span className={`sort-indicator${sortBy === 'username' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'username' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('email')}>
-                                            Email{sortBy === 'email' && sortDir === 'asc' ? ' ▲' : sortBy === 'email' ? ' ▼' : ''}
+                                            Email
+                                            <span className={`sort-indicator${sortBy === 'email' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'email' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('role')}>
-                                            Role{sortBy === 'role' && sortDir === 'asc' ? ' ▲' : sortBy === 'role' ? ' ▼' : ''}
+                                            Role
+                                            <span className={`sort-indicator${sortBy === 'role' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'role' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('status')}>
-                                            Status{sortBy === 'status' && sortDir === 'asc' ? ' ▲' : sortBy === 'status' ? ' ▼' : ''}
+                                            Status
+                                            <span className={`sort-indicator${sortBy === 'status' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'status' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('updated')}>
-                                            Updated{sortBy === 'updated' && sortDir === 'asc' ? ' ▲' : sortBy === 'updated' ? ' ▼' : ''}
+                                            Updated
+                                            <span className={`sort-indicator${sortBy === 'updated' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'updated' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="text-right">Actions</th>
                                     </tr>
@@ -689,6 +805,20 @@ export default function Users() {
                                     })}
                                 </tbody>
                             </table>
+
+                            {sortedUsers.length === 0 && (
+                                <div className="table-empty table-empty-solid">
+                                    <span className="table-empty-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="9" cy="8" r="4" />
+                                            <path d="M2 21a7 7 0 0 1 14 0" />
+                                            <path d="M19 8v6M16 11h6" />
+                                        </svg>
+                                    </span>
+                                    <p className="table-empty-title">No other accounts yet</p>
+                                    <p className="table-empty-sub">Create an account or add the 7 sample users to populate this list.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -751,6 +881,15 @@ export default function Users() {
                                     role="menuitem"
                                     onClick={() => {
                                         setActivityOptionsOpen(false);
+
+                                        if (activity.length === 0) {
+                                            setEmptyNotice({
+                                                title: 'Nothing to clear',
+                                                description: 'The activity list is already empty. Create, edit or deactivate an account and its activity will show up here.',
+                                            });
+                                            return;
+                                        }
+
                                         setClearError(null);
                                         setClearConfirm(true);
                                     }}
@@ -1243,6 +1382,34 @@ export default function Users() {
                         if (busyId !== deactivateUser?.id) {
                             setDeactivateUser(null);
                             setDeactivateError(null);
+                        }
+                    }}
+                />
+            )}
+
+            {emptyNotice && (
+                <MessageDialog
+                    tone="info"
+                    title={emptyNotice.title}
+                    description={emptyNotice.description}
+                    onClose={() => setEmptyNotice(null)}
+                />
+            )}
+
+            {deleteAllConfirm && (
+                <ConfirmDialog
+                    tone="danger"
+                    title="Delete all users?"
+                    description={`This permanently deletes all ${sortedUsers.length} other user account(s) in the table. Your currently signed-in account and any accounts linked to transaction history are kept. This action cannot be undone.`}
+                    confirmLabel="Delete all"
+                    loadingLabel="Deleting…"
+                    loading={deletingAll}
+                    error={deleteAllError}
+                    onConfirm={handleDeleteAllConfirm}
+                    onCancel={() => {
+                        if (!deletingAll) {
+                            setDeleteAllConfirm(false);
+                            setDeleteAllError(null);
                         }
                     }}
                 />

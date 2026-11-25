@@ -138,6 +138,8 @@ Route::middleware('auth')->group(function () {
     // User management API (Admin only) — BRD (Account Management)
     Route::get('/api/users', [UserController::class, 'list'])->name('users.index')->middleware(EnsureUserIsAdmin::class);
     Route::post('/api/users', [UserController::class, 'store'])->name('users.store')->middleware(EnsureUserIsAdmin::class);
+    Route::post('/api/users/seed', [UserController::class, 'seed'])->name('users.seed')->middleware(EnsureUserIsAdmin::class);
+    Route::delete('/api/users', [UserController::class, 'destroyAll'])->name('users.destroyAll')->middleware(EnsureUserIsAdmin::class);
     Route::put('/api/users/{user}', [UserController::class, 'update'])->name('users.update')->middleware(EnsureUserIsAdmin::class);
     Route::post('/api/users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate')->middleware(EnsureUserIsAdmin::class);
     Route::post('/api/users/{user}/activate', [UserController::class, 'activate'])->name('users.activate')->middleware(EnsureUserIsAdmin::class);

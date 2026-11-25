@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import { FieldError, Toast } from '../../components/Feedback.jsx';
 import { get, post, del, validationMessages } from '../../lib/api.js';
 import { timeAgo } from '../../lib/format.js';
@@ -149,6 +150,7 @@ export default function StockIn() {
     const [stats, setStats] = useState(null);
     // Drives the hero's load bar only; the sections below render as data arrives.
     const [loading, setLoading] = useState(true);
+    usePageLoadbar(loading);
 
     const [toast, setToast] = useState(null);
 
@@ -631,8 +633,7 @@ export default function StockIn() {
         <div className="page">
             {/* Permanent header region (matches the Products page): the hero
                 stays put while the body loads, and carries its own load bar. */}
-            <section className={`page-hero${loading ? ' is-loading' : ''}`}>
-                <div className="page-loadbar" aria-hidden="true" />
+            <section className="page-hero">
                 <header className="page-head">
                     <div>
                         <h2>Stock Inventory</h2>

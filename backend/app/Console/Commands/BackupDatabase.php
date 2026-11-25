@@ -21,7 +21,11 @@ use Illuminate\Support\Facades\Schema;
  */
 class BackupDatabase extends Command
 {
-    protected $signature = 'backup:run {--keep=7 : How many newest backups to keep}';
+    protected $signature = 'backup:run
+        {--keep=7 : How many newest backups to keep}
+        {--range=all : Preset range label (all, 1d, 1w, 1m, custom)}
+        {--from= : Start date (YYYY-MM-DD) for filtering timestamped records}
+        {--to= : End date (YYYY-MM-DD) for filtering timestamped records}';
 
     protected $description = 'Create a timestamped database backup (stored in the database and storage/app/private/backups)';
 
@@ -45,15 +49,33 @@ class BackupDatabase extends Command
         ];
         $tables = array_values(array_filter($tables, fn ($t) => Schema::hasTable($t)));
 
+        $range = (string) ($this->option('range') ?: 'all');
+        $from = $this->option('from') ? (string) $this->option('from') : null;
+        $to = $this->option('to') ? (string) $this->option('to') : null;
+
         $dump = [
             'app' => config('app.name'),
             'connection' => $connection,
             'driver' => $driver,
             'exported_at' => now()->toDateTimeString(),
+            'range' => [
+                'preset' => $range,
+                'from' => $from,
+                'to' => $to,
+            ],
             'tables' => [],
         ];
         foreach ($tables as $table) {
-            $dump['tables'][$table] = DB::table($table)->get()->toArray();
+            $query = DB::table($table);
+            if (($from || $to) && Schema::hasColumn($table, 'created_at')) {
+                if ($from) {
+                    $query->where('created_at', '>=', $from . ' 00:00:00');
+                }
+                if ($to) {
+                    $query->where('created_at', '<=', $to . ' 23:59:59');
+                }
+            }
+            $dump['tables'][$table] = $query->get()->toArray();
         }
 
         $json = json_encode($dump, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);

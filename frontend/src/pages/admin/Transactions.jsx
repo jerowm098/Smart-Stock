@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import Alert, { Toast } from '../../components/Feedback.jsx';
 import Modal from '../../components/Modal.jsx';
@@ -101,6 +102,7 @@ export default function Transactions() {
     const [sortDir, setSortDir] = useState(null);
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
+    usePageLoadbar(loading);
     const [error, setError] = useState(null);
     const [viewing, setViewing] = useState(null);
 
@@ -335,8 +337,7 @@ export default function Transactions() {
 
     return (
         <div className="page">
-            <section className={`page-hero${loading ? ' is-loading' : ''}`}>
-                <div className="page-loadbar" aria-hidden="true" />
+            <section className="page-hero">
                 <header className="page-head">
                     <div>
                         <h2>Transactions</h2>

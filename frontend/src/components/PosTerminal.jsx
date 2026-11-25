@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { usePageLoadbar } from './PageLoadbar.jsx';
 import { useNavigate } from 'react-router-dom';
 import Modal from './Modal.jsx';
 import MessageDialog from './MessageDialog.jsx';
@@ -35,6 +36,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
 
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
+    usePageLoadbar(loading);
     const [error, setError] = useState(null);
     // Bumped after every successful checkout so the admin Recent Activity
     // List refetches and shows the new sale immediately.
@@ -415,8 +417,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
 
     return (
         <div className="page">
-            <section className={`page-hero${loading ? ' is-loading' : ''}`}>
-                <div className="page-loadbar" aria-hidden="true" />
+            <section className="page-hero">
                 <header className="page-head">
                     <div>
                         <div className="page-title">

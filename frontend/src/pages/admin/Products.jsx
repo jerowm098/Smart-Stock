@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import Modal from '../../components/Modal.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import InfoTip from '../../components/InfoTip.jsx';
@@ -233,6 +234,7 @@ export default function Products() {
     const activityOptionsRef = useRef(null);
     const ACTIVITY_PER_PAGE = 3;
     const [loading, setLoading] = useState(true);
+    usePageLoadbar(loading);
     const [error, setError] = useState(null);
     const [message, setMessage] = useState(null);
     const [search, setSearch] = useState('');
@@ -1105,8 +1107,7 @@ export default function Products() {
 
     return (
         <div className="page">
-            <section className={`page-hero${loading ? ' is-loading' : ''}`}>
-                <div className="page-loadbar" aria-hidden="true" />
+            <section className="page-hero">
                 <header className="page-head">
                     <div>
                         <h2>Products</h2>
