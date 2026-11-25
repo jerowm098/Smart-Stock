@@ -30,6 +30,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // redirects. Ang auth middleware ay sumasagot ng 401 JSON sa mga JSON
         // request, at ang named /login route (401 JSON din) ang fallback para
         // sa mga non-JSON na request tulad ng backup download links.
+
+        // Security hardening (OWASP ZAP): nosniff, anti-clickjacking, CSP,
+        // no-store caching, HSTS (HTTPS), walang X-Powered-By — sa LAHAT ng
+        // response ng API (kasama ang 401/403/404/419/429 error responses).
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Pure JSON API: lahat ng error (404, 500, validation atbp.) ay sumasagot

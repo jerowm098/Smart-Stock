@@ -31,6 +31,34 @@ export default defineConfig(({ mode }) => {
         },
     };
 
+    // Security hardening (OWASP ZAP): parehong headers ng production nginx
+    // (backend/docker/nginx/security-headers.conf) para ang local
+    // `npx vite preview` scan ay tumugma sa production behavior.
+    // Preview LANG — ang `npm run dev` ay gumagamit ng inline HMR scripts na
+    // haharangin ng CSP na ito.
+    // script-src hashes = inline anti-flash theme script sa index.html (LF at
+    // CRLF). Kapag binago ang script na iyon, i-recompute ang sha256 at
+    // i-update dito AT sa security-headers.conf.
+    const securityHeaders = {
+        'X-Content-Type-Options': 'nosniff',
+        'X-Frame-Options': 'DENY',
+        'Referrer-Policy': 'strict-origin-when-cross-origin',
+        'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
+        'Cross-Origin-Opener-Policy': 'same-origin',
+        'Content-Security-Policy': [
+            "default-src 'self'",
+            "script-src 'self' 'sha256-FyJR/IFo4LEIg8OyzuArYKlnDlzwzQ5//fO6jl26PpY=' 'sha256-NQoc+TGrcC6RxnckgwQKr+PFU8/WoTNJ07I+SdZksG4='",
+            "style-src 'self'",
+            "font-src 'self' data:",
+            "img-src 'self' data: blob:",
+            "connect-src 'self'",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "frame-ancestors 'none'",
+        ].join('; '),
+    };
+
     return {
         plugins: [react()],
         base: '/',
@@ -47,6 +75,11 @@ export default defineConfig(({ mode }) => {
         preview: {
             port: 4173,
             strictPort: true,
+            // Default ng vite preview ay `Access-Control-Allow-Origin: *`
+            // (ZAP 10098 Cross-Domain Misconfiguration) — kasama pa ang
+            // proxied /api responses. Same-origin ang SPA kaya hindi kailangan.
+            cors: false,
+            headers: securityHeaders,
             proxy,
         },
     };

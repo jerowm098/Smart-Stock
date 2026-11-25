@@ -76,7 +76,15 @@ class AuthController extends Controller
 
         $user = $this->findAuthenticatable($validated['username']);
 
-        if (! $user || ! $user->isActive() || ! Hash::check($validated['password'], $user->password)) {
+        // Security hardening: laging mag-bcrypt check kahit walang user, para
+        // pareho ang response time ng "walang ganitong username" at "maling
+        // password" (iwas username enumeration sa pamamagitan ng timing).
+        $passwordOk = Hash::check(
+            $validated['password'],
+            $user?->password ?? '$2y$12$pYR/XLCnZWxT4j7B.T6xTOkgzIzzkTC3MmqmkosY1gYk50ayejHiK'
+        );
+
+        if (! $user || ! $user->isActive() || ! $passwordOk) {
             return response()->json([
                 'message' => 'The provided credentials do not match our records.',
             ], 401);

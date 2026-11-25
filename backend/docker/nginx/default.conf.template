@@ -15,6 +15,10 @@ server {
     charset utf-8;
     client_max_body_size 20M;
 
+    # Security hardening (OWASP ZAP): huwag ipakita ang nginx version sa
+    # "Server" header at sa error pages.
+    server_tokens off;
+
     # I-stream ang logs papunta stdout/stderr para makita sa Render
     access_log /dev/stdout;
     error_log /dev/stderr warn;
@@ -34,7 +38,11 @@ server {
     }
 
     # Built React SPA assets (Vite base = /app/).
+    # Security headers: ini-include sa bawat SPA/static location (hindi sa
+    # server level) para hindi madoble ang headers na galing na sa Laravel
+    # sa /api/* responses. Tingnan ang security-headers.conf.
     location /app/ {
+        include /etc/nginx/snippets/security-headers.conf;
         try_files $uri =404;
     }
 
@@ -44,17 +52,20 @@ server {
     # ang kunin ng browser para hindi ito mag-reference ng lumang hashed
     # assets na 404 na (ang hashed assets may sariling 30-day cache sa baba).
     location = / {
+        include /etc/nginx/snippets/security-headers.conf;
         add_header Cache-Control "no-cache";
         try_files /app/index.html =404;
     }
 
     location / {
+        include /etc/nginx/snippets/security-headers.conf;
         add_header Cache-Control "no-cache";
         try_files $uri /app/index.html;
     }
 
     # Static assets na may mahabang cache (ginagawa ng Vite)
     location ~* \.(?:css|js|jpg|jpeg|png|gif|ico|svg|webp|woff2?|ttf|eot|map)$ {
+        include /etc/nginx/snippets/security-headers.conf;
         expires 30d;
         add_header Cache-Control "public, max-age=2592000, immutable";
         try_files $uri =404;
@@ -74,6 +85,9 @@ server {
         # only talks plain HTTP on $PORT.
         fastcgi_param HTTP_X_FORWARDED_PROTO $http_x_forwarded_proto;
         fastcgi_param HTTP_HOST              $http_host;
+        # Huwag ipakita ang PHP version (defense in depth; naka-off din ang
+        # expose_php sa Dockerfile).
+        fastcgi_hide_header X-Powered-By;
         fastcgi_buffers 16 16k;
         fastcgi_buffer_size 32k;
         fastcgi_read_timeout 60s;

@@ -90,7 +90,14 @@ COPY --from=node /app/dist ./public/app
 # Template na may ${PORT} placeholder -> gagawing real config
 # ng entrypoint.sh gamit ang envsubst (part ng gettext-base)
 COPY backend/docker/nginx/default.conf.template /etc/nginx/templates/default.conf.template
+# Security headers snippet (OWASP ZAP hardening) - ini-include ng bawat
+# SPA/static location sa default.conf.template.
+COPY backend/docker/nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
 RUN rm -f /etc/nginx/sites-enabled/default
+
+# ============ PHP hardening ============
+# expose_php=Off -> walang "X-Powered-By: PHP/8.3.x" header (ZAP 10037).
+RUN printf 'expose_php = Off\n' > /usr/local/etc/php/conf.d/zz-security.ini
 
 # ============ PHP-FPM configuration ============
 # Pool config na may clear_env=no (para makuha ng Laravel ang

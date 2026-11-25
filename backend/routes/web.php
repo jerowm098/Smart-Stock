@@ -57,7 +57,11 @@ Route::get('/login', fn () => response()->json(['message' => 'Unauthenticated.']
 // ------------------------------------------------------------------
 // API auth endpoints (JSON responses)
 // ------------------------------------------------------------------
-Route::post('/api/auth/login', [AuthController::class, 'apiLogin'])->name('api.auth.login');
+// Security hardening (OWASP ZAP): 'throttle:login' = brute-force protection,
+// tingnan ang AppServiceProvider::configureRateLimiting().
+Route::post('/api/auth/login', [AuthController::class, 'apiLogin'])
+    ->name('api.auth.login')
+    ->middleware('throttle:login');
 Route::post('/api/auth/logout', [AuthController::class, 'apiLogout'])->name('api.auth.logout')->middleware('auth');
 
 // SPA bootstrap: returns the signed-in user (or null) and sets the

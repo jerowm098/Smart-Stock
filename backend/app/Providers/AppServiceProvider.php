@@ -3,9 +3,13 @@
 namespace App\Providers;
 
 use App\Database\PostgresConnection;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Connection;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,6 +35,35 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }
+
+        $this->configureRateLimiting();
+    }
+
+    /**
+     * Security hardening (OWASP ZAP / OWASP ASVS V2.2): brute-force at
+     * credential-stuffing protection sa POST /api/auth/login.
+     *
+     * Baseline ZAP run: 10 sunod-sunod na maling login = 10x 401, walang 429.
+     * Ngayon, tatlong sabay na limit (alinmang maabot = 429):
+     *   - 5 attempts/min bawat username + IP   (normal na typo allowance)
+     *   - 10 attempts/min bawat username        (kahit iba-ibang IP)
+     *   - 30 attempts/min bawat IP              (password spraying)
+     */
+    protected function configureRateLimiting(): void
+    {
+        RateLimiter::for('login', function (Request $request) {
+            $identifier = Str::lower((string) ($request->input('username') ?: $request->input('email')));
+
+            $tooMany = fn (Request $request, array $headers) => response()->json([
+                'message' => 'Too many login attempts. Please wait a minute and try again.',
+            ], 429, $headers);
+
+            return [
+                Limit::perMinute(5)->by('login:'.$identifier.'|'.$request->ip())->response($tooMany),
+                Limit::perMinute(10)->by('login-user:'.$identifier)->response($tooMany),
+                Limit::perMinute(30)->by('login-ip:'.$request->ip())->response($tooMany),
+            ];
+        });
     }
 
     /**

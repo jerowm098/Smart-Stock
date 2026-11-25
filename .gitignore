@@ -40,8 +40,10 @@ Thumbs.db
 *.log
 
 # Local personal notes (not part of the repo)
-how to run this.txt
-
 .claude/
+
 SKILLS.md
-mydocs/
+mydocs - reference-of-updating-the-confluence-document/
+mydocs - reference-on-how-to-run-this/
+mydocs - reference-about-system-architecture/
+mydocs - reference-about-security-hardening-in-owasp-zap/
