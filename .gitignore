@@ -43,7 +43,11 @@ Thumbs.db
 .claude/
 
 SKILLS.md
-mydocs - reference-of-updating-the-confluence-document/
-mydocs - reference-on-how-to-run-this/
-mydocs - reference-about-system-architecture/
-mydocs - reference-about-security-hardening-in-owasp-zap/
+
+mydocs - how-to-run-this/
+mydocs - system-architecture/
+mydocs - reference-for-jira-and-confluence-documentation/
+mydocs - reference-for-security-hardening-in-owasp-zap/
+mydocs - reference-for-deploying-in-render-dashboard/
+mydocs - reference-for-migration-in-supabase/
+mydocs - reference-for-github-access
