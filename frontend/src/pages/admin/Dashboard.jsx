@@ -21,6 +21,10 @@ const SORT_FIELDS = {
 export default function Dashboard() {
     const [stats, setStats] = useState(null);
     const [suggestions, setSuggestions] = useState([]);
+    const [revenueChart, setRevenueChart] = useState({ labels: [], values: [] });
+    const [topProducts, setTopProducts] = useState([]);
+    const [recentSales, setRecentSales] = useState([]);
+    const [recentStockIns, setRecentStockIns] = useState([]);
     const [loading, setLoading] = useState(true);
     usePageLoadbar(loading);
     const [error, setError] = useState(null);
@@ -31,12 +35,23 @@ export default function Dashboard() {
     const loadStats = useCallback(async () => {
         try {
             setLoading(true);
-            const [statsData, suggestData] = await Promise.all([
+            const [statsData, suggestData, chartData, topData, salesData, stockInsData] = await Promise.all([
                 get('/api/dashboard/stats'),
                 get('/api/dashboard/restock-suggestions', { status: 'active' }),
+                get('/api/dashboard/revenue-chart').catch(() => ({ labels: [], values: [] })),
+                get('/api/dashboard/top-products').catch(() => []),
+                get('/api/dashboard/recent-sales').catch(() => []),
+                get('/api/dashboard/recent-stockins').catch(() => []),
             ]);
             setStats(statsData);
             setSuggestions(suggestData.suggestions ?? []);
+            setRevenueChart({
+                labels: Array.isArray(chartData?.labels) ? chartData.labels : [],
+                values: Array.isArray(chartData?.values) ? chartData.values.map(Number) : [],
+            });
+            setTopProducts(Array.isArray(topData) ? topData : []);
+            setRecentSales(Array.isArray(salesData) ? salesData : []);
+            setRecentStockIns(Array.isArray(stockInsData) ? stockInsData : []);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -216,6 +231,140 @@ export default function Dashboard() {
                         </article>
                     </div>
 
+                    {/* SS-190: Revenue Chart & Top-Selling Products */}
+                    <div className="dashboard-grid-2">
+                        <section className="card padded">
+                            <div className="filter-head">
+                                <div>
+                                    <h3>Revenue Trend (30 Days)</h3>
+                                    <p className="muted">Daily sales revenue over the last 30 days.</p>
+                                </div>
+                                <span className="pill pill-info">
+                                    {formatPeso(revenueChart.values.reduce((sum, v) => sum + (Number(v) || 0), 0))}
+                                </span>
+                            </div>
+                            {revenueChart.values.some((v) => v > 0) ? (
+                                <div className="revenue-chart-wrap">
+                                    {(() => {
+                                        const vals = revenueChart.values;
+                                        const labels = revenueChart.labels;
+                                        const maxVal = Math.max(...vals, 1);
+                                        const W = 520;
+                                        const H = 180;
+                                        const padX = 12;
+                                        const padTop = 14;
+                                        const padBottom = 26;
+                                        const plotW = W - padX * 2;
+                                        const plotH = H - padTop - padBottom;
+                                        const barStep = plotW / Math.max(vals.length, 1);
+                                        const barW = Math.max(4, barStep - 4);
+                                        const tickIndices = [0, Math.floor(vals.length / 2), vals.length - 1];
+                                        return (
+                                            <svg viewBox={`0 0 ${W} ${H}`} className="revenue-chart-svg" role="img" aria-label="30-day revenue bar chart">
+                                                {[0, 0.5, 1].map((ratio) => {
+                                                    const y = padTop + plotH * (1 - ratio);
+                                                    return (
+                                                        <line
+                                                            key={ratio}
+                                                            x1={padX}
+                                                            y1={y}
+                                                            x2={W - padX}
+                                                            y2={y}
+                                                            className="revenue-chart-grid"
+                                                        />
+                                                    );
+                                                })}
+                                                {vals.map((val, idx) => {
+                                                    const h = Math.max(val > 0 ? 4 : 0, (val / maxVal) * plotH);
+                                                    const x = padX + idx * barStep + (barStep - barW) / 2;
+                                                    const y = padTop + plotH - h;
+                                                    return (
+                                                        <rect
+                                                            key={idx}
+                                                            x={x}
+                                                            y={y}
+                                                            width={barW}
+                                                            height={h}
+                                                            rx="3"
+                                                            className="revenue-chart-bar"
+                                                        >
+                                                            <title>{`${labels[idx] ?? ''}: ${formatPeso(val)}`}</title>
+                                                        </rect>
+                                                    );
+                                                })}
+                                                {tickIndices.map((idx) => (
+                                                    labels[idx] ? (
+                                                        <text
+                                                            key={idx}
+                                                            x={padX + idx * barStep + barStep / 2}
+                                                            y={H - 6}
+                                                            textAnchor={idx === 0 ? 'start' : idx === vals.length - 1 ? 'end' : 'middle'}
+                                                            className="revenue-chart-label"
+                                                        >
+                                                            {labels[idx]}
+                                                        </text>
+                                                    ) : null
+                                                ))}
+                                            </svg>
+                                        );
+                                    })()}
+                                </div>
+                            ) : (
+                                <div className="table-shell">
+                                    <div className="table-empty table-empty-solid">
+                                        <p className="table-empty-title">No revenue data yet</p>
+                                        <p className="table-empty-sub">Completed POS sales over the last 30 days will plot here.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </section>
+
+                        <section className="card padded">
+                            <div className="filter-head">
+                                <div>
+                                    <h3>Top-Selling Products</h3>
+                                    <p className="muted">Best sellers ranked by total units sold.</p>
+                                </div>
+                                <Link to="/products" className="icon-btn is-outlined" aria-label="View products" title="View products">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M7 17L17 7" />
+                                        <path d="M7 7h10v10" />
+                                    </svg>
+                                </Link>
+                            </div>
+                            <div className="table-shell">
+                                <div className="table-wrap">
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Product</th>
+                                                <th>SKU</th>
+                                                <th>Sold</th>
+                                                <th>Revenue</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {topProducts.map((p) => (
+                                                <tr key={p.id}>
+                                                    <td><strong>{p.name}</strong></td>
+                                                    <td className="mono">{p.sku}</td>
+                                                    <td>{p.total_qty}</td>
+                                                    <td><strong>{formatPeso(p.total_revenue)}</strong></td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {topProducts.length === 0 && (
+                                        <div className="table-empty table-empty-solid">
+                                            <p className="table-empty-title">No product sales yet</p>
+                                            <p className="table-empty-sub">Top-selling hardware items will rank here once sales are recorded.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
                     {/* Restock suggestions widget */}
                     <section className="card padded">
                         <div className="filter-head">
@@ -256,13 +405,13 @@ export default function Dashboard() {
                                                 </span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('stock')}>
-                                                Current Stock
+                                                Current<br />Stock
                                                 <span className={`sort-indicator${sortBy === 'stock' ? ' is-active' : ''}`} aria-hidden="true">
                                                     {sortBy === 'stock' && sortDir === 'desc' ? '▼' : '▲'}
                                                 </span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('suggested_qty')}>
-                                                Suggested Qty
+                                                Suggested<br />Qty
                                                 <span className={`sort-indicator${sortBy === 'suggested_qty' ? ' is-active' : ''}`} aria-hidden="true">
                                                     {sortBy === 'suggested_qty' && sortDir === 'desc' ? '▼' : '▲'}
                                                 </span>
@@ -341,6 +490,99 @@ export default function Dashboard() {
                             </div>
                         )}
                     </section>
+
+                    {/* SS-191: Recent Sales & Recent Stock-Ins Feeds */}
+                    <div className="dashboard-grid-2">
+                        <section className="card padded">
+                            <div className="filter-head">
+                                <div>
+                                    <h3>Recent Sales</h3>
+                                    <p className="muted">Latest items checked out through POS.</p>
+                                </div>
+                                <Link to="/transactions" className="icon-btn is-outlined" aria-label="View all transactions" title="View all transactions">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M7 17L17 7" />
+                                        <path d="M7 7h10v10" />
+                                    </svg>
+                                </Link>
+                            </div>
+                            <div className="table-shell">
+                                <div className="table-wrap">
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Product</th>
+                                                <th>Qty</th>
+                                                <th>Total</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {recentSales.map((s) => (
+                                                <tr key={s.id}>
+                                                    <td><strong>{s.product_name}</strong></td>
+                                                    <td>{s.quantity}</td>
+                                                    <td><strong>{formatPeso(s.line_total)}</strong></td>
+                                                    <td className="txn-date">{s.date}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {recentSales.length === 0 && (
+                                        <div className="table-empty table-empty-solid">
+                                            <p className="table-empty-title">No recent sales</p>
+                                            <p className="table-empty-sub">Completed POS checkouts will appear here.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="card padded">
+                            <div className="filter-head">
+                                <div>
+                                    <h3>Recent Stock-Ins</h3>
+                                    <p className="muted">Latest incoming stock deliveries logged.</p>
+                                </div>
+                                <Link to="/stock-in" className="icon-btn is-outlined" aria-label="View stock inventory" title="View stock inventory">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M7 17L17 7" />
+                                        <path d="M7 7h10v10" />
+                                    </svg>
+                                </Link>
+                            </div>
+                            <div className="table-shell">
+                                <div className="table-wrap">
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Product</th>
+                                                <th>Supplier</th>
+                                                <th>Qty</th>
+                                                <th>Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {recentStockIns.map((si) => (
+                                                <tr key={si.id}>
+                                                    <td><strong>{si.product_name}</strong></td>
+                                                    <td>{si.supplier_name}</td>
+                                                    <td>+{si.quantity} {si.unit}</td>
+                                                    <td className="txn-date">{si.date}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                    {recentStockIns.length === 0 && (
+                                        <div className="table-empty table-empty-solid">
+                                            <p className="table-empty-title">No recent stock-ins</p>
+                                            <p className="table-empty-sub">Logged supplier deliveries will appear here.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </section>
+                    </div>
                 </>
             )}
         </section>
