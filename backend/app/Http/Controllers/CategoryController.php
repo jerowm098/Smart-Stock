@@ -22,7 +22,17 @@ class CategoryController extends Controller
             return response()->json(['message' => 'Authentication required.'], 401);
         }
 
-        $categories = Category::withCount('products')
+        $categories = Category::query()
+            ->select('categories.*')
+            ->selectSub(
+                Product::query()
+                    ->selectRaw('COUNT(*)')
+                    ->where(function ($q) {
+                        $q->whereColumn('products.category_id', 'categories.id')
+                            ->orWhereRaw('LOWER(TRIM(products.category)) = LOWER(TRIM(categories.name))');
+                    }),
+                'products_count'
+            )
             ->orderBy('name')
             ->get()
             ->map(fn (Category $c) => [

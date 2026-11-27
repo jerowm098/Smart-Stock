@@ -8,6 +8,7 @@ import Alert, { FieldError, Toast } from '../../components/Feedback.jsx';
 import MessageDialog from '../../components/MessageDialog.jsx';
 import { del, get, post, put, validationMessages } from '../../lib/api.js';
 import { formatDate } from '../../lib/format.js';
+import { notifyConnectedNav } from '../../lib/navBadges.js';
 
 const EMPTY = { name: '', contact_person: '', phone: '', email: '' };
 const PER_PAGE = 6;
@@ -300,6 +301,7 @@ export default function Suppliers() {
             setToast(response.message ?? 'Supplier added successfully.');
             setForm(EMPTY);
             setShowAdd(false);
+            notifyConnectedNav('supplierAdded', 1);
             await refresh();
         } catch (err) {
             setFormError(err.message);
@@ -353,6 +355,10 @@ export default function Suppliers() {
         try {
             const response = await del(`/api/suppliers/${target.id}`);
             setRemoveSupplier(null);
+            const affected = Number(response?.affected_products) || 0;
+            if (affected > 0) {
+                notifyConnectedNav('supplierRemoved', -affected);
+            }
             setToast(response.message ?? 'Supplier removed.');
             await refresh();
         } catch (err) {
@@ -369,6 +375,7 @@ export default function Suppliers() {
         try {
             const response = await post('/api/suppliers/seed');
             setToast(response?.message ?? '7 sample suppliers added.');
+            notifyConnectedNav('supplierAdded', response?.created ?? 7);
             await refresh();
         } catch (err) {
             setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample suppliers.');
@@ -385,6 +392,10 @@ export default function Suppliers() {
         try {
             const response = await del('/api/suppliers');
             setDeleteAllConfirm(false);
+            const affected = Number(response?.affected_products) || 0;
+            if (affected > 0) {
+                notifyConnectedNav('supplierRemoved', -affected);
+            }
             setToast(response?.message ?? 'All suppliers removed.');
             await refresh();
         } catch (err) {
@@ -592,7 +603,7 @@ export default function Suppliers() {
                                             </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('contact')}>
-                                            Contact person
+                                            Contact<br />person
                                             <span className={`sort-indicator${sortBy === 'contact' ? ' is-active' : ''}`} aria-hidden="true">
                                                 {sortBy === 'contact' && sortDir === 'desc' ? '▼' : '▲'}
                                             </span>

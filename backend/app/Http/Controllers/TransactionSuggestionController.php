@@ -303,13 +303,14 @@ class TransactionSuggestionController extends Controller
     {
         $count = OrderSuggestion::count();
         if ($count === 0) {
-            return response()->json(['message' => 'No order suggestions to delete.']);
+            return response()->json(['message' => 'No order suggestions to delete.', 'deleted' => 0]);
         }
 
         OrderSuggestion::query()->delete();
 
         return response()->json([
             'message' => "All order suggestions deleted ({$count}).",
+            'deleted' => $count,
         ]);
     }
 }

@@ -8,6 +8,7 @@ import Tooltip from '../../components/Tooltip.jsx';
 import Alert, { FieldError, Toast } from '../../components/Feedback.jsx';
 import { del, get, post, put, validationMessages } from '../../lib/api.js';
 import { formatDate } from '../../lib/format.js';
+import { notifyConnectedNav } from '../../lib/navBadges.js';
 
 const EMPTY = { name: '', description: '' };
 const PER_PAGE = 6;
@@ -258,6 +259,7 @@ export default function Categories() {
             setToast(response?.message ?? 'Category added successfully.');
             setForm(EMPTY);
             setShowAdd(false);
+            notifyConnectedNav('categoryAdded', 1);
             await refresh();
         } catch (err) {
             setFormError(err.message);
@@ -319,6 +321,7 @@ export default function Categories() {
         try {
             const response = await post('/api/categories/seed');
             setToast(response?.message ?? '7 sample categories added.');
+            notifyConnectedNav('categoryAdded', response?.created ?? 7);
             await refresh();
         } catch (err) {
             setError(validationMessages(err)[0] ?? err.message ?? 'Could not add sample categories.');

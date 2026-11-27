@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
+use App\Models\StockIn;
 use App\Models\Supplier;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
@@ -98,11 +100,27 @@ class SupplierController extends Controller
             return response()->json(['message' => 'Supplier not found.'], 404);
         }
 
+        $affectedIds = StockIn::where('supplier_id', $supplier->id)
+            ->distinct()
+            ->pluck('product_id');
+
         $supplier->update(['is_active' => false]);
+
+        $deactivatedProducts = 0;
+        if ($affectedIds->isNotEmpty()) {
+            $deactivatedProducts = Product::whereIn('id', $affectedIds)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+        }
 
         ActivityLogger::safe(fn () => ActivityLogger::supplierRemoved($user, $supplier));
 
-        return response()->json(['message' => 'Supplier deleted successfully.']);
+        return response()->json([
+            'message' => $deactivatedProducts > 0
+                ? "Supplier deleted. {$deactivatedProducts} linked product(s) deactivated."
+                : 'Supplier deleted successfully.',
+            'affected_products' => $deactivatedProducts,
+        ]);
     }
 
     /**
@@ -162,16 +180,31 @@ class SupplierController extends Controller
             return response()->json(['message' => 'Authentication required.'], 401);
         }
 
-        $count = Supplier::active()->count();
+        $activeIds = Supplier::active()->pluck('id');
+        $count = $activeIds->count();
 
         if ($count === 0) {
-            return response()->json(['message' => 'No active suppliers to delete.']);
+            return response()->json(['message' => 'No active suppliers to delete.', 'affected_products' => 0]);
         }
 
-        Supplier::active()->update(['is_active' => false]);
+        $affectedIds = StockIn::whereIn('supplier_id', $activeIds)
+            ->distinct()
+            ->pluck('product_id');
+
+        Supplier::whereIn('id', $activeIds)->update(['is_active' => false]);
+
+        $deactivatedProducts = 0;
+        if ($affectedIds->isNotEmpty()) {
+            $deactivatedProducts = Product::whereIn('id', $affectedIds)
+                ->where('is_active', true)
+                ->update(['is_active' => false]);
+        }
 
         return response()->json([
-            'message' => "All suppliers removed ({$count}).",
+            'message' => $deactivatedProducts > 0
+                ? "All suppliers removed ({$count}). {$deactivatedProducts} linked product(s) deactivated."
+                : "All suppliers removed ({$count}).",
+            'affected_products' => $deactivatedProducts,
         ]);
     }
 
