@@ -7,6 +7,7 @@ import Tooltip from '../../components/Tooltip.jsx';
 import Alert, { Toast } from '../../components/Feedback.jsx';
 import MessageDialog from '../../components/MessageDialog.jsx';
 import { del, get, post, put, validationMessages } from '../../lib/api.js';
+import { notifyConnectedNav } from '../../lib/navBadges.js';
 
 const EMPTY_CREATE = { name: '', username: '', email: '', role: 'cashier', password: '', password_confirmation: '' };
 const PER_PAGE = 6;
@@ -242,6 +243,7 @@ export default function Users() {
         try {
             const response = await post('/api/users/seed');
             setToast(response?.message ?? '7 sample users added.');
+            notifyConnectedNav('userAdded', response?.created ?? 7);
             await refresh();
         } catch (err) {
             setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample users.');
@@ -360,6 +362,7 @@ export default function Users() {
             setMessage(response.message);
             setCreateForm(EMPTY_CREATE);
             setAddOpen(false);
+            notifyConnectedNav('userAdded', 1);
             await refresh();
         } catch (err) {
             setFormError(err.message);
@@ -671,7 +674,7 @@ export default function Users() {
                                 <thead>
                                     <tr>
                                         <th className="sort-header" onClick={() => toggleSort('name')}>
-                                            Full name
+                                            Full<br />name
                                             <span className={`sort-indicator${sortBy === 'name' ? ' is-active' : ''}`} aria-hidden="true">
                                                 {sortBy === 'name' && sortDir === 'desc' ? '▼' : '▲'}
                                             </span>

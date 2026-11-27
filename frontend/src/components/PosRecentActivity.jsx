@@ -5,6 +5,7 @@ import MessageDialog from './MessageDialog.jsx';
 import { Toast } from './Feedback.jsx';
 import { del, get, validationMessages } from '../lib/api.js';
 import { formatPeso } from '../lib/format.js';
+import { clearConnectedNav } from '../lib/navBadges.js';
 
 /**
  * Recent Activity List for the Admin POS Checkout page.
@@ -117,6 +118,7 @@ export default function PosRecentActivity({ refreshKey = 0 }) {
 
             setClearConfirm(false);
             setActivity([]);
+            clearConnectedNav('saleCompleted');
             setPage(1);
             setToast(response?.message ?? 'Activity list cleared.');
             await load();

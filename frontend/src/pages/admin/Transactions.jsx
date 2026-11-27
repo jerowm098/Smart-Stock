@@ -6,6 +6,7 @@ import Alert, { Toast } from '../../components/Feedback.jsx';
 import Modal from '../../components/Modal.jsx';
 import { del, exportFile, get, post, validationMessages } from '../../lib/api.js';
 import { formatPeso } from '../../lib/format.js';
+import { notifyConnectedNav } from '../../lib/navBadges.js';
 
 const PER_PAGE = 6;
 
@@ -311,6 +312,7 @@ export default function Transactions() {
         try {
             const response = await post('/api/dashboard/transactions/seed');
             setToast({ tone: 'success', text: response?.message ?? '7 sample transactions added.' });
+            notifyConnectedNav('transactionAdded', response?.created ?? 7);
             await refresh();
         } catch (err) {
             setToast({

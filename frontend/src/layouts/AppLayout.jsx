@@ -4,6 +4,7 @@ import NotificationBell from '../components/NotificationBell.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import UserMenu from '../components/UserMenu.jsx';
 import { useAuth } from '../auth/AuthContext.jsx';
+import { clearNavBadge, readNavBadges, subscribeNavBadges } from '../lib/navBadges.js';
 
 /**
  * Sidebar navigation, grouped by purpose (order per the team's Jira board +
@@ -29,11 +30,17 @@ const ADMIN_NAV = [
         ],
     },
     {
+        label: 'Catalog',
+        items: [
+            { to: '/stock-in', label: 'Stock Inventory', icon: 'inbox' },
+            { to: '/categories', label: 'Categories', icon: 'tag' },
+            { to: '/suppliers', label: 'Suppliers', icon: 'truck' },
+        ],
+    },
+    {
         label: 'Management',
         items: [
             { to: '/products', label: 'Products', icon: 'box' },
-            { to: '/categories', label: 'Categories', icon: 'tag' },
-            { to: '/stock-in', label: 'Stock Inventory', icon: 'inbox' },
             { to: '/checkout', label: 'POS Checkout', icon: 'cart' },
         ],
     },
@@ -50,12 +57,6 @@ const ADMIN_NAV = [
         ],
     },
     {
-        label: 'Partners',
-        items: [
-            { to: '/suppliers', label: 'Suppliers', icon: 'truck' },
-        ],
-    },
-    {
         label: 'Accounts',
         items: [
             { to: '/users', label: 'Users', icon: 'users' },
@@ -65,6 +66,12 @@ const ADMIN_NAV = [
         label: 'System',
         items: [
             { to: '/backups', label: 'Backups', icon: 'database' },
+        ],
+    },
+    {
+        label: 'Reports',
+        items: [
+            { to: '/audit-logs', label: 'Audit Logs', icon: 'report' },
         ],
     },
 ];
@@ -90,6 +97,7 @@ function Icon({ name }) {
         users: 'M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z',
         database: 'M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125',
         cart: 'M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z',
+        report: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25M9 17.25v-2.25m3 2.25v-4.5m3 4.5v-6m3.75 7.5H6a2.25 2.25 0 01-2.25-2.25V5.25A2.25 2.25 0 016 3h4.5l6.75 6.75v9a2.25 2.25 0 01-2.25 2.25z',
     };
 
     return (
@@ -103,6 +111,7 @@ export default function AppLayout() {
     const { user } = useAuth();
     const location = useLocation();
     const [menuOpen, setMenuOpen] = useState(false);
+    const [navBadges, setNavBadges] = useState(() => readNavBadges());
     const scrollRef = useRef(null);
 
     // Touchpad momentum scrolling: rows/columns scroll past the stationary
@@ -137,6 +146,16 @@ export default function AppLayout() {
         scrollRef.current?.scrollTo({ top: 0, left: 0 });
     }, [location.pathname]);
 
+    // Subscribe to cross-page connected-item badges and clear the badge for
+    // whichever tab the user just opened.
+    useEffect(() => subscribeNavBadges(setNavBadges), []);
+
+    useEffect(() => {
+        if (current?.to) {
+            clearNavBadge(current.to);
+        }
+    }, [current?.to]);
+
     return (
         <div className="app-shell">
             {menuOpen && <button type="button" className="sidebar-backdrop" aria-label="Close menu" onClick={() => setMenuOpen(false)} />}
@@ -156,16 +175,36 @@ export default function AppLayout() {
                     {nav.map((section, index) => (
                         <div className="nav-group" key={section.label ?? index}>
                             {section.label && <p className="nav-group-label">{section.label}</p>}
-                            {section.items.map((item) => (
-                                <NavLink
-                                    key={item.to}
-                                    to={item.to}
-                                    className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}
-                                >
-                                    <Icon name={item.icon} />
-                                    <span>{item.label}</span>
-                                </NavLink>
-                            ))}
+                            {section.items.map((item) => {
+                                const badgeCount = Number(navBadges[item.to]) || 0;
+                                return (
+                                    <NavLink
+                                        key={item.to}
+                                        to={item.to}
+                                        className={({ isActive }) => `nav-link${isActive ? ' is-active' : ''}`}
+                                    >
+                                        <Icon name={item.icon} />
+                                        <span>{item.label}</span>
+                                        {badgeCount !== 0 && (() => {
+                                            const isNegative = badgeCount < 0;
+                                            const absCount = Math.abs(badgeCount);
+                                            const display = `${isNegative ? '-' : '+'}${absCount > 99 ? '99' : absCount}`;
+                                            const label = isNegative
+                                                ? `${absCount} removed or deactivated connected item${absCount === 1 ? '' : 's'}`
+                                                : `${absCount} new connected item${absCount === 1 ? '' : 's'}`;
+                                            return (
+                                                <span
+                                                    className={`nav-badge${isNegative ? ' nav-badge-danger' : ''}`}
+                                                    title={label}
+                                                    aria-label={label}
+                                                >
+                                                    {display}
+                                                </span>
+                                            );
+                                        })()}
+                                    </NavLink>
+                                );
+                            })}
                         </div>
                     ))}
                 </nav>

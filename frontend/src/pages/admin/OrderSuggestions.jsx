@@ -7,6 +7,7 @@ import Tooltip from '../../components/Tooltip.jsx';
 import Alert, { Toast } from '../../components/Feedback.jsx';
 import { downloadFile, del, get, post, validationMessages } from '../../lib/api.js';
 import { formatPeso } from '../../lib/format.js';
+import { clearConnectedNav, notifyConnectedNav } from '../../lib/navBadges.js';
 
 const TABS = [
     { key: 'active', label: 'Active' },
@@ -215,6 +216,7 @@ export default function OrderSuggestions() {
 
             setClearConfirm(false);
             setActivity([]);
+            clearConnectedNav('suggestionAdded');
             setActivityPage(1);
             setMessage(response?.message ?? 'Activity list cleared.');
             await refresh();
@@ -232,6 +234,7 @@ export default function OrderSuggestions() {
         try {
             const response = await post('/api/dashboard/order-suggestions/seed');
             setMessage(response?.message ?? '7 sample order suggestions added.');
+            notifyConnectedNav('suggestionAdded', response?.created ?? 7);
             await refresh();
         } catch (err) {
             setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample suggestions.');
@@ -248,6 +251,11 @@ export default function OrderSuggestions() {
         try {
             const response = await del('/api/dashboard/order-suggestions');
             setDeleteAllConfirm(false);
+            const deleted = Number(response?.deleted) || 0;
+            clearConnectedNav('suggestionAdded');
+            if (deleted > 0) {
+                notifyConnectedNav('suggestionAdded', -deleted);
+            }
             setMessage(response?.message ?? 'All order suggestions deleted.');
             await refresh();
         } catch (err) {
@@ -286,6 +294,9 @@ export default function OrderSuggestions() {
                     `${stats.preserved ?? 0} preserved, ${stats.skipped_fallback ?? 0} on static fallback.`,
             );
             setStatus('active');
+            if ((stats.created ?? 0) > 0) {
+                notifyConnectedNav('suggestionAdded', stats.created);
+            }
             await load(true);
         } catch (err) {
             setError(err.message);
