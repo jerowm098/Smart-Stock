@@ -116,6 +116,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/activity/recent', [ActivityLogController::class, 'recent'])
         ->name('activity.recent')
         ->middleware(EnsureUserIsAdmin::class);
+    // SS-24 / SS-107: centralized Audit Logs table with date-range & module filters
+    Route::get('/api/activity/logs', [ActivityLogController::class, 'logs'])
+        ->name('activity.logs')
+        ->middleware(EnsureUserIsAdmin::class);
     // Destructive: clears a page-scoped slice of the feed (?actions=...).
     Route::delete('/api/activity/recent', [ActivityLogController::class, 'clear'])
         ->name('activity.clear')

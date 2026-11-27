@@ -11,6 +11,7 @@ import Categories from './pages/admin/Categories.jsx';
 import StockIn from './pages/admin/StockIn.jsx';
 import Dashboard from './pages/admin/Dashboard.jsx';
 import Transactions from './pages/admin/Transactions.jsx';
+import AuditLogs from './pages/admin/AuditLogs.jsx';
 import OrderSuggestions from './pages/admin/OrderSuggestions.jsx';
 import Suppliers from './pages/admin/Suppliers.jsx';
 import Users from './pages/admin/Users.jsx';
@@ -37,6 +38,7 @@ export default function App() {
                             <Route path="/stock-in" element={<StockIn />} />
                             <Route path="/checkout" element={<AdminPos />} />
                             <Route path="/transactions" element={<Transactions />} />
+                            <Route path="/audit-logs" element={<AuditLogs />} />
                             <Route path="/order-suggestions" element={<OrderSuggestions />} />
                             <Route path="/suppliers" element={<Suppliers />} />
                             <Route path="/users" element={<Users />} />
