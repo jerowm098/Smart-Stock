@@ -630,4 +630,114 @@ class ActivityLogger
 
         return $changes;
     }
+
+    /**
+     * Suppliers page feed: an Admin edited a supplier record (SS-124).
+     *
+     * @param  array<string,mixed>  $before
+     */
+    public static function supplierUpdated(User $actor, \App\Models\Supplier $supplier, array $before): void
+    {
+        $changes = [];
+        $labels = [
+            'name' => 'Name',
+            'contact_person' => 'Contact person',
+            'phone' => 'Phone',
+            'email' => 'Email',
+        ];
+
+        foreach ($labels as $field => $label) {
+            $old = trim((string) ($before[$field] ?? ''));
+            $new = trim((string) ($supplier->{$field} ?? ''));
+            if ($old !== $new) {
+                $changes[] = [
+                    'field' => $field,
+                    'text' => "{$label} ".($old !== '' ? $old : '—').' → '.($new !== '' ? $new : '—'),
+                ];
+            }
+        }
+
+        if ($changes === []) {
+            return;
+        }
+
+        $parts = array_map(fn (array $c) => $c['text'], $changes);
+
+        self::log($actor, 'supplier_updated', "Updated {$supplier->name}: ".implode('; ', $parts), [
+            'subject_type' => 'supplier',
+            'subject_id' => $supplier->id,
+            'subject_name' => $supplier->name,
+            'meta' => ['changes' => $changes],
+        ]);
+    }
+
+    /**
+     * Categories page feed: an Admin created a hardware category (SS-123).
+     */
+    public static function categoryCreated(User $actor, \App\Models\Category $category): void
+    {
+        $changes = [
+            ['field' => 'name', 'text' => "Name {$category->name}"],
+        ];
+        if ($category->description) {
+            $changes[] = ['field' => 'description', 'text' => "Description {$category->description}"];
+        }
+
+        self::log($actor, 'category_created', "Added category {$category->name}", [
+            'subject_type' => 'category',
+            'subject_id' => $category->id,
+            'subject_name' => $category->name,
+            'meta' => ['changes' => $changes],
+        ]);
+    }
+
+    /**
+     * Categories page feed: an Admin renamed or updated a category (SS-123).
+     *
+     * @param  array<string,mixed>  $before
+     */
+    public static function categoryUpdated(User $actor, \App\Models\Category $category, array $before): void
+    {
+        $changes = [];
+        foreach (['name' => 'Name', 'description' => 'Description'] as $field => $label) {
+            $old = trim((string) ($before[$field] ?? ''));
+            $new = trim((string) ($category->{$field} ?? ''));
+            if ($old !== $new) {
+                $changes[] = [
+                    'field' => $field,
+                    'text' => "{$label} ".($old !== '' ? $old : '—').' → '.($new !== '' ? $new : '—'),
+                ];
+            }
+        }
+
+        if ($changes === []) {
+            return;
+        }
+
+        $parts = array_map(fn (array $c) => $c['text'], $changes);
+
+        self::log($actor, 'category_updated', "Updated category {$category->name}: ".implode('; ', $parts), [
+            'subject_type' => 'category',
+            'subject_id' => $category->id,
+            'subject_name' => $category->name,
+            'meta' => ['changes' => $changes],
+        ]);
+    }
+
+    /**
+     * Categories page feed: an Admin deleted an unused category (SS-123).
+     */
+    public static function categoryDeleted(User $actor, string $name, int $id): void
+    {
+        self::log($actor, 'category_deleted', "Deleted category {$name}", [
+            'subject_type' => 'category',
+            'subject_id' => $id,
+            'subject_name' => $name,
+            'meta' => [
+                'changes' => [
+                    ['field' => 'deleted', 'text' => "Removed category {$name}"],
+                ],
+            ],
+        ]);
+    }
 }

@@ -3,6 +3,7 @@
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\BackupController;
+use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PosCheckoutController;
@@ -62,6 +63,12 @@ Route::get('/login', fn () => response()->json(['message' => 'Unauthenticated.']
 Route::post('/api/auth/login', [AuthController::class, 'apiLogin'])
     ->name('api.auth.login')
     ->middleware('throttle:login');
+Route::post('/api/auth/forgot-password', [AuthController::class, 'apiForgotPassword'])
+    ->name('api.auth.forgot-password')
+    ->middleware('throttle:login');
+Route::post('/api/auth/reset-password', [AuthController::class, 'apiResetPassword'])
+    ->name('api.auth.reset-password')
+    ->middleware('throttle:login');
 Route::post('/api/auth/logout', [AuthController::class, 'apiLogout'])->name('api.auth.logout')->middleware('auth');
 
 // SPA bootstrap: returns the signed-in user (or null) and sets the
@@ -97,6 +104,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/inventory/suggest', [ProductSuggestionController::class, 'suggest'])
         ->name('inventory.suggest')
         ->middleware(EnsureUserIsAdmin::class);
+    Route::post('/api/inventory/seed', [InventoryController::class, 'seed'])->name('inventory.seed')->middleware(EnsureUserIsAdmin::class);
+    Route::delete('/api/inventory', [InventoryController::class, 'destroyAll'])->name('inventory.destroyAll')->middleware(EnsureUserIsAdmin::class);
     Route::delete('/api/inventory/{product}', [InventoryController::class, 'destroy'])->name('inventory.destroy')->middleware(EnsureUserIsAdmin::class);
     Route::post('/api/inventory/adjust', [InventoryController::class, 'adjustStock'])
         ->name('inventory.adjust')
@@ -153,6 +162,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/dashboard/order-suggestions', [TransactionSuggestionController::class, 'index'])
         ->name('dashboard.orderSuggestions')
         ->middleware(EnsureUserIsAdmin::class);
+    Route::post('/api/dashboard/order-suggestions/seed', [TransactionSuggestionController::class, 'seed'])
+        ->name('dashboard.orderSuggestions.seed')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::delete('/api/dashboard/order-suggestions', [TransactionSuggestionController::class, 'destroyAll'])
+        ->name('dashboard.orderSuggestions.destroyAll')
+        ->middleware(EnsureUserIsAdmin::class);
     Route::post('/api/dashboard/order-suggestions/{id}/ordered', [TransactionSuggestionController::class, 'markOrdered'])
         ->name('dashboard.orderSuggestions.ordered')
         ->middleware(EnsureUserIsAdmin::class);
@@ -170,8 +185,37 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/suppliers', [SupplierController::class, 'store'])
         ->name('suppliers.store')
         ->middleware(EnsureUserIsAdmin::class);
+    Route::put('/api/suppliers/{id}', [SupplierController::class, 'update'])
+        ->name('suppliers.update')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::post('/api/suppliers/seed', [SupplierController::class, 'seed'])
+        ->name('suppliers.seed')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::delete('/api/suppliers', [SupplierController::class, 'destroyAll'])
+        ->name('suppliers.destroyAll')
+        ->middleware(EnsureUserIsAdmin::class);
     Route::delete('/api/suppliers/{id}', [SupplierController::class, 'destroy'])
         ->name('suppliers.destroy')
+        ->middleware(EnsureUserIsAdmin::class);
+
+    // Hardware Categories CRUD API (SS-123 / SS-140)
+    Route::get('/api/categories', [CategoryController::class, 'index'])
+        ->name('categories.index')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::post('/api/categories', [CategoryController::class, 'store'])
+        ->name('categories.store')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::post('/api/categories/seed', [CategoryController::class, 'seed'])
+        ->name('categories.seed')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::delete('/api/categories', [CategoryController::class, 'destroyAll'])
+        ->name('categories.destroyAll')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::put('/api/categories/{id}', [CategoryController::class, 'update'])
+        ->name('categories.update')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::delete('/api/categories/{id}', [CategoryController::class, 'destroy'])
+        ->name('categories.destroy')
         ->middleware(EnsureUserIsAdmin::class);
 
     // Dashboard API endpoints (admin overview)
@@ -182,6 +226,12 @@ Route::middleware('auth')->group(function () {
     // SS-24: paginated transaction history with staff name (Admin only)
     Route::get('/api/dashboard/transactions', [DashboardController::class, 'transactionHistory'])
         ->name('dashboard.transactions')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::post('/api/dashboard/transactions/seed', [DashboardController::class, 'seedTransactions'])
+        ->name('dashboard.transactions.seed')
+        ->middleware(EnsureUserIsAdmin::class);
+    Route::delete('/api/dashboard/transactions', [DashboardController::class, 'destroyAllTransactions'])
+        ->name('dashboard.transactions.destroyAll')
         ->middleware(EnsureUserIsAdmin::class);
     // SS-25 / SS-34: downloadable transaction summary CSV (Admin only)
     Route::get('/api/dashboard/transactions/export', [DashboardController::class, 'exportTransactions'])

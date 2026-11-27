@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
-import Modal from '../../components/Modal.jsx';
+import Modal, { MODAL_INFO_ICON } from '../../components/Modal.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
+import InfoTip from '../../components/InfoTip.jsx';
+import Tooltip from '../../components/Tooltip.jsx';
 import Alert, { FieldError, Toast } from '../../components/Feedback.jsx';
-import { del, get, post, validationMessages } from '../../lib/api.js';
+import MessageDialog from '../../components/MessageDialog.jsx';
+import { del, get, post, put, validationMessages } from '../../lib/api.js';
 import { formatDate } from '../../lib/format.js';
 
 const EMPTY = { name: '', contact_person: '', phone: '', email: '' };
@@ -21,11 +24,13 @@ const SORT_FIELDS = {
 // Recent Activity: action → colour tone + short verb, mirroring Products.
 const ACTIVITY_TONE = {
     supplier_created: 'ok',
+    supplier_updated: 'info',
     supplier_removed: 'danger',
 };
 
 const ACTIVITY_VERB = {
     supplier_created: 'Added',
+    supplier_updated: 'Updated',
     supplier_removed: 'Removed',
 };
 
@@ -33,6 +38,12 @@ const ACTIVITY_ICONS = {
     supplier_created: (
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 5v14M5 12h14" />
+        </svg>
+    ),
+    supplier_updated: (
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
         </svg>
     ),
     supplier_removed: (
@@ -93,14 +104,31 @@ export default function Suppliers() {
     const [loading, setLoading] = useState(true);
     usePageLoadbar(loading);
     const [error, setError] = useState(null);
-    const [message, setMessage] = useState(null);
+    const [toast, setToast] = useState(null);
 
     const [showAdd, setShowAdd] = useState(false);
     const [form, setForm] = useState(EMPTY);
     const [saving, setSaving] = useState(false);
     const [formError, setFormError] = useState(null);
     const [fieldErrors, setFieldErrors] = useState([]);
+
+    const [editSupplier, setEditSupplier] = useState(null);
+    const [editForm, setEditForm] = useState(null);
+    const [editing, setEditing] = useState(false);
+    const [editError, setEditError] = useState(null);
+
+    const [removeSupplier, setRemoveSupplier] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
+    const [removeError, setRemoveError] = useState(null);
+
+    // Supplier List kebab (seed sample data / delete all) state.
+    const [suppliersOptionsOpen, setSuppliersOptionsOpen] = useState(false);
+    const suppliersOptionsRef = useRef(null);
+    const [seeding, setSeeding] = useState(false);
+    const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+    const [deletingAll, setDeletingAll] = useState(false);
+    const [deleteAllError, setDeleteAllError] = useState(null);
+    const [emptyNotice, setEmptyNotice] = useState(null);
 
     // Recent Activity List state.
     const [activity, setActivity] = useState([]);
@@ -111,18 +139,16 @@ export default function Suppliers() {
     const [clearConfirm, setClearConfirm] = useState(false);
     const [clearing, setClearing] = useState(false);
     const [clearError, setClearError] = useState(null);
-    const [toast, setToast] = useState(null);
     const ACTIVITY_PER_PAGE = 3;
 
     const [sortBy, setSortBy] = useState(null);
     const [sortDir, setSortDir] = useState(null);
     const [page, setPage] = useState(1);
 
-    const tableRef = useRef(null);
-    const wrapRef = useRef(null);
-
-    const load = useCallback(async () => {
-        setLoading(true);
+    const load = useCallback(async (silent = false) => {
+        if (!silent) {
+            setLoading(true);
+        }
         setError(null);
 
         try {
@@ -131,7 +157,7 @@ export default function Suppliers() {
                 // Suppliers page owns its slice of the audit feed.
                 get('/api/activity/recent', {
                     limit: 12,
-                    actions: 'supplier_created,supplier_removed',
+                    actions: 'supplier_created,supplier_updated,supplier_removed',
                 }).catch(() => null),
             ]);
 
@@ -144,14 +170,16 @@ export default function Suppliers() {
         }
     }, []);
 
+    const refresh = useCallback(() => load(true), [load]);
+
     useEffect(() => {
         load();
     }, [load]);
 
-    // Options dropdown (kebab) on the Recent Activity card header: closes on
-    // outside click and Escape, same behaviour as the other admin pages.
+    // Options dropdowns (kebabs) on Supplier List and Recent Activity card
+    // headers: close on outside click and Escape, matching Users and Backups.
     useEffect(() => {
-        if (!activityOptionsOpen) {
+        if (!activityOptionsOpen && !suppliersOptionsOpen) {
             return;
         }
 
@@ -159,11 +187,15 @@ export default function Suppliers() {
             if (activityOptionsRef.current && !activityOptionsRef.current.contains(event.target)) {
                 setActivityOptionsOpen(false);
             }
+            if (suppliersOptionsRef.current && !suppliersOptionsRef.current.contains(event.target)) {
+                setSuppliersOptionsOpen(false);
+            }
         };
 
         const onKey = (event) => {
             if (event.key === 'Escape') {
                 setActivityOptionsOpen(false);
+                setSuppliersOptionsOpen(false);
             }
         };
 
@@ -174,7 +206,7 @@ export default function Suppliers() {
             document.removeEventListener('mousedown', onDown);
             document.removeEventListener('keydown', onKey);
         };
-    }, [activityOptionsOpen]);
+    }, [activityOptionsOpen, suppliersOptionsOpen]);
 
     /** Column sort: 1st click asc → 2nd desc → 3rd back to the default order. */
     function toggleSort(field) {
@@ -242,30 +274,17 @@ export default function Suppliers() {
         setActivityPage(1);
     }, [activity.length]);
 
-    // Reserve exactly one full page (6 rows) of height, mirroring Stock
-    // Inventory, Backups and Users. Measured from the rendered table so it
-    // stays accurate across fonts, zoom levels and button wrapping.
-    useLayoutEffect(() => {
-        const table = tableRef.current;
-        const wrap = wrapRef.current;
-        if (!table || !wrap) {
-            return;
-        }
-
-        const head = table.querySelector('thead');
-        const row = table.querySelector('tbody tr');
-
-        // Nothing to measure (empty list / loading): let the wrap size itself.
-        if (!head || !row) {
-            wrap.style.minHeight = '';
-            return;
-        }
-
-        wrap.style.minHeight = `${head.getBoundingClientRect().height + row.getBoundingClientRect().height * PER_PAGE}px`;
-    }, [pagedSuppliers.length, loading]);
+    function closeAddModal() {
+        if (saving) return;
+        setShowAdd(false);
+        setForm(EMPTY);
+        setFormError(null);
+        setFieldErrors([]);
+    }
 
     async function handleSave(event) {
         event.preventDefault();
+        if (saving) return;
         setSaving(true);
         setFormError(null);
         setFieldErrors([]);
@@ -278,10 +297,10 @@ export default function Suppliers() {
                 email: form.email || null,
             });
 
-            setMessage(response.message);
+            setToast(response.message ?? 'Supplier added successfully.');
             setForm(EMPTY);
             setShowAdd(false);
-            await load();
+            await refresh();
         } catch (err) {
             setFormError(err.message);
             setFieldErrors(validationMessages(err));
@@ -290,23 +309,88 @@ export default function Suppliers() {
         }
     }
 
-    async function handleDeactivate(supplier) {
-        if (!window.confirm(`Remove "${supplier.name}" from the active supplier list?`)) {
-            return;
-        }
+    function openEdit(supplier) {
+        setEditSupplier(supplier);
+        setEditForm({
+            name: supplier.name ?? '',
+            contact_person: supplier.contact_person ?? '',
+            phone: supplier.phone ?? '',
+            email: supplier.email ?? '',
+        });
+        setEditError(null);
+    }
 
-        setDeletingId(supplier.id);
-        setMessage(null);
-        setError(null);
+    async function handleEdit(event) {
+        event.preventDefault();
+        if (editing || !editSupplier) return;
+        setEditing(true);
+        setEditError(null);
 
         try {
-            const response = await del(`/api/suppliers/${supplier.id}`);
-            setMessage(response.message);
-            await load();
+            const response = await put(`/api/suppliers/${editSupplier.id}`, {
+                ...editForm,
+                contact_person: editForm.contact_person || null,
+                phone: editForm.phone || null,
+                email: editForm.email || null,
+            });
+            setToast(response?.message ?? 'Supplier updated successfully.');
+            setEditSupplier(null);
+            await refresh();
         } catch (err) {
-            setError(err.message);
+            setEditError(validationMessages(err)[0] ?? err.message ?? 'Could not update the supplier.');
+        } finally {
+            setEditing(false);
+        }
+    }
+
+    async function handleRemoveConfirm() {
+        const target = removeSupplier;
+        if (!target) return;
+
+        setDeletingId(target.id);
+        setRemoveError(null);
+
+        try {
+            const response = await del(`/api/suppliers/${target.id}`);
+            setRemoveSupplier(null);
+            setToast(response.message ?? 'Supplier removed.');
+            await refresh();
+        } catch (err) {
+            setRemoveError(validationMessages(err)[0] ?? err.message ?? 'Could not remove the supplier.');
         } finally {
             setDeletingId(null);
+        }
+    }
+
+    async function handleSeedSuppliers() {
+        if (seeding) return;
+        setSeeding(true);
+
+        try {
+            const response = await post('/api/suppliers/seed');
+            setToast(response?.message ?? '7 sample suppliers added.');
+            await refresh();
+        } catch (err) {
+            setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample suppliers.');
+        } finally {
+            setSeeding(false);
+        }
+    }
+
+    async function handleDeleteAllConfirm() {
+        if (deletingAll) return;
+        setDeletingAll(true);
+        setDeleteAllError(null);
+
+        try {
+            const response = await del('/api/suppliers');
+            setDeleteAllConfirm(false);
+            setToast(response?.message ?? 'All suppliers removed.');
+            await refresh();
+        } catch (err) {
+            setDeleteAllError(validationMessages(err)[0] ?? err.message ?? 'Could not delete suppliers.');
+        } finally {
+            setDeletingAll(false);
         }
     }
 
@@ -315,7 +399,7 @@ export default function Suppliers() {
         setClearError(null);
 
         try {
-            const response = await del('/api/activity/recent?actions=supplier_created,supplier_removed');
+            const response = await del('/api/activity/recent?actions=supplier_created,supplier_updated,supplier_removed');
 
             setClearConfirm(false);
             setActivity([]);
@@ -341,7 +425,6 @@ export default function Suppliers() {
                 </header>
             </section>
 
-            {message && <Alert tone="success" onClose={() => setMessage(null)}>{message}</Alert>}
             {error && <Alert tone="error" onClose={() => setError(null)}>{error}</Alert>}
             {toast && <Toast tone="success" onClose={() => setToast(null)}>{toast}</Toast>}
 
@@ -408,7 +491,15 @@ export default function Suppliers() {
                         <h3>Add Supplier</h3>
                         <p className="muted">Add a new supplier to the directory for use in Stock-In.</p>
                     </div>
-                    <button type="button" className="btn btn-primary" onClick={() => setShowAdd(true)}>
+                    <button
+                        type="button"
+                        className="btn btn-primary"
+                        onClick={() => {
+                            setFormError(null);
+                            setFieldErrors([]);
+                            setShowAdd(true);
+                        }}
+                    >
                         Add supplier
                     </button>
                 </header>
@@ -420,27 +511,109 @@ export default function Suppliers() {
                         <h3>Supplier List</h3>
                         <p className="muted">Every active supplier with its contact details and date added.</p>
                     </div>
+                    <div className="activity-options" ref={suppliersOptionsRef}>
+                        <button
+                            type="button"
+                            className="icon-btn is-outlined"
+                            onClick={() => setSuppliersOptionsOpen((open) => !open)}
+                            aria-haspopup="menu"
+                            aria-expanded={suppliersOptionsOpen}
+                            aria-label="Supplier options"
+                        >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+                                <circle cx="12" cy="5" r="1.7" />
+                                <circle cx="12" cy="12" r="1.7" />
+                                <circle cx="12" cy="19" r="1.7" />
+                            </svg>
+                        </button>
+                        {suppliersOptionsOpen && (
+                            <div className="activity-options-panel" role="menu" aria-label="Supplier options">
+                                <button
+                                    type="button"
+                                    className="activity-options-item"
+                                    role="menuitem"
+                                    disabled={seeding || deletingAll}
+                                    onClick={() => {
+                                        setSuppliersOptionsOpen(false);
+                                        handleSeedSuppliers();
+                                    }}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M3 7.5h11v9H3z" />
+                                        <path d="M14 10.5h4l3 3v3h-7z" />
+                                        <circle cx="7" cy="17.5" r="1.5" />
+                                        <circle cx="17.5" cy="17.5" r="1.5" />
+                                    </svg>
+                                    <span>Add 7 sample suppliers</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="activity-options-item activity-options-danger"
+                                    role="menuitem"
+                                    disabled={seeding || deletingAll}
+                                    onClick={() => {
+                                        setSuppliersOptionsOpen(false);
+
+                                        if (sortedSuppliers.length === 0) {
+                                            setEmptyNotice({
+                                                title: 'No suppliers to delete',
+                                                description: 'The supplier list is already empty. Add a supplier or add the 7 sample suppliers first.',
+                                            });
+                                            return;
+                                        }
+
+                                        setDeleteAllError(null);
+                                        setDeleteAllConfirm(true);
+                                    }}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M3 6h18" />
+                                        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                        <path d="M10 11v6" />
+                                        <path d="M14 11v6" />
+                                    </svg>
+                                    <span>Delete all suppliers</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
                 {!loading && !error && (
                     <div className="table-shell">
-                        <div className="table-wrap data-rows-6" ref={wrapRef}>
-                            <table className="table" ref={tableRef}>
+                        <div className="table-wrap">
+                            <table className="table">
                                 <thead>
                                     <tr>
                                         <th className="sort-header" onClick={() => toggleSort('name')}>
-                                            Name{sortBy === 'name' && sortDir === 'asc' ? ' ▲' : sortBy === 'name' ? ' ▼' : ''}
+                                            Name
+                                            <span className={`sort-indicator${sortBy === 'name' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'name' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('contact')}>
-                                            Contact person{sortBy === 'contact' && sortDir === 'asc' ? ' ▲' : sortBy === 'contact' ? ' ▼' : ''}
+                                            Contact person
+                                            <span className={`sort-indicator${sortBy === 'contact' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'contact' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('phone')}>
-                                            Phone{sortBy === 'phone' && sortDir === 'asc' ? ' ▲' : sortBy === 'phone' ? ' ▼' : ''}
+                                            Phone
+                                            <span className={`sort-indicator${sortBy === 'phone' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'phone' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('email')}>
-                                            Email{sortBy === 'email' && sortDir === 'asc' ? ' ▲' : sortBy === 'email' ? ' ▼' : ''}
+                                            Email
+                                            <span className={`sort-indicator${sortBy === 'email' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'email' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('added')}>
-                                            Added{sortBy === 'added' && sortDir === 'asc' ? ' ▲' : sortBy === 'added' ? ' ▼' : ''}
+                                            Added
+                                            <span className={`sort-indicator${sortBy === 'added' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'added' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="text-right">Actions</th>
                                     </tr>
@@ -454,14 +627,32 @@ export default function Suppliers() {
                                             <td>{supplier.email || '—'}</td>
                                             <td className="muted">{formatDate(supplier.created_at)}</td>
                                             <td className="text-right actions-cell">
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-ghost btn-sm"
-                                                    disabled={deletingId === supplier.id}
-                                                    onClick={() => handleDeactivate(supplier)}
+                                                <Tooltip
+                                                    label="Edit"
+                                                    className="btn btn-ghost btn-sm action-icon-btn"
+                                                    onClick={() => openEdit(supplier)}
                                                 >
-                                                    Remove
-                                                </button>
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M12 20h9" />
+                                                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                                    </svg>
+                                                </Tooltip>
+                                                <Tooltip
+                                                    label="Remove"
+                                                    className="btn btn-ghost btn-sm btn-danger-text action-icon-btn"
+                                                    disabled={deletingId === supplier.id}
+                                                    onClick={() => {
+                                                        setRemoveError(null);
+                                                        setRemoveSupplier(supplier);
+                                                    }}
+                                                >
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M3 6h18" />
+                                                        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                                        <path d="M10 11v6M14 11v6" />
+                                                    </svg>
+                                                </Tooltip>
                                             </td>
                                         </tr>
                                     ))}
@@ -469,7 +660,7 @@ export default function Suppliers() {
                             </table>
 
                             {sortedSuppliers.length === 0 && (
-                                <div className="table-empty">
+                                <div className="table-empty table-empty-solid">
                                     <span className="table-empty-icon" aria-hidden="true">
                                         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                                             <circle cx="11" cy="11" r="8" />
@@ -478,7 +669,7 @@ export default function Suppliers() {
                                         </svg>
                                     </span>
                                     <p className="table-empty-title">No suppliers yet</p>
-                                    <p className="table-empty-sub">Add a supplier to get started.</p>
+                                    <p className="table-empty-sub">Add a supplier or add the 7 sample suppliers to populate this list.</p>
                                 </div>
                             )}
                         </div>
@@ -510,6 +701,7 @@ export default function Suppliers() {
                                 <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </button>
+                        <span className="page-detail">{Math.min(safePage * PER_PAGE, sortedSuppliers.length)} of {sortedSuppliers.length}</span>
                     </div>
                 )}
             </section>
@@ -543,6 +735,15 @@ export default function Suppliers() {
                                     role="menuitem"
                                     onClick={() => {
                                         setActivityOptionsOpen(false);
+
+                                        if (activity.length === 0) {
+                                            setEmptyNotice({
+                                                title: 'Nothing to clear',
+                                                description: 'The activity list is already empty. Add or remove a supplier and its activity will show up here.',
+                                            });
+                                            return;
+                                        }
+
                                         setClearError(null);
                                         setClearConfirm(true);
                                     }}
@@ -647,26 +848,107 @@ export default function Suppliers() {
             )}
 
             {showAdd && (
-                <Modal title="Add supplier" onClose={() => setShowAdd(false)}>
+                <Modal
+                    title="Add supplier"
+                    description="Register a supplier so you can link incoming deliveries on Stock Inventory."
+                    className="modal-user-create"
+                    noClose
+                    loading={saving}
+                    onClose={closeAddModal}
+                >
                     <form className="form" onSubmit={handleSave}>
-                        <label className="field">
-                            <span>Supplier name *</span>
-                            <input type="text" required maxLength={255} value={form.name} onChange={setField('name')} autoFocus />
-                        </label>
                         <div className="field-row">
                             <label className="field">
-                                <span>Contact person</span>
-                                <input type="text" maxLength={255} value={form.contact_person} onChange={setField('contact_person')} />
+                                <span className="field-label">
+                                    Supplier name
+                                    <InfoTip text="Official business or distributor name shown in Stock-In." />
+                                    <span className="text-danger">*</span>
+                                </span>
+                                <div className="input-prefix-wrap has-icon">
+                                    <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M3 21h18" />
+                                            <path d="M5 21V7l8-4v18" />
+                                            <path d="M19 21V11l-6-4" />
+                                            <path d="M9 9v.01M9 12v.01M9 15v.01M9 18v.01" />
+                                        </svg>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        required
+                                        maxLength={255}
+                                        placeholder="e.g. Metro Steel & Hardware Supply"
+                                        value={form.name}
+                                        onChange={setField('name')}
+                                        autoFocus
+                                    />
+                                </div>
                             </label>
                             <label className="field">
-                                <span>Phone</span>
-                                <input type="text" maxLength={50} value={form.phone} onChange={setField('phone')} />
+                                <span className="field-label">
+                                    Contact person
+                                    <InfoTip text="Primary sales representative or delivery coordinator." />
+                                </span>
+                                <div className="input-prefix-wrap has-icon">
+                                    <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="12" cy="8" r="4" />
+                                            <path d="M4 21a8 8 0 0 1 16 0" />
+                                        </svg>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        maxLength={255}
+                                        placeholder="e.g. Juan Dela Cruz"
+                                        value={form.contact_person}
+                                        onChange={setField('contact_person')}
+                                    />
+                                </div>
                             </label>
                         </div>
-                        <label className="field">
-                            <span>Email</span>
-                            <input type="email" maxLength={255} value={form.email} onChange={setField('email')} />
-                        </label>
+                        <div className="field-row">
+                            <label className="field">
+                                <span className="field-label">
+                                    Email
+                                    <InfoTip text="Optional email address for purchase orders or receipts." />
+                                </span>
+                                <div className="input-prefix-wrap has-icon">
+                                    <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                                        </svg>
+                                    </span>
+                                    <input
+                                        type="email"
+                                        maxLength={255}
+                                        placeholder="e.g. sales@metrosteel.example.com"
+                                        value={form.email}
+                                        onChange={setField('email')}
+                                    />
+                                </div>
+                            </label>
+                            <label className="field">
+                                <span className="field-label">
+                                    Phone
+                                    <InfoTip text="Mobile or landline number for order follow-ups." />
+                                </span>
+                                <div className="input-prefix-wrap has-icon">
+                                    <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                                        </svg>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        maxLength={50}
+                                        placeholder="e.g. 0917-123-4567"
+                                        value={form.phone}
+                                        onChange={setField('phone')}
+                                    />
+                                </div>
+                            </label>
+                        </div>
 
                         {formError && (
                             <div className="alert alert-error" role="alert">
@@ -675,12 +957,78 @@ export default function Suppliers() {
                             </div>
                         )}
 
-                        <div className="modal-actions">
-                            <button type="button" className="btn btn-ghost" onClick={() => setShowAdd(false)}>
+                        <div className="modal-actions modal-actions-center">
+                            <button type="button" className="btn btn-ghost" onClick={closeAddModal} disabled={saving}>
                                 Cancel
                             </button>
                             <button type="submit" className="btn btn-primary" disabled={saving}>
                                 {saving ? 'Saving…' : 'Save supplier'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {editSupplier && editForm && (
+                <Modal
+                    title="Edit Supplier"
+                    titleIcon={MODAL_INFO_ICON}
+                    className="modal-user-create"
+                    loading={editing}
+                    onClose={() => { if (!editing) setEditSupplier(null); }}
+                >
+                    <form className="form" onSubmit={handleEdit}>
+                        <div className="field-row">
+                            <label className="field">
+                                <span className="field-label">Supplier name <span className="text-danger">*</span></span>
+                                <input
+                                    type="text"
+                                    required
+                                    maxLength={255}
+                                    value={editForm.name}
+                                    onChange={(e) => setEditForm((c) => ({ ...c, name: e.target.value }))}
+                                    autoFocus
+                                />
+                            </label>
+                            <label className="field">
+                                <span className="field-label">Contact person</span>
+                                <input
+                                    type="text"
+                                    maxLength={255}
+                                    value={editForm.contact_person}
+                                    onChange={(e) => setEditForm((c) => ({ ...c, contact_person: e.target.value }))}
+                                />
+                            </label>
+                        </div>
+                        <div className="field-row">
+                            <label className="field">
+                                <span className="field-label">Email</span>
+                                <input
+                                    type="email"
+                                    maxLength={255}
+                                    value={editForm.email}
+                                    onChange={(e) => setEditForm((c) => ({ ...c, email: e.target.value }))}
+                                />
+                            </label>
+                            <label className="field">
+                                <span className="field-label">Phone</span>
+                                <input
+                                    type="text"
+                                    maxLength={50}
+                                    value={editForm.phone}
+                                    onChange={(e) => setEditForm((c) => ({ ...c, phone: e.target.value }))}
+                                />
+                            </label>
+                        </div>
+
+                        {editError && <div className="alert alert-error" role="alert"><span>{editError}</span></div>}
+
+                        <div className="modal-actions modal-actions-center">
+                            <button type="button" className="btn btn-ghost" onClick={() => setEditSupplier(null)} disabled={editing}>
+                                Cancel
+                            </button>
+                            <button type="submit" className="btn btn-primary" disabled={editing}>
+                                {editing ? 'Saving…' : 'Save changes'}
                             </button>
                         </div>
                     </form>
@@ -748,6 +1096,53 @@ export default function Suppliers() {
                         <button type="button" className="btn btn-ghost" onClick={() => setActivityDetail(null)}>Close</button>
                     </div>
                 </Modal>
+            )}
+
+            {removeSupplier && (
+                <ConfirmDialog
+                    tone="danger"
+                    title={<>Remove <strong>{removeSupplier.name}</strong>?</>}
+                    description="This removes the supplier from the active Supplier List and Stock-In dropdown. Past delivery records stay intact."
+                    confirmLabel="Remove"
+                    loadingLabel="Removing…"
+                    loading={deletingId === removeSupplier?.id}
+                    error={removeError}
+                    onConfirm={handleRemoveConfirm}
+                    onCancel={() => {
+                        if (deletingId !== removeSupplier?.id) {
+                            setRemoveSupplier(null);
+                            setRemoveError(null);
+                        }
+                    }}
+                />
+            )}
+
+            {emptyNotice && (
+                <MessageDialog
+                    tone="info"
+                    title={emptyNotice.title}
+                    description={emptyNotice.description}
+                    onClose={() => setEmptyNotice(null)}
+                />
+            )}
+
+            {deleteAllConfirm && (
+                <ConfirmDialog
+                    tone="danger"
+                    title="Delete all suppliers?"
+                    description={`This removes all ${sortedSuppliers.length} active supplier(s) from the Supplier List and Stock-In dropdown. Past delivery records stay intact.`}
+                    confirmLabel="Delete all"
+                    loadingLabel="Deleting…"
+                    loading={deletingAll}
+                    error={deleteAllError}
+                    onConfirm={handleDeleteAllConfirm}
+                    onCancel={() => {
+                        if (!deletingAll) {
+                            setDeleteAllConfirm(false);
+                            setDeleteAllError(null);
+                        }
+                    }}
+                />
             )}
 
             {clearConfirm && (
