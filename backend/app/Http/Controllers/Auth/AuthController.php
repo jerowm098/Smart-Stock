@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -121,6 +122,91 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Logged out successfully.',
+        ]);
+    }
+
+    /**
+     * SS-120 / SS-126: Request a password reset token.
+     *
+     * Stores a SHA-256 hash of the token plus a 30-minute expiry on the user
+     * record (SS-128). Because Smart-Stock runs without an external SMTP relay,
+     * the reset link/token is returned in the JSON payload when an active
+     * account matches so the user can proceed directly to /reset-password.
+     */
+    public function apiForgotPassword(Request $request): JsonResponse
+    {
+        $request->merge([
+            'identifier' => $request->input('identifier')
+                ?: $request->input('email')
+                ?: $request->input('username'),
+        ]);
+
+        $validated = $request->validate([
+            'identifier' => ['required', 'string', 'max:255'],
+        ]);
+
+        $user = $this->findAuthenticatable(trim($validated['identifier']));
+
+        if (! $user || ! $user->isActive()) {
+            return response()->json([
+                'message' => 'If an active account matches that username or email, a password reset link has been generated.',
+            ]);
+        }
+
+        $plainToken = Str::random(64);
+        $expiresAt = now()->addMinutes(30);
+
+        $user->forceFill([
+            'reset_token' => hash('sha256', $plainToken),
+            'reset_token_expires_at' => $expiresAt,
+        ])->save();
+
+        return response()->json([
+            'message' => 'Password reset link generated. It will expire in 30 minutes.',
+            'reset_token' => $plainToken,
+            'reset_url' => "/reset-password?token={$plainToken}",
+            'expires_at' => $expiresAt->toISOString(),
+        ]);
+    }
+
+    /**
+     * SS-120 / SS-127: Complete a password reset using a valid, non-expired token.
+     */
+    public function apiResetPassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'token' => ['required', 'string'],
+            'password' => ['required', 'string', 'min:6', 'confirmed'],
+        ]);
+
+        $hashedToken = hash('sha256', trim($validated['token']));
+        $user = User::where('reset_token', $hashedToken)->first();
+
+        if (! $user || ! $user->isActive()) {
+            return response()->json([
+                'message' => 'This password reset token is invalid.',
+            ], 422);
+        }
+
+        if (! $user->reset_token_expires_at || $user->reset_token_expires_at->isPast()) {
+            $user->forceFill([
+                'reset_token' => null,
+                'reset_token_expires_at' => null,
+            ])->save();
+
+            return response()->json([
+                'message' => 'This password reset token has expired. Please request a new one.',
+            ], 422);
+        }
+
+        $user->forceFill([
+            'password' => Hash::make($validated['password']),
+            'reset_token' => null,
+            'reset_token_expires_at' => null,
+        ])->save();
+
+        return response()->json([
+            'message' => 'Your password has been reset. You can now sign in with your new password.',
         ]);
     }
 }

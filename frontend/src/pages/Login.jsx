@@ -119,6 +119,12 @@ export default function Login() {
                             </div>
                         </label>
 
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '-6px' }}>
+                            <Link to="/forgot-password" style={{ fontSize: '13px', fontWeight: 500 }}>
+                                Forgot password?
+                            </Link>
+                        </div>
+
                         {error && (
                             <p className="form-error" role="alert">
                                 {error}
