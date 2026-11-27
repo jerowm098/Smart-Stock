@@ -4,7 +4,10 @@ import { PageLoadbarProvider } from './components/PageLoadbar.jsx';
 import AppLayout from './layouts/AppLayout.jsx';
 import Home from './pages/Home.jsx';
 import Login from './pages/Login.jsx';
+import ForgotPassword from './pages/ForgotPassword.jsx';
+import ResetPassword from './pages/ResetPassword.jsx';
 import Products from './pages/admin/Products.jsx';
+import Categories from './pages/admin/Categories.jsx';
 import StockIn from './pages/admin/StockIn.jsx';
 import Dashboard from './pages/admin/Dashboard.jsx';
 import Transactions from './pages/admin/Transactions.jsx';
@@ -22,12 +25,15 @@ export default function App() {
             <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
                 <Route element={<ProtectedRoute />}>
                     <Route element={<AppLayout />}>
                         <Route element={<RequireRole role="admin" />}>
                             <Route path="/dashboard" element={<Dashboard />} />
                             <Route path="/products" element={<Products />} />
+                            <Route path="/categories" element={<Categories />} />
                             <Route path="/stock-in" element={<StockIn />} />
                             <Route path="/checkout" element={<AdminPos />} />
                             <Route path="/transactions" element={<Transactions />} />

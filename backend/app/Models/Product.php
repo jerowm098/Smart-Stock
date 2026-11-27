@@ -49,6 +49,7 @@ class Product extends Model
         'description',
         'sku',
         'category',
+        'category_id',
         'price',
         'current_stock',
         'reorder_threshold',
@@ -88,5 +89,13 @@ class Product extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Get the linked hardware category record (SS-141).
+     */
+    public function categoryRecord(): BelongsTo
+    {
+        return $this->belongsTo(Category::class, 'category_id');
     }
 }
