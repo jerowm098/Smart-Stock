@@ -147,8 +147,10 @@ export default function Backups() {
     const [toast, setToast] = useState(null);
     const ACTIVITY_PER_PAGE = 3;
 
-    const load = useCallback(async () => {
-        setLoading(true);
+    const load = useCallback(async (silent = false) => {
+        if (!silent) {
+            setLoading(true);
+        }
         setError(null);
 
         try {
@@ -169,6 +171,8 @@ export default function Backups() {
             setLoading(false);
         }
     }, []);
+
+    const refresh = useCallback(() => load(true), [load]);
 
     useEffect(() => {
         load();
@@ -351,7 +355,7 @@ export default function Backups() {
                     title: 'Backup created successfully',
                     description: `A new database dump (${rangeLabels[backupRange] ?? 'selected range'}) has been saved to the server.`,
                 });
-                await load();
+                await refresh();
             } else {
                 setRunModalError(response.output || 'The backup did not complete.');
             }
@@ -380,7 +384,7 @@ export default function Backups() {
 
             setDeleteConfirm(null);
             setToast({ tone: 'success', text: response?.message ?? 'Backup deleted successfully.' });
-            await load();
+            await refresh();
         } catch (err) {
             setDeleteError(validationMessages(err)[0] ?? err.message ?? 'Could not delete the backup.');
         } finally {
@@ -451,7 +455,7 @@ export default function Backups() {
         try {
             const response = await post('/api/backups/seed');
             setToast({ tone: 'success', text: response?.message ?? '7 sample backups added.' });
-            await load();
+            await refresh();
         } catch (err) {
             setToast({
                 tone: 'error',
@@ -474,7 +478,7 @@ export default function Backups() {
 
             setDeleteAllConfirm(false);
             setToast({ tone: 'success', text: response?.message ?? 'All backups deleted.' });
-            await load();
+            await refresh();
         } catch (err) {
             setDeleteAllError(validationMessages(err)[0] ?? err.message ?? 'Could not delete the backups.');
         } finally {
@@ -717,9 +721,9 @@ export default function Backups() {
                                 <div className="table-empty table-empty-solid">
                                     <span className="table-empty-icon" aria-hidden="true">
                                         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <ellipse cx="12" cy="5" rx="8" ry="3" />
-                                            <path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
-                                            <path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3" />
+                                            <circle cx="11" cy="11" r="8" />
+                                            <path d="M21 21l-4.35-4.35" />
+                                            <path d="M11 8v6M8 11h6" />
                                         </svg>
                                     </span>
                                     <p className="table-empty-title">No backups yet</p>
@@ -755,6 +759,7 @@ export default function Backups() {
                                 <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </button>
+                        <span className="page-detail">{Math.min(safePage * PER_PAGE, sortedBackups.length)} of {sortedBackups.length}</span>
                     </div>
                 )}
             </section>

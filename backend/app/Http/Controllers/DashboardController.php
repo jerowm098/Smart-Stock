@@ -630,5 +630,85 @@ class DashboardController extends Controller
 
         return response()->json($sales);
     }
+
+    /**
+     * Seed 7 sample transactions for quick pagination / table testing.
+     */
+    public function seedTransactions(): JsonResponse
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $products = Product::orderBy('id')->limit(7)->get();
+        $sampleTotals = [150.00, 245.00, 380.00, 120.00, 540.00, 290.00, 460.00];
+        $cashier = \App\Models\User::where('role', 'cashier')->first();
+        $created = 0;
+
+        DB::transaction(function () use ($products, $sampleTotals, $user, $cashier, &$created) {
+            for ($i = 0; $i < 7; $i++) {
+                $product = $products->isNotEmpty() ? $products[$i % $products->count()] : null;
+                $qty = ($i % 3) + 1;
+                $unitPrice = $product ? (float) ($product->price ?: 100) : $sampleTotals[$i];
+                $lineTotal = $product ? round($unitPrice * $qty, 2) : $sampleTotals[$i];
+                $payment = ceil($lineTotal / 50) * 50;
+                $change = round($payment - $lineTotal, 2);
+                $useCashier = $cashier && ($i % 2 === 1);
+                $ts = now()->subMinutes((7 - $i) * 17);
+
+                $sale = Sale::create([
+                    'user_id' => $useCashier ? $cashier->id : $user->id,
+                    'total_amount' => $lineTotal,
+                    'payment_amount' => $payment,
+                    'change_amount' => $change,
+                    'channel' => $useCashier ? 'cashier' : 'admin',
+                    'created_at' => $ts,
+                    'updated_at' => $ts,
+                ]);
+
+                if ($product) {
+                    \App\Models\SaleItem::create([
+                        'sale_id' => $sale->id,
+                        'product_id' => $product->id,
+                        'quantity' => $qty,
+                        'unit_price' => $unitPrice,
+                        'line_total' => $lineTotal,
+                    ]);
+                }
+
+                $created++;
+            }
+        });
+
+        return response()->json([
+            'message' => "{$created} sample transactions added.",
+        ], 201);
+    }
+
+    /**
+     * Delete all transaction records (sales and their line items).
+     */
+    public function destroyAllTransactions(): JsonResponse
+    {
+        $user = Auth::user();
+        if (! $user) {
+            return response()->json(['message' => 'Unauthenticated'], 401);
+        }
+
+        $count = Sale::count();
+        if ($count === 0) {
+            return response()->json(['message' => 'No transactions to delete.']);
+        }
+
+        DB::transaction(function () {
+            \App\Models\SaleItem::query()->delete();
+            Sale::query()->delete();
+        });
+
+        return response()->json([
+            'message' => "All transactions deleted ({$count}).",
+        ]);
+    }
 }
 

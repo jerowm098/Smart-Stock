@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import Modal from '../../components/Modal.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
+import MessageDialog from '../../components/MessageDialog.jsx';
+import Tooltip from '../../components/Tooltip.jsx';
 import Alert, { Toast } from '../../components/Feedback.jsx';
 import { downloadFile, del, get, post, validationMessages } from '../../lib/api.js';
 import { formatPeso } from '../../lib/format.js';
@@ -15,8 +17,8 @@ const TABS = [
 
 const PER_PAGE = 6;
 
-// Urgency ranking matches the backend default order (critical first).
-const URGENCY_RANK = { critical: 0, high: 1, medium: 2, low: 3, watch: 4 };
+// Urgency ranking matches the backend / Jira SS-35 levels (critical first).
+const URGENCY_RANK = { critical: 0, low: 1 };
 
 // Column → row-field accessors for the client-side table sort.
 const SORT_FIELDS = {
@@ -33,8 +35,7 @@ const SORT_FIELDS = {
 
 function urgencyClass(urgency) {
     if (urgency === 'critical') return 'pill-danger';
-    if (urgency === 'medium' || urgency === 'high') return 'pill-warn';
-    return 'pill-ok';
+    return 'pill-warn';
 }
 
 function highlight(text, needle) {
@@ -133,6 +134,13 @@ export default function OrderSuggestions() {
     const [clearError, setClearError] = useState(null);
     const [activityOptionsOpen, setActivityOptionsOpen] = useState(false);
     const activityOptionsRef = useRef(null);
+    const [suggestionsOptionsOpen, setSuggestionsOptionsOpen] = useState(false);
+    const suggestionsOptionsRef = useRef(null);
+    const [seeding, setSeeding] = useState(false);
+    const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+    const [deletingAll, setDeletingAll] = useState(false);
+    const [deleteAllError, setDeleteAllError] = useState(null);
+    const [emptyNotice, setEmptyNotice] = useState(null);
     const ACTIVITY_PER_PAGE = 3;
 
     const load = useCallback(async (silent = false) => {
@@ -141,7 +149,7 @@ export default function OrderSuggestions() {
 
         try {
             const [suggestions, feed] = await Promise.all([
-                get('/api/dashboard/order-suggestions', { status }),
+                get('/api/dashboard/order-suggestions', { status: 'all' }),
                 get('/api/activity/recent', {
                     limit: 12,
                     actions: 'suggestion_ordered,suggestion_dismissed',
@@ -155,7 +163,7 @@ export default function OrderSuggestions() {
         } finally {
             setLoading(false);
         }
-    }, [status]);
+    }, []);
 
     useEffect(() => {
         // Initial load paints the skeleton; tab changes update smoothly in place
@@ -164,10 +172,10 @@ export default function OrderSuggestions() {
 
     const refresh = useCallback(() => load(true), [load]);
 
-    // Options dropdown (kebab) on the Recent Activity card header: closes on
-    // outside click and Escape, same behaviour as the topbar menus.
+    // Options dropdowns (kebabs) on Order Suggestions and Recent Activity card
+    // headers: close on outside click and Escape, matching the other admin pages.
     useEffect(() => {
-        if (!activityOptionsOpen) {
+        if (!activityOptionsOpen && !suggestionsOptionsOpen) {
             return;
         }
 
@@ -175,11 +183,15 @@ export default function OrderSuggestions() {
             if (activityOptionsRef.current && !activityOptionsRef.current.contains(event.target)) {
                 setActivityOptionsOpen(false);
             }
+            if (suggestionsOptionsRef.current && !suggestionsOptionsRef.current.contains(event.target)) {
+                setSuggestionsOptionsOpen(false);
+            }
         };
 
         const onKey = (event) => {
             if (event.key === 'Escape') {
                 setActivityOptionsOpen(false);
+                setSuggestionsOptionsOpen(false);
             }
         };
 
@@ -190,7 +202,7 @@ export default function OrderSuggestions() {
             document.removeEventListener('mousedown', onDown);
             document.removeEventListener('keydown', onKey);
         };
-    }, [activityOptionsOpen]);
+    }, [activityOptionsOpen, suggestionsOptionsOpen]);
 
     async function handleClearActivity() {
         setClearing(true);
@@ -210,6 +222,38 @@ export default function OrderSuggestions() {
             setClearError(validationMessages(err)[0] ?? err.message ?? 'Could not clear the activity list.');
         } finally {
             setClearing(false);
+        }
+    }
+
+    async function handleSeedSuggestions() {
+        if (seeding) return;
+        setSeeding(true);
+
+        try {
+            const response = await post('/api/dashboard/order-suggestions/seed');
+            setMessage(response?.message ?? '7 sample order suggestions added.');
+            await refresh();
+        } catch (err) {
+            setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample suggestions.');
+        } finally {
+            setSeeding(false);
+        }
+    }
+
+    async function handleDeleteAllConfirm() {
+        if (deletingAll) return;
+        setDeletingAll(true);
+        setDeleteAllError(null);
+
+        try {
+            const response = await del('/api/dashboard/order-suggestions');
+            setDeleteAllConfirm(false);
+            setMessage(response?.message ?? 'All order suggestions deleted.');
+            await refresh();
+        } catch (err) {
+            setDeleteAllError(validationMessages(err)[0] ?? err.message ?? 'Could not delete order suggestions.');
+        } finally {
+            setDeletingAll(false);
         }
     }
 
@@ -250,7 +294,11 @@ export default function OrderSuggestions() {
         }
     }
 
-    const suggestions = data?.suggestions ?? [];
+    const allSuggestions = data?.suggestions ?? [];
+    const suggestions = useMemo(
+        () => (status === 'all' ? allSuggestions : allSuggestions.filter((s) => s.status === status)),
+        [allSuggestions, status],
+    );
 
     const categories = useMemo(() => {
         const set = new Set();
@@ -551,8 +599,6 @@ export default function OrderSuggestions() {
                                     >
                                         <option value="">All urgencies</option>
                                         <option value="critical">Critical</option>
-                                        <option value="high">High</option>
-                                        <option value="medium">Medium</option>
                                         <option value="low">Low</option>
                                     </select>
                                 </label>
@@ -594,14 +640,82 @@ export default function OrderSuggestions() {
                                 <h3>Order Suggestions</h3>
                                 <p className="muted">Suggested restocks with demand, urgency and estimated cost.</p>
                             </div>
-                            <button
-                                type="button"
-                                className="btn btn-primary"
-                                onClick={runForecast}
-                                disabled={forecasting}
-                            >
-                                {forecasting ? 'Computing…' : 'Run forecast'}
-                            </button>
+                            <div className="head-actions">
+                                <button
+                                    type="button"
+                                    className="btn btn-primary"
+                                    onClick={runForecast}
+                                    disabled={forecasting}
+                                >
+                                    {forecasting ? 'Computing…' : 'Run forecast'}
+                                </button>
+                                <div className="activity-options" ref={suggestionsOptionsRef}>
+                                    <button
+                                        type="button"
+                                        className="icon-btn is-outlined"
+                                        onClick={() => setSuggestionsOptionsOpen((open) => !open)}
+                                        aria-haspopup="menu"
+                                        aria-expanded={suggestionsOptionsOpen}
+                                        aria-label="Order suggestion options"
+                                    >
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+                                            <circle cx="12" cy="5" r="1.7" />
+                                            <circle cx="12" cy="12" r="1.7" />
+                                            <circle cx="12" cy="19" r="1.7" />
+                                        </svg>
+                                    </button>
+                                    {suggestionsOptionsOpen && (
+                                        <div className="activity-options-panel" role="menu" aria-label="Order suggestion options">
+                                            {status === 'active' && (
+                                                <button
+                                                    type="button"
+                                                    className="activity-options-item"
+                                                    role="menuitem"
+                                                    disabled={seeding || deletingAll}
+                                                    onClick={() => {
+                                                        setSuggestionsOptionsOpen(false);
+                                                        handleSeedSuggestions();
+                                                    }}
+                                                >
+                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                        <path d="M9 12h6m-6 3.75h6M9 4.5h6M6.75 6.75h10.5a1.5 1.5 0 011.5 1.5v10.5a1.5 1.5 0 01-1.5 1.5H6.75a1.5 1.5 0 01-1.5-1.5V8.25a1.5 1.5 0 011.5-1.5z" />
+                                                    </svg>
+                                                    <span>Add 7 sample suggestions</span>
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                className="activity-options-item activity-options-danger"
+                                                role="menuitem"
+                                                disabled={seeding || deletingAll}
+                                                onClick={() => {
+                                                    setSuggestionsOptionsOpen(false);
+
+                                                    if (suggestions.length === 0) {
+                                                        setEmptyNotice({
+                                                            title: 'No suggestions to delete',
+                                                            description: 'The order suggestions list is already empty. Run a forecast or add the 7 sample suggestions on the Active tab first.',
+                                                        });
+                                                        return;
+                                                    }
+
+                                                    setDeleteAllError(null);
+                                                    setDeleteAllConfirm(true);
+                                                }}
+                                            >
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                    <path d="M3 6h18" />
+                                                    <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                                    <path d="M10 11v6" />
+                                                    <path d="M14 11v6" />
+                                                </svg>
+                                                <span>Delete all suggestions</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
 
                         <div className="table-shell">
@@ -610,35 +724,62 @@ export default function OrderSuggestions() {
                                     <thead>
                                         <tr>
                                             <th className="sort-header" onClick={() => toggleSort('name')}>
-                                                Product{sortBy === 'name' && sortDir === 'asc' ? ' ▲' : sortBy === 'name' ? ' ▼' : ''}
+                                                Product
+                                                <span className={`sort-indicator${sortBy === 'name' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'name' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('sku')} title="Stock Keeping Unit">
-                                                SKU{sortBy === 'sku' && sortDir === 'asc' ? ' ▲' : sortBy === 'sku' ? ' ▼' : ''}
+                                                SKU
+                                                <span className={`sort-indicator${sortBy === 'sku' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'sku' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                                 <span className="th-sub">Stock Keeping Unit</span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('stock')}>
-                                                Stock{sortBy === 'stock' && sortDir === 'asc' ? ' ▲' : sortBy === 'stock' ? ' ▼' : ''}
+                                                Stock
+                                                <span className={`sort-indicator${sortBy === 'stock' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'stock' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('avg_daily')} title="Average daily sales">
-                                                Avg Daily{sortBy === 'avg_daily' && sortDir === 'asc' ? ' ▲' : sortBy === 'avg_daily' ? ' ▼' : ''}
+                                                Avg Daily
+                                                <span className={`sort-indicator${sortBy === 'avg_daily' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'avg_daily' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                                 <span className="th-sub">Average daily sales</span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('reorder_point')} title="Reorder threshold point">
-                                                Reorder pt{sortBy === 'reorder_point' && sortDir === 'asc' ? ' ▲' : sortBy === 'reorder_point' ? ' ▼' : ''}
+                                                Reorder pt
+                                                <span className={`sort-indicator${sortBy === 'reorder_point' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'reorder_point' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                                 <span className="th-sub">Reorder point</span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('suggested_qty')} title="Suggested order quantity">
-                                                Suggested{sortBy === 'suggested_qty' && sortDir === 'asc' ? ' ▲' : sortBy === 'suggested_qty' ? ' ▼' : ''}
+                                                Suggested
+                                                <span className={`sort-indicator${sortBy === 'suggested_qty' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'suggested_qty' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('est_cost')} title="Estimated restock cost">
-                                                Est. Cost{sortBy === 'est_cost' && sortDir === 'asc' ? ' ▲' : sortBy === 'est_cost' ? ' ▼' : ''}
+                                                Est. Cost
+                                                <span className={`sort-indicator${sortBy === 'est_cost' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'est_cost' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                                 <span className="th-sub">Estimated cost</span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('urgency')}>
-                                                Urgency{sortBy === 'urgency' && sortDir === 'asc' ? ' ▲' : sortBy === 'urgency' ? ' ▼' : ''}
+                                                Urgency
+                                                <span className={`sort-indicator${sortBy === 'urgency' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'urgency' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('reason')}>
-                                                Reason{sortBy === 'reason' && sortDir === 'asc' ? ' ▲' : sortBy === 'reason' ? ' ▼' : ''}
+                                                Reason
+                                                <span className={`sort-indicator${sortBy === 'reason' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'reason' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                             </th>
                                             {status === 'active' && <th>Actions</th>}
                                         </tr>
@@ -673,22 +814,28 @@ export default function OrderSuggestions() {
                                                 </td>
                                                 {status === 'active' && (
                                                     <td className="actions-cell">
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-primary btn-sm"
+                                                        <Tooltip
+                                                            label="Ordered"
+                                                            className="btn btn-ghost btn-sm btn-success-text action-icon-btn"
                                                             disabled={busyId === suggestion.id}
                                                             onClick={() => act(suggestion, 'ordered')}
                                                         >
-                                                            Ordered
-                                                        </button>
-                                                        <button
-                                                            type="button"
-                                                            className="btn btn-ghost btn-sm"
+                                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <circle cx="12" cy="12" r="9" />
+                                                                <path d="m8.5 12 2.5 2.5 4.5-5" />
+                                                            </svg>
+                                                        </Tooltip>
+                                                        <Tooltip
+                                                            label="Dismiss"
+                                                            className="btn btn-ghost btn-sm btn-danger-text action-icon-btn"
                                                             disabled={busyId === suggestion.id}
                                                             onClick={() => act(suggestion, 'dismiss')}
                                                         >
-                                                            Dismiss
-                                                        </button>
+                                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <circle cx="12" cy="12" r="9" />
+                                                                <path d="m15 9-6 6M9 9l6 6" />
+                                                            </svg>
+                                                        </Tooltip>
                                                     </td>
                                                 )}
                                             </tr>
@@ -697,13 +844,25 @@ export default function OrderSuggestions() {
                                 </table>
 
                                 {sortedSuggestions.length === 0 && (
-                                    <p className="muted padded">
-                                        {hasActiveFilters
-                                            ? 'No suggestions match the selected filters.'
-                                            : status === 'active'
-                                                ? 'Nothing to reorder — every active product is above its reorder point.'
-                                                : 'No suggestions with this status.'}
-                                    </p>
+                                    <div className="table-empty table-empty-solid">
+                                        <span className="table-empty-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <circle cx="11" cy="11" r="8" />
+                                                <path d="M21 21l-4.35-4.35" />
+                                                <path d="M11 8v6M8 11h6" />
+                                            </svg>
+                                        </span>
+                                        <p className="table-empty-title">
+                                            {hasActiveFilters ? 'No results found' : 'No order suggestions yet'}
+                                        </p>
+                                        <p className="table-empty-sub">
+                                            {hasActiveFilters
+                                                ? 'Try adjusting your search or filters.'
+                                                : status === 'active'
+                                                    ? 'Run a forecast or add the 7 sample suggestions to populate this list.'
+                                                    : 'No suggestions with this status.'}
+                                        </p>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -733,6 +892,7 @@ export default function OrderSuggestions() {
                                         <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                 </button>
+                                <span className="page-detail">{Math.min(safePage * PER_PAGE, sortedSuggestions.length)} of {sortedSuggestions.length}</span>
                             </div>
                         )}
                     </section>
@@ -767,6 +927,15 @@ export default function OrderSuggestions() {
                                             role="menuitem"
                                             onClick={() => {
                                                 setActivityOptionsOpen(false);
+
+                                                if (activity.length === 0) {
+                                                    setEmptyNotice({
+                                                        title: 'Nothing to clear',
+                                                        description: 'The activity list is already empty. Mark a suggestion as ordered or dismiss one and its activity will show up here.',
+                                                    });
+                                                    return;
+                                                }
+
                                                 setClearError(null);
                                                 setClearConfirm(true);
                                             }}
@@ -856,6 +1025,7 @@ export default function OrderSuggestions() {
                                                 <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                             </svg>
                                         </button>
+                                        <span className="page-detail">{Math.min(activitySafePage * ACTIVITY_PER_PAGE, activity.length)} of {activity.length}</span>
                                     </div>
                                 )}
                             </>
@@ -925,6 +1095,34 @@ export default function OrderSuggestions() {
                     <button type="button" className="btn btn-ghost" onClick={() => setActivityDetail(null)}>Close</button>
                 </div>
             </Modal>
+        )}
+
+        {emptyNotice && (
+            <MessageDialog
+                tone="info"
+                title={emptyNotice.title}
+                description={emptyNotice.description}
+                onClose={() => setEmptyNotice(null)}
+            />
+        )}
+
+        {deleteAllConfirm && (
+            <ConfirmDialog
+                tone="danger"
+                title="Delete all suggestions?"
+                description={`This permanently deletes all ${suggestions.length} order suggestion(s). Products and sales history are not affected. This action cannot be undone.`}
+                confirmLabel="Delete all"
+                loadingLabel="Deleting…"
+                loading={deletingAll}
+                error={deleteAllError}
+                onConfirm={handleDeleteAllConfirm}
+                onCancel={() => {
+                    if (!deletingAll) {
+                        setDeleteAllConfirm(false);
+                        setDeleteAllError(null);
+                    }
+                }}
+            />
         )}
 
         {clearConfirm && (

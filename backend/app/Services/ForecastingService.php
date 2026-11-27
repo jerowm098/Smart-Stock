@@ -124,7 +124,7 @@ class ForecastingService
 
             $daysLeft = $avgDaily > 0 ? round($current / $avgDaily, 1) : null;
 
-            $urgency = 'watch';
+            $urgency = 'low';
             if ($current <= 0) {
                 $urgency = 'critical';
             } elseif ($usesFallback) {

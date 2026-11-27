@@ -5,6 +5,7 @@ import { get, post, del, validationMessages } from '../../lib/api.js';
 import { timeAgo } from '../../lib/format.js';
 import Modal from '../../components/Modal.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
+import MessageDialog from '../../components/MessageDialog.jsx';
 import Tooltip from '../../components/Tooltip.jsx';
 import InfoTip from '../../components/InfoTip.jsx';
 
@@ -193,12 +194,19 @@ export default function StockIn() {
     const [clearError, setClearError] = useState(null);
     const [activityOptionsOpen, setActivityOptionsOpen] = useState(false);
     const activityOptionsRef = useRef(null);
+    const [stockOptionsOpen, setStockOptionsOpen] = useState(false);
+    const stockOptionsRef = useRef(null);
+    const [seeding, setSeeding] = useState(false);
+    const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+    const [deletingAll, setDeletingAll] = useState(false);
+    const [deleteAllError, setDeleteAllError] = useState(null);
+    const [emptyNotice, setEmptyNotice] = useState(null);
     const ACTIVITY_PER_PAGE = 3;
 
-    // Options dropdown (kebab) on the Recent Activity card header: closes on
-    // outside click and Escape, same behaviour as the topbar menus.
+    // Options dropdowns (kebabs) on Stock Receiving and Recent Activity card
+    // headers: close on outside click and Escape, matching the other admin pages.
     useEffect(() => {
-        if (!activityOptionsOpen) {
+        if (!activityOptionsOpen && !stockOptionsOpen) {
             return;
         }
 
@@ -206,11 +214,15 @@ export default function StockIn() {
             if (activityOptionsRef.current && !activityOptionsRef.current.contains(event.target)) {
                 setActivityOptionsOpen(false);
             }
+            if (stockOptionsRef.current && !stockOptionsRef.current.contains(event.target)) {
+                setStockOptionsOpen(false);
+            }
         };
 
         const onKey = (event) => {
             if (event.key === 'Escape') {
                 setActivityOptionsOpen(false);
+                setStockOptionsOpen(false);
             }
         };
 
@@ -221,7 +233,7 @@ export default function StockIn() {
             document.removeEventListener('mousedown', onDown);
             document.removeEventListener('keydown', onKey);
         };
-    }, [activityOptionsOpen]);
+    }, [activityOptionsOpen, stockOptionsOpen]);
 
     const refresh = useCallback(async () => {
         const [productsRes, suppliersRes, statsRes, feedRes] = await Promise.allSettled([
@@ -543,6 +555,38 @@ export default function StockIn() {
             setClearError(validationMessages(err)[0] ?? err.message ?? 'Could not clear the activity list.');
         } finally {
             setClearing(false);
+        }
+    }
+
+    async function handleSeedProducts() {
+        if (seeding) return;
+        setSeeding(true);
+
+        try {
+            const response = await post('/api/inventory/seed');
+            setToast(response?.message ?? '7 sample products added.');
+            await refresh();
+        } catch (err) {
+            setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample products.');
+        } finally {
+            setSeeding(false);
+        }
+    }
+
+    async function handleDeleteAllConfirm() {
+        if (deletingAll) return;
+        setDeletingAll(true);
+        setDeleteAllError(null);
+
+        try {
+            const response = await del('/api/inventory');
+            setDeleteAllConfirm(false);
+            setToast(response?.message ?? 'All products deleted.');
+            await refresh();
+        } catch (err) {
+            setDeleteAllError(validationMessages(err)[0] ?? err.message ?? 'Could not delete products.');
+        } finally {
+            setDeletingAll(false);
         }
     }
 
@@ -876,6 +920,72 @@ export default function StockIn() {
                             <h3>Stock Receiving</h3>
                             <p className="muted">Overview of all products and their receiving status.</p>
                         </div>
+                        <div className="activity-options" ref={stockOptionsRef}>
+                            <button
+                                type="button"
+                                className="icon-btn is-outlined"
+                                onClick={() => setStockOptionsOpen((open) => !open)}
+                                aria-haspopup="menu"
+                                aria-expanded={stockOptionsOpen}
+                                aria-label="Stock receiving options"
+                            >
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+                                    <circle cx="12" cy="5" r="1.7" />
+                                    <circle cx="12" cy="12" r="1.7" />
+                                    <circle cx="12" cy="19" r="1.7" />
+                                </svg>
+                            </button>
+                            {stockOptionsOpen && (
+                                <div className="activity-options-panel" role="menu" aria-label="Stock receiving options">
+                                    <button
+                                        type="button"
+                                        className="activity-options-item"
+                                        role="menuitem"
+                                        disabled={seeding || deletingAll}
+                                        onClick={() => {
+                                            setStockOptionsOpen(false);
+                                            handleSeedProducts();
+                                        }}
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                                            <path d="m3.3 7 8.7 5 8.7-5" />
+                                            <path d="M12 22V12" />
+                                        </svg>
+                                        <span>Add 7 sample products</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="activity-options-item activity-options-danger"
+                                        role="menuitem"
+                                        disabled={seeding || deletingAll}
+                                        onClick={() => {
+                                            setStockOptionsOpen(false);
+
+                                            if (products.length === 0) {
+                                                setEmptyNotice({
+                                                    title: 'No products to delete',
+                                                    description: 'The stock list is already empty. Receive a new product or add the 7 sample products first.',
+                                                });
+                                                return;
+                                            }
+
+                                            setDeleteAllError(null);
+                                            setDeleteAllConfirm(true);
+                                        }}
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                            <path d="M3 6h18" />
+                                            <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                            <path d="M10 11v6" />
+                                            <path d="M14 11v6" />
+                                        </svg>
+                                        <span>Delete all products</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div className="table-shell">
                         <div className="table-wrap">
@@ -886,39 +996,57 @@ export default function StockIn() {
                                             className="sort-header"
                                             onClick={() => toggleSort('name')}
                                         >
-                                            Product{sortBy === 'name' && sortDir === 'asc' ? ' ▲' : sortBy === 'name' ? ' ▼' : ''}
+                                            Product
+                                            <span className={`sort-indicator${sortBy === 'name' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'name' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('sku')}
                                             title="Stock Keeping Unit"
                                         >
-                                            SKU{sortBy === 'sku' && sortDir === 'asc' ? ' ▲' : sortBy === 'sku' ? ' ▼' : ''}
+                                            SKU
+                                            <span className={`sort-indicator${sortBy === 'sku' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'sku' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                             <span className="th-sub">Stock Keeping Unit</span>
                                         </th>
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('category')}
                                         >
-                                            Category{sortBy === 'category' && sortDir === 'asc' ? ' ▲' : sortBy === 'category' ? ' ▼' : ''}
+                                            Category
+                                            <span className={`sort-indicator${sortBy === 'category' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'category' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('current_stock')}
                                         >
-                                            Current stock{sortBy === 'current_stock' && sortDir === 'asc' ? ' ▲' : sortBy === 'current_stock' ? ' ▼' : ''}
+                                            Current stock
+                                            <span className={`sort-indicator${sortBy === 'current_stock' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'current_stock' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('receiving_unit')}
                                         >
-                                            Unit{sortBy === 'receiving_unit' && sortDir === 'asc' ? ' ▲' : sortBy === 'receiving_unit' ? ' ▼' : ''}
+                                            Unit
+                                            <span className={`sort-indicator${sortBy === 'receiving_unit' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'receiving_unit' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('last_received_at')}
                                         >
-                                            Latest received{sortBy === 'last_received_at' && sortDir === 'asc' ? ' ▲' : sortBy === 'last_received_at' ? ' ▼' : ''}
+                                            Latest received
+                                            <span className={`sort-indicator${sortBy === 'last_received_at' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'last_received_at' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th>Actions</th>
                                     </tr>
@@ -957,7 +1085,7 @@ export default function StockIn() {
                             </table>
 
                             {filteredProducts.length === 0 && (
-                                <div className="table-empty">
+                                <div className="table-empty table-empty-solid">
                                     <span className="table-empty-icon" aria-hidden="true">
                                         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                                             <circle cx="11" cy="11" r="8" />
@@ -969,7 +1097,7 @@ export default function StockIn() {
                                         {hasActiveFilters ? 'No results found' : 'No products yet'}
                                     </p>
                                     <p className="table-empty-sub">
-                                        {hasActiveFilters ? 'Try adjusting your search or filters.' : 'Add a product to get started.'}
+                                        {hasActiveFilters ? 'Try adjusting your search or filters.' : 'Receive a new product or add the 7 sample products to populate this list.'}
                                     </p>
                                 </div>
                             )}
@@ -1035,6 +1163,15 @@ export default function StockIn() {
                                         role="menuitem"
                                         onClick={() => {
                                             setActivityOptionsOpen(false);
+
+                                            if (activity.length === 0) {
+                                                setEmptyNotice({
+                                                    title: 'Nothing to clear',
+                                                    description: 'The activity list is already empty. Receive stock and its activity will show up here.',
+                                                });
+                                                return;
+                                            }
+
                                             setClearError(null);
                                             setClearConfirm(true);
                                         }}
@@ -1486,6 +1623,34 @@ export default function StockIn() {
                         <button type="button" className="btn btn-ghost" onClick={() => setActivityDetail(null)}>Close</button>
                     </div>
                 </Modal>
+            )}
+
+            {emptyNotice && (
+                <MessageDialog
+                    tone="info"
+                    title={emptyNotice.title}
+                    description={emptyNotice.description}
+                    onClose={() => setEmptyNotice(null)}
+                />
+            )}
+
+            {deleteAllConfirm && (
+                <ConfirmDialog
+                    tone="danger"
+                    title="Delete all products?"
+                    description={`This permanently deletes all ${products.length} product(s) in the catalogue. Any products linked to transaction or stock history are kept. This action cannot be undone.`}
+                    confirmLabel="Delete all"
+                    loadingLabel="Deleting…"
+                    loading={deletingAll}
+                    error={deleteAllError}
+                    onConfirm={handleDeleteAllConfirm}
+                    onCancel={() => {
+                        if (!deletingAll) {
+                            setDeleteAllConfirm(false);
+                            setDeleteAllError(null);
+                        }
+                    }}
+                />
             )}
 
             {clearConfirm && (

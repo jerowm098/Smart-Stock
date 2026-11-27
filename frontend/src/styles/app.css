@@ -802,7 +802,16 @@ select.input.is-ghost { color: var(--placeholder); font-style: italic; }
 .form { display: flex; flex-direction: column; gap: 16px; }
 
 .field { display: flex; flex-direction: column; gap: 10px; }
-.field-label { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 600; color: var(--label); }
+.field-label,
+.field > span:first-child:not(.sr-only):not(.skeleton):not(.field-note),
+.field > label:first-child {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--label);
+}
 .field-info { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border); display: grid; place-items: center; font-size: 11px; font-weight: 700; color: var(--muted); flex-shrink: 0; }
 .field-info:hover, .field-info:focus-visible { color: var(--primary); border-color: var(--primary); outline: none; }
 
@@ -1773,12 +1782,67 @@ html.landing-page body {
 /* Self-service account modal (header account menu). */
 .modal-account { width: min(460px, 100%); }
 
-/* Users page forms (Create account / Edit / Reset password). The default
-   520px felt too wide for these short forms, so they share a narrower sheet. */
+/* Users page forms (Edit / Reset password). The default 520px felt too wide
+   for these short forms, so they share a narrower sheet. */
 .modal-user-form { width: min(440px, 100%); }
+
+/* Create account modal: wider 2-column top layout so Full name & Email have
+   plenty of room for their placeholders while Username & Role stay compact,
+   and the stacked password fields keep their 400px width. */
+.modal-user-create { width: min(660px, 100%); }
+.modal-user-create .field-row { grid-template-columns: 1.45fr 1fr; }
+@media (max-width: 560px) {
+    .modal-user-create .field-row { grid-template-columns: 1fr; }
+}
+.field-password-fixed { max-width: 400px; }
 
 /* Reset password holds only two stacked fields — narrower still. */
 .modal-reset { width: min(360px, 100%); }
+
+/* Single-rule password strength indicator (minimum 6 characters). */
+.password-strength {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 2px;
+}
+
+.password-strength-track {
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border-soft);
+    overflow: hidden;
+}
+
+.password-strength-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 160ms ease, background-color 160ms ease;
+}
+
+.password-strength.is-idle .password-strength-fill { background: var(--border); }
+.password-strength.is-short .password-strength-fill { background: var(--danger); }
+.password-strength.is-met .password-strength-fill { background: var(--success); }
+
+.password-strength-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.password-strength-rule {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 160ms ease;
+}
+
+.password-strength.is-idle .password-strength-rule { color: var(--muted); }
+.password-strength.is-short .password-strength-rule { color: var(--danger); }
+.password-strength.is-met .password-strength-rule { color: var(--success); }
 
 /* Read-only identity field (Account modal → Role). Matches the read-only
    fields used on the other pages (`.readonly-value`): same soft blue-grey
@@ -2137,7 +2201,7 @@ html.landing-page body {
 
 .modal-actions {
     display: flex;
-    justify-content: flex-end;
+    justify-content: center;
     gap: 10px;
     margin-top: 4px;
 }
@@ -2963,6 +3027,15 @@ html.landing-page body {
 .pos-catalog-area > .pos-grid.is-stretch {
     flex: 1;
     align-content: stretch;
+}
+.pos-catalog-area > .table-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border-soft);
+    border-radius: 12px;
 }
 
 /* Full-width pager: the shell's gap supplies the spacing above, its padding

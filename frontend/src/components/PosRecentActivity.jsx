@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Modal from './Modal.jsx';
 import ConfirmDialog from './ConfirmDialog.jsx';
+import MessageDialog from './MessageDialog.jsx';
 import { Toast } from './Feedback.jsx';
 import { del, get, validationMessages } from '../lib/api.js';
 import { formatPeso } from '../lib/format.js';
@@ -52,6 +53,7 @@ export default function PosRecentActivity({ refreshKey = 0 }) {
     const [clearConfirm, setClearConfirm] = useState(false);
     const [clearing, setClearing] = useState(false);
     const [clearError, setClearError] = useState(null);
+    const [emptyNotice, setEmptyNotice] = useState(null);
 
     const load = useCallback(async () => {
         try {
@@ -155,6 +157,15 @@ export default function PosRecentActivity({ refreshKey = 0 }) {
                                 role="menuitem"
                                 onClick={() => {
                                     setOptionsOpen(false);
+
+                                    if (activity.length === 0) {
+                                        setEmptyNotice({
+                                            title: 'Nothing to clear',
+                                            description: 'The activity list is already empty. Complete a sale and its activity will show up here.',
+                                        });
+                                        return;
+                                    }
+
                                     setClearError(null);
                                     setClearConfirm(true);
                                 }}
@@ -327,6 +338,15 @@ export default function PosRecentActivity({ refreshKey = 0 }) {
                         <button type="button" className="btn btn-ghost" onClick={() => setDetail(null)}>Close</button>
                     </div>
                 </Modal>
+            )}
+
+            {emptyNotice && (
+                <MessageDialog
+                    tone="info"
+                    title={emptyNotice.title}
+                    description={emptyNotice.description}
+                    onClose={() => setEmptyNotice(null)}
+                />
             )}
 
             {clearConfirm && (

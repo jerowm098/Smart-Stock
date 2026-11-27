@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
-import Modal from '../../components/Modal.jsx';
+import Modal, { MODAL_INFO_ICON } from '../../components/Modal.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import InfoTip from '../../components/InfoTip.jsx';
 import Tooltip from '../../components/Tooltip.jsx';
@@ -156,6 +156,7 @@ export default function Users() {
 
     const [editUser, setEditUser] = useState(null);
     const [editForm, setEditForm] = useState(null);
+    const [editing, setEditing] = useState(false);
     const [editError, setEditError] = useState(null);
 
     const [resetUser, setResetUser] = useState(null);
@@ -169,11 +170,10 @@ export default function Users() {
     const [sortDir, setSortDir] = useState(null);
     const [page, setPage] = useState(1);
 
-    const tableRef = useRef(null);
-    const wrapRef = useRef(null);
-
-    const load = useCallback(async () => {
-        setLoading(true);
+    const load = useCallback(async (silent = false) => {
+        if (!silent) {
+            setLoading(true);
+        }
         setError(null);
 
         try {
@@ -196,6 +196,8 @@ export default function Users() {
             setLoading(false);
         }
     }, []);
+
+    const refresh = useCallback(() => load(true), [load]);
 
     useEffect(() => {
         load();
@@ -240,7 +242,7 @@ export default function Users() {
         try {
             const response = await post('/api/users/seed');
             setToast(response?.message ?? '7 sample users added.');
-            await load();
+            await refresh();
         } catch (err) {
             setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample users.');
         } finally {
@@ -257,7 +259,7 @@ export default function Users() {
             const response = await del('/api/users');
             setDeleteAllConfirm(false);
             setToast(response?.message ?? 'All other users deleted.');
-            await load();
+            await refresh();
         } catch (err) {
             setDeleteAllError(validationMessages(err)[0] ?? err.message ?? 'Could not delete users.');
         } finally {
@@ -347,28 +349,6 @@ export default function Users() {
         setActivityPage(1);
     }, [activity.length]);
 
-    // Reserve exactly one full page (6 rows) of height, mirroring Stock
-    // Inventory and Backups. Measured from the rendered table so it stays
-    // accurate across fonts, zoom levels and action-button wrapping.
-    useLayoutEffect(() => {
-        const table = tableRef.current;
-        const wrap = wrapRef.current;
-        if (!table || !wrap) {
-            return;
-        }
-
-        const head = table.querySelector('thead');
-        const row = table.querySelector('tbody tr');
-
-        // Nothing to measure (empty list / loading): let the wrap size itself.
-        if (!head || !row) {
-            wrap.style.minHeight = '';
-            return;
-        }
-
-        wrap.style.minHeight = `${head.getBoundingClientRect().height + row.getBoundingClientRect().height * PER_PAGE}px`;
-    }, [pagedUsers.length, loading]);
-
     async function handleCreate(event) {
         event.preventDefault();
         setCreating(true);
@@ -380,7 +360,7 @@ export default function Users() {
             setMessage(response.message);
             setCreateForm(EMPTY_CREATE);
             setAddOpen(false);
-            await load();
+            await refresh();
         } catch (err) {
             setFormError(err.message);
             setFieldErrors(validationMessages(err));
@@ -397,15 +377,19 @@ export default function Users() {
 
     async function handleEdit(event) {
         event.preventDefault();
+        if (editing) return;
+        setEditing(true);
         setEditError(null);
 
         try {
             const response = await put(`/api/users/${editUser.id}`, editForm);
             setMessage(response.message);
             setEditUser(null);
-            await load();
+            await refresh();
         } catch (err) {
             setEditError(validationMessages(err)[0] ?? err.message);
+        } finally {
+            setEditing(false);
         }
     }
 
@@ -423,7 +407,7 @@ export default function Users() {
 
             setActivateUser(null);
             setMessage(response.message);
-            await load();
+            await refresh();
         } catch (err) {
             setActivateError(validationMessages(err)[0] ?? err.message ?? 'Could not activate the account.');
         } finally {
@@ -446,7 +430,7 @@ export default function Users() {
 
             setDeactivateUser(null);
             setMessage(response.message);
-            await load();
+            await refresh();
         } catch (err) {
             setDeactivateError(validationMessages(err)[0] ?? err.message ?? 'Could not deactivate the account.');
         } finally {
@@ -682,8 +666,8 @@ export default function Users() {
                 </div>
                 {!loading && !error && (
                     <div className="table-shell">
-                        <div className={sortedUsers.length > 0 ? 'table-wrap data-rows-6' : 'table-wrap'} ref={wrapRef}>
-                            <table className="table" ref={tableRef}>
+                        <div className="table-wrap">
+                            <table className="table">
                                 <thead>
                                     <tr>
                                         <th className="sort-header" onClick={() => toggleSort('name')}>
@@ -810,9 +794,9 @@ export default function Users() {
                                 <div className="table-empty table-empty-solid">
                                     <span className="table-empty-icon" aria-hidden="true">
                                         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                            <circle cx="9" cy="8" r="4" />
-                                            <path d="M2 21a7 7 0 0 1 14 0" />
-                                            <path d="M19 8v6M16 11h6" />
+                                            <circle cx="11" cy="11" r="8" />
+                                            <path d="M21 21l-4.35-4.35" />
+                                            <path d="M11 8v6M8 11h6" />
                                         </svg>
                                     </span>
                                     <p className="table-empty-title">No other accounts yet</p>
@@ -848,6 +832,7 @@ export default function Users() {
                                 <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </button>
+                        <span className="page-detail">{Math.min(safePage * PER_PAGE, sortedUsers.length)} of {sortedUsers.length}</span>
                     </div>
                 )}
             </section>
@@ -995,7 +980,8 @@ export default function Users() {
             {addOpen && (
                 <Modal
                     title="Create account"
-                    className="modal-user-form"
+                    className="modal-user-create"
+                    noClose
                     onClose={() => {
                         // Keep the form open while the nested error dialog is up,
                         // otherwise one Escape press would close both dialogs.
@@ -1005,30 +991,30 @@ export default function Users() {
                     }}
                 >
                     <form className="form" onSubmit={handleCreate}>
-                        <label className="field">
-                            <span className="field-label">
-                                Full name
-                                <InfoTip text="Letters and spaces only. Shown in activity logs and across the app." />*
-                            </span>
-                            <div className="input-prefix-wrap has-icon">
-                                <span className="input-prefix input-prefix-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <circle cx="12" cy="8" r="4" />
-                                        <path d="M4 21a8 8 0 0 1 16 0" />
-                                    </svg>
-                                </span>
-                                <input
-                                    type="text"
-                                    required
-                                    maxLength={100}
-                                    placeholder="e.g. Juan Dela Cruz"
-                                    value={createForm.name}
-                                    onChange={createSet('name')}
-                                    autoFocus
-                                />
-                            </div>
-                        </label>
                         <div className="field-row">
+                            <label className="field">
+                                <span className="field-label">
+                                    Full name
+                                    <InfoTip text="Letters and spaces only. Shown in activity logs and across the app." />*
+                                </span>
+                                <div className="input-prefix-wrap has-icon">
+                                    <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="12" cy="8" r="4" />
+                                            <path d="M4 21a8 8 0 0 1 16 0" />
+                                        </svg>
+                                    </span>
+                                    <input
+                                        type="text"
+                                        required
+                                        maxLength={100}
+                                        placeholder="e.g. Juan Dela Cruz"
+                                        value={createForm.name}
+                                        onChange={createSet('name')}
+                                        autoFocus
+                                    />
+                                </div>
+                            </label>
                             <label className="field">
                                 <span className="field-label">
                                     Username
@@ -1054,6 +1040,30 @@ export default function Users() {
                                     />
                                 </div>
                             </label>
+                        </div>
+                        <div className="field-row">
+                            <label className="field">
+                                <span className="field-label">
+                                    Email
+                                    <InfoTip text="Contact address for the account. Each account needs a unique email." />*
+                                </span>
+                                <div className="input-prefix-wrap has-icon">
+                                    <span className="input-prefix input-prefix-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                                        </svg>
+                                    </span>
+                                    <input
+                                        type="email"
+                                        required
+                                        maxLength={255}
+                                        placeholder="e.g. jdelacruz123@example.com"
+                                        value={createForm.email}
+                                        onChange={createSet('email')}
+                                    />
+                                </div>
+                            </label>
                             <label className="field">
                                 <span className="field-label">
                                     Role
@@ -1066,80 +1076,118 @@ export default function Users() {
                                 </select>
                             </label>
                         </div>
-                        <label className="field">
+                        <label className="field field-password-fixed">
                             <span className="field-label">
-                                Email
-                                <InfoTip text="Contact address for the account. Each account needs a unique email." />*
+                                Password
+                                <InfoTip text="At least 6 characters. The user can change it after signing in." />*
                             </span>
-                            <div className="input-prefix-wrap has-icon">
-                                <span className="input-prefix input-prefix-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <rect x="2" y="4" width="20" height="16" rx="2" />
-                                        <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-                                    </svg>
-                                </span>
+                            <div className="input-with-action">
                                 <input
-                                    type="email"
+                                    type={showCreatePassword ? 'text' : 'password'}
                                     required
-                                    maxLength={255}
-                                    placeholder="e.g. jdelacruz123@example.com"
-                                    value={createForm.email}
-                                    onChange={createSet('email')}
+                                    minLength={6}
+                                    autoComplete="new-password"
+                                    placeholder="******"
+                                    value={createForm.password}
+                                    onChange={createSet('password')}
                                 />
+                                <button
+                                    type="button"
+                                    className="input-action"
+                                    onClick={() => setShowCreatePassword((visible) => !visible)}
+                                >
+                                    {showCreatePassword ? 'Hide' : 'Show'}
+                                </button>
                             </div>
+                            {(() => {
+                                const len = createForm.password.length;
+                                const met = len >= 6;
+                                const state = len === 0 ? 'is-idle' : met ? 'is-met' : 'is-short';
+                                const pct = Math.min(100, Math.round((len / 6) * 100));
+                                return (
+                                    <div className={`password-strength ${state}`} aria-live="polite">
+                                        <div className="password-strength-track" aria-hidden="true">
+                                            <div className="password-strength-fill" style={{ width: `${pct}%` }} />
+                                        </div>
+                                        <div className="password-strength-row">
+                                            <span className="password-strength-rule">
+                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                    {met ? (
+                                                        <>
+                                                            <circle cx="12" cy="12" r="9" />
+                                                            <path d="m8.5 12 2.3 2.3 4.7-4.7" />
+                                                        </>
+                                                    ) : (
+                                                        <circle cx="12" cy="12" r="9" />
+                                                    )}
+                                                </svg>
+                                                At least 6 characters
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </label>
-                        <div className="field-row">
-                            <label className="field">
-                                <span className="field-label">
-                                    Password
-                                    <InfoTip text="At least 6 characters. The user can change it after signing in." />*
-                                </span>
-                                <div className="input-with-action">
-                                    <input
-                                        type={showCreatePassword ? 'text' : 'password'}
-                                        required
-                                        minLength={6}
-                                        autoComplete="new-password"
-                                        placeholder="******"
-                                        value={createForm.password}
-                                        onChange={createSet('password')}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="input-action"
-                                        onClick={() => setShowCreatePassword((visible) => !visible)}
-                                    >
-                                        {showCreatePassword ? 'Hide' : 'Show'}
-                                    </button>
-                                </div>
-                            </label>
-                            <label className="field">
-                                <span className="field-label">
-                                    Confirm password
-                                    <InfoTip text="Must exactly match the password above." />*
-                                </span>
-                                <div className="input-with-action">
-                                    <input
-                                        type={showCreateConfirm ? 'text' : 'password'}
-                                        required
-                                        minLength={6}
-                                        autoComplete="new-password"
-                                        placeholder="******"
-                                        value={createForm.password_confirmation}
-                                        onChange={createSet('password_confirmation')}
-                                    />
-                                    <button
-                                        type="button"
-                                        className="input-action"
-                                        onClick={() => setShowCreateConfirm((visible) => !visible)}
-                                    >
-                                        {showCreateConfirm ? 'Hide' : 'Show'}
-                                    </button>
-                                </div>
-                            </label>
-                        </div>
+                        <label className="field field-password-fixed">
+                            <span className="field-label">
+                                Confirm password
+                                <InfoTip text="Must exactly match the password above." />*
+                            </span>
+                            <div className="input-with-action">
+                                <input
+                                    type={showCreateConfirm ? 'text' : 'password'}
+                                    required
+                                    minLength={6}
+                                    autoComplete="new-password"
+                                    placeholder="******"
+                                    value={createForm.password_confirmation}
+                                    onChange={createSet('password_confirmation')}
+                                />
+                                <button
+                                    type="button"
+                                    className="input-action"
+                                    onClick={() => setShowCreateConfirm((visible) => !visible)}
+                                >
+                                    {showCreateConfirm ? 'Hide' : 'Show'}
+                                </button>
+                            </div>
+                            {(() => {
+                                const confirm = createForm.password_confirmation;
+                                const matched = confirm.length > 0 && confirm === createForm.password;
+                                const state = confirm.length === 0 ? 'is-idle' : matched ? 'is-met' : 'is-short';
+                                const label = confirm.length === 0
+                                    ? 'Passwords must match'
+                                    : matched
+                                        ? 'Passwords match'
+                                        : 'Passwords do not match';
+                                return (
+                                    <div className={`password-strength ${state}`} aria-live="polite">
+                                        <div className="password-strength-row">
+                                            <span className="password-strength-rule">
+                                                <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                    {confirm.length === 0 ? (
+                                                        <circle cx="12" cy="12" r="9" />
+                                                    ) : matched ? (
+                                                        <>
+                                                            <circle cx="12" cy="12" r="9" />
+                                                            <path d="m8.5 12 2.3 2.3 4.7-4.7" />
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <circle cx="12" cy="12" r="9" />
+                                                            <path d="m9.5 9.5 5 5M14.5 9.5l-5 5" />
+                                                        </>
+                                                    )}
+                                                </svg>
+                                                {label}
+                                            </span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                        </label>
 
-                        <div className="modal-actions">
+                        <div className="modal-actions modal-actions-center">
                             <button type="button" className="btn btn-ghost" onClick={() => setAddOpen(false)}>Cancel</button>
                             <button type="submit" className="btn btn-primary" disabled={creating}>
                                 {creating ? 'Creating…' : 'Create account'}
@@ -1160,10 +1208,20 @@ export default function Users() {
             )}
 
             {editUser && editForm && (
-                <Modal title="Edit Account" className="modal-user-form" onClose={() => setEditUser(null)}>
+                <Modal
+                    title="Edit Account"
+                    titleIcon={MODAL_INFO_ICON}
+                    className="modal-user-form"
+                    loading={editing}
+                    onClose={() => {
+                        if (!editing) {
+                            setEditUser(null);
+                        }
+                    }}
+                >
                     <form className="form" onSubmit={handleEdit}>
                         <label className="field">
-                            <span>Full name *</span>
+                            <span className="field-label">Full name *</span>
                             <div className="input-prefix-wrap has-icon">
                                 <span className="input-prefix input-prefix-icon" aria-hidden="true">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1176,7 +1234,7 @@ export default function Users() {
                         </label>
                         <div className="field-row">
                             <label className="field">
-                                <span>Username *</span>
+                                <span className="field-label">Username *</span>
                                 <div className="input-prefix-wrap has-icon">
                                     <span className="input-prefix input-prefix-icon" aria-hidden="true">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1188,7 +1246,7 @@ export default function Users() {
                                 </div>
                             </label>
                             <label className="field">
-                                <span>Role *</span>
+                                <span className="field-label">Role *</span>
                                 <select
                                     className="input"
                                     value={editForm.role}
@@ -1203,7 +1261,7 @@ export default function Users() {
                             </label>
                         </div>
                         <label className="field">
-                            <span>Email *</span>
+                            <span className="field-label">Email *</span>
                             <div className="input-prefix-wrap has-icon">
                                 <span className="input-prefix input-prefix-icon" aria-hidden="true">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1218,22 +1276,24 @@ export default function Users() {
                         {editError && <div className="alert alert-error" role="alert"><span>{editError}</span></div>}
 
                         <div className="modal-actions">
-                            <button type="button" className="btn btn-ghost" onClick={() => setEditUser(null)}>Cancel</button>
-                            <button type="submit" className="btn btn-primary">Save changes</button>
+                            <button type="button" className="btn btn-ghost" onClick={() => setEditUser(null)} disabled={editing}>Cancel</button>
+                            <button type="submit" className="btn btn-primary" disabled={editing}>
+                                {editing ? 'Saving…' : 'Save changes'}
+                            </button>
                         </div>
                     </form>
                 </Modal>
             )}
 
             {resetUser && (
-                <Modal title="Reset password" className="modal-user-form modal-reset" onClose={() => setResetUser(null)}>
+                <Modal title="Reset password" titleIcon={MODAL_INFO_ICON} className="modal-user-form modal-reset" onClose={() => setResetUser(null)}>
                     <form className="form" onSubmit={handleReset}>
                         <div className="field">
                             <span className="field-label">Username</span>
                             <div className="readonly-field">{resetUser.username}</div>
                         </div>
                         <label className="field">
-                            <span>New password *</span>
+                            <span className="field-label">New password *</span>
                             <div className="input-with-action">
                                 <input
                                     type={showResetPassword ? 'text' : 'password'}
@@ -1254,7 +1314,7 @@ export default function Users() {
                             </div>
                         </label>
                         <label className="field">
-                            <span>Confirm new password *</span>
+                            <span className="field-label">Confirm new password *</span>
                             <div className="input-with-action">
                                 <input
                                     type={showResetConfirm ? 'text' : 'password'}

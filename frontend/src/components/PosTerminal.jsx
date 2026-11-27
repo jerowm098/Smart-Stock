@@ -640,7 +640,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                         <div className="pos-catalog-area">
                             {error && <Alert tone="error">{error}</Alert>}
 
-                            {!error && (
+                            {!error && filtered.length > 0 && (
                                 <div className={`pos-grid${paged.length >= 9 ? ' is-stretch' : ''}`}>
                                     {paged.map((item) => {
                                         const stock = Number(item.current_stock) || 0;
@@ -697,7 +697,23 @@ export default function PosTerminal({ channel = 'cashier' }) {
                             )}
 
                             {!error && filtered.length === 0 && (
-                                <p className="muted pos-grid-empty">No items match “{search}”.</p>
+                                <div className="table-empty table-empty-solid">
+                                    <span className="table-empty-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="11" cy="11" r="8" />
+                                            <path d="M21 21l-4.35-4.35" />
+                                            <path d="M11 8v6M8 11h6" />
+                                        </svg>
+                                    </span>
+                                    <p className="table-empty-title">
+                                        {search.trim() || category || status ? 'No results found' : 'No products available'}
+                                    </p>
+                                    <p className="table-empty-sub">
+                                        {search.trim() || category || status
+                                            ? 'Try adjusting your search or filters.'
+                                            : 'Add active products on the Products page to start selling.'}
+                                    </p>
+                                </div>
                             )}
                         </div>
 
@@ -862,6 +878,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                     <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             </button>
+                            <span className="page-detail">{Math.min(safePage * PER_PAGE, filtered.length)} of {filtered.length}</span>
                         </div>
                     )}
                 </div>

@@ -61,7 +61,7 @@ export default function ConfirmDialog({
     const icon = TONE_ICONS[tone] ?? TONE_ICONS.danger;
 
     return (
-        <Modal bare className="modal-confirm" onClose={onCancel} loading={loading} aria-label={TONE_LABELS[tone]}>
+        <Modal bare className="modal-confirm" onClose={onCancel} aria-label={TONE_LABELS[tone]}>
             <form
                 className="form"
                 onSubmit={(event) => {

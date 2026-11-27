@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
+import MessageDialog from '../../components/MessageDialog.jsx';
 import Alert, { Toast } from '../../components/Feedback.jsx';
 import Modal from '../../components/Modal.jsx';
-import { del, exportFile, get, validationMessages } from '../../lib/api.js';
+import { del, exportFile, get, post, validationMessages } from '../../lib/api.js';
 import { formatPeso } from '../../lib/format.js';
 
 const PER_PAGE = 6;
@@ -112,6 +113,13 @@ export default function Transactions() {
     const [activityPage, setActivityPage] = useState(1);
     const [activityOptionsOpen, setActivityOptionsOpen] = useState(false);
     const activityOptionsRef = useRef(null);
+    const [txnOptionsOpen, setTxnOptionsOpen] = useState(false);
+    const txnOptionsRef = useRef(null);
+    const [seeding, setSeeding] = useState(false);
+    const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+    const [deletingAll, setDeletingAll] = useState(false);
+    const [deleteAllError, setDeleteAllError] = useState(null);
+    const [emptyNotice, setEmptyNotice] = useState(null);
     const [clearConfirm, setClearConfirm] = useState(false);
     const [clearing, setClearing] = useState(false);
     const [clearError, setClearError] = useState(null);
@@ -175,9 +183,11 @@ export default function Transactions() {
         setActivityPage(1);
     }, [activity.length]);
 
-    const load = useCallback(async () => {
+    const load = useCallback(async (silent = false) => {
         const id = ++requestId.current;
-        setLoading(true);
+        if (!silent) {
+            setLoading(true);
+        }
         setError(null);
 
         try {
@@ -206,14 +216,16 @@ export default function Transactions() {
         }
     }, [filters, page]);
 
+    const refresh = useCallback(() => load(true), [load]);
+
     useEffect(() => {
         load();
     }, [load]);
 
-    // Options dropdown (kebab) on the Recent Activity card header: closes on
-    // outside click and Escape, same behaviour as the other admin pages.
+    // Options dropdowns (kebabs) on Transaction List and Recent Activity card
+    // headers: close on outside click and Escape, matching the other admin pages.
     useEffect(() => {
-        if (!activityOptionsOpen) {
+        if (!activityOptionsOpen && !txnOptionsOpen) {
             return undefined;
         }
 
@@ -221,11 +233,15 @@ export default function Transactions() {
             if (activityOptionsRef.current && !activityOptionsRef.current.contains(event.target)) {
                 setActivityOptionsOpen(false);
             }
+            if (txnOptionsRef.current && !txnOptionsRef.current.contains(event.target)) {
+                setTxnOptionsOpen(false);
+            }
         };
 
         const onKey = (event) => {
             if (event.key === 'Escape') {
                 setActivityOptionsOpen(false);
+                setTxnOptionsOpen(false);
             }
         };
 
@@ -236,7 +252,7 @@ export default function Transactions() {
             document.removeEventListener('mousedown', onDown);
             document.removeEventListener('keydown', onKey);
         };
-    }, [activityOptionsOpen]);
+    }, [activityOptionsOpen, txnOptionsOpen]);
 
     // Export CSV with real feedback (same convention as the other pages):
     // loading state on the button, success/error toast, then a silent refresh
@@ -285,6 +301,41 @@ export default function Transactions() {
             setClearError(validationMessages(err)[0] ?? err.message ?? 'Could not clear the activity list.');
         } finally {
             setClearing(false);
+        }
+    }
+
+    async function handleSeedTransactions() {
+        if (seeding) return;
+        setSeeding(true);
+
+        try {
+            const response = await post('/api/dashboard/transactions/seed');
+            setToast({ tone: 'success', text: response?.message ?? '7 sample transactions added.' });
+            await refresh();
+        } catch (err) {
+            setToast({
+                tone: 'error',
+                text: validationMessages(err)[0] ?? err.message ?? 'Could not add the sample transactions.',
+            });
+        } finally {
+            setSeeding(false);
+        }
+    }
+
+    async function handleDeleteAllConfirm() {
+        if (deletingAll) return;
+        setDeletingAll(true);
+        setDeleteAllError(null);
+
+        try {
+            const response = await del('/api/dashboard/transactions');
+            setDeleteAllConfirm(false);
+            setToast({ tone: 'success', text: response?.message ?? 'All transactions deleted.' });
+            await refresh();
+        } catch (err) {
+            setDeleteAllError(validationMessages(err)[0] ?? err.message ?? 'Could not delete transactions.');
+        } finally {
+            setDeletingAll(false);
         }
     }
 
@@ -548,6 +599,72 @@ export default function Transactions() {
                         <h3>Transaction List</h3>
                         <p className="muted">Overview of every completed sale and the items on each receipt.</p>
                     </div>
+                    <div className="activity-options" ref={txnOptionsRef}>
+                        <button
+                            type="button"
+                            className="icon-btn is-outlined"
+                            onClick={() => setTxnOptionsOpen((open) => !open)}
+                            aria-haspopup="menu"
+                            aria-expanded={txnOptionsOpen}
+                            aria-label="Transaction list options"
+                        >
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+                                <circle cx="12" cy="5" r="1.7" />
+                                <circle cx="12" cy="12" r="1.7" />
+                                <circle cx="12" cy="19" r="1.7" />
+                            </svg>
+                        </button>
+                        {txnOptionsOpen && (
+                            <div className="activity-options-panel" role="menu" aria-label="Transaction list options">
+                                <button
+                                    type="button"
+                                    className="activity-options-item"
+                                    role="menuitem"
+                                    disabled={seeding || deletingAll}
+                                    onClick={() => {
+                                        setTxnOptionsOpen(false);
+                                        handleSeedTransactions();
+                                    }}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M6 3h12a1 1 0 0 1 1 1v17l-3-2-2 2-2-2-2 2-2-2-3 2V4a1 1 0 0 1 1-1z" />
+                                        <path d="M9 8h6" />
+                                        <path d="M9 12h6" />
+                                    </svg>
+                                    <span>Add 7 sample transactions</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    className="activity-options-item activity-options-danger"
+                                    role="menuitem"
+                                    disabled={seeding || deletingAll}
+                                    onClick={() => {
+                                        setTxnOptionsOpen(false);
+
+                                        if ((data?.total ?? sortedRows.length) === 0) {
+                                            setEmptyNotice({
+                                                title: 'No transactions to delete',
+                                                description: 'The transaction list is already empty. Complete a sale or add the 7 sample transactions first.',
+                                            });
+                                            return;
+                                        }
+
+                                        setDeleteAllError(null);
+                                        setDeleteAllConfirm(true);
+                                    }}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M3 6h18" />
+                                        <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                        <path d="M10 11v6" />
+                                        <path d="M14 11v6" />
+                                    </svg>
+                                    <span>Delete all transactions</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="table-shell">
@@ -560,37 +677,55 @@ export default function Transactions() {
                                             className="sort-header"
                                             onClick={() => toggleSort('receipt')}
                                         >
-                                            Receipt{sortArrow('receipt')}
+                                            Receipt
+                                            <span className={`sort-indicator${sortBy === 'receipt' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'receipt' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('channel')}
                                         >
-                                            Type{sortArrow('channel')}
+                                            Type
+                                            <span className={`sort-indicator${sortBy === 'channel' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'channel' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('cashier')}
                                         >
-                                            Name{sortArrow('cashier')}
+                                            Name
+                                            <span className={`sort-indicator${sortBy === 'cashier' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'cashier' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header text-right"
                                             onClick={() => toggleSort('items')}
                                         >
-                                            Items{sortArrow('items')}
+                                            Items
+                                            <span className={`sort-indicator${sortBy === 'items' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'items' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header text-right"
                                             onClick={() => toggleSort('total')}
                                         >
-                                            Total{sortArrow('total')}
+                                            Total
+                                            <span className={`sort-indicator${sortBy === 'total' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'total' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header txn-date"
                                             onClick={() => toggleSort('date')}
                                         >
-                                            Date{sortArrow('date')}
+                                            Date
+                                            <span className={`sort-indicator${sortBy === 'date' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'date' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th className="text-right">Actions</th>
                                     </tr>
@@ -632,7 +767,7 @@ export default function Transactions() {
                             </table>
 
                             {sortedRows.length === 0 && (
-                                <div className="table-empty">
+                                <div className="table-empty table-empty-solid">
                                     <span className="table-empty-icon" aria-hidden="true">
                                         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                                             <circle cx="11" cy="11" r="8" />
@@ -640,15 +775,23 @@ export default function Transactions() {
                                             <path d="M11 8v6M8 11h6" />
                                         </svg>
                                     </span>
-                                    <p className="table-empty-title">No results found</p>
-                                    <p className="table-empty-sub">Try adjusting your search or filters.</p>
+                                    <p className="table-empty-title">
+                                        {filters.search || filters.cashier_id || filters.channel || filters.date_from || filters.date_to
+                                            ? 'No results found'
+                                            : 'No transactions yet'}
+                                    </p>
+                                    <p className="table-empty-sub">
+                                        {filters.search || filters.cashier_id || filters.channel || filters.date_from || filters.date_to
+                                            ? 'Try adjusting your search or filters.'
+                                            : 'Complete a sale or add the 7 sample transactions to populate this list.'}
+                                    </p>
                                 </div>
                             )}
                         </div>
                     )}
                 </div>
 
-                {!loading && !error && data && (data.last_page ?? 0) > 1 && (
+                {!loading && !error && data && (data.total ?? sortedRows.length) > 0 && (
                     <div className="pagination">
                         <button
                             type="button"
@@ -673,6 +816,7 @@ export default function Transactions() {
                                 <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                         </button>
+                        <span className="page-detail">{Math.min(safePage * PER_PAGE, data.total ?? sortedRows.length)} of {data.total ?? sortedRows.length}</span>
                     </div>
                 )}
             </section>
@@ -707,6 +851,15 @@ export default function Transactions() {
                                     role="menuitem"
                                     onClick={() => {
                                         setActivityOptionsOpen(false);
+
+                                        if (activity.length === 0) {
+                                            setEmptyNotice({
+                                                title: 'Nothing to clear',
+                                                description: 'The activity list is already empty. Export transactions and its activity will show up here.',
+                                            });
+                                            return;
+                                        }
+
                                         setClearError(null);
                                         setClearConfirm(true);
                                     }}
@@ -941,6 +1094,34 @@ export default function Transactions() {
                         <button type="button" className="btn btn-ghost" onClick={() => setActivityDetail(null)}>Close</button>
                     </div>
                 </Modal>
+            )}
+
+            {emptyNotice && (
+                <MessageDialog
+                    tone="info"
+                    title={emptyNotice.title}
+                    description={emptyNotice.description}
+                    onClose={() => setEmptyNotice(null)}
+                />
+            )}
+
+            {deleteAllConfirm && (
+                <ConfirmDialog
+                    tone="danger"
+                    title="Delete all transactions?"
+                    description={`This permanently deletes all ${data?.total ?? sortedRows.length} transaction(s) and their line items. This action cannot be undone.`}
+                    confirmLabel="Delete all"
+                    loadingLabel="Deleting…"
+                    loading={deletingAll}
+                    error={deleteAllError}
+                    onConfirm={handleDeleteAllConfirm}
+                    onCancel={() => {
+                        if (!deletingAll) {
+                            setDeleteAllConfirm(false);
+                            setDeleteAllError(null);
+                        }
+                    }}
+                />
             )}
 
             {clearConfirm && (
