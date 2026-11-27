@@ -561,4 +561,95 @@ public function getProducts(Request $request): JsonResponse
             ],
         ]);
     }
+
+    /**
+     * Seed 7 sample hardware products for quick pagination / table testing.
+     */
+    public function seed(): JsonResponse
+    {
+        $user = $this->currentUser();
+        if (! $user) {
+            return response()->json(['message' => 'Authentication required.'], 401);
+        }
+
+        $samples = [
+            ['name' => 'Claw Hammer 16oz', 'category' => 'Hand Tools', 'price' => 245, 'current_stock' => 24, 'reorder_threshold' => 10, 'receiving_unit' => 'piece'],
+            ['name' => 'Portland Cement 40kg', 'category' => 'Building Materials', 'price' => 260, 'current_stock' => 45, 'reorder_threshold' => 15, 'receiving_unit' => 'sack'],
+            ['name' => 'Latex Paint White 4L', 'category' => 'Paints & Coatings', 'price' => 680, 'current_stock' => 4, 'reorder_threshold' => 8, 'receiving_unit' => 'gallon'],
+            ['name' => 'PVC Pipe 1/2in 3m', 'category' => 'Plumbing', 'price' => 95, 'current_stock' => 0, 'reorder_threshold' => 12, 'receiving_unit' => 'piece'],
+            ['name' => 'THHN Wire 12 AWG', 'category' => 'Electrical', 'price' => 38, 'current_stock' => 80, 'reorder_threshold' => 25, 'receiving_unit' => 'meter'],
+            ['name' => 'Common Wire Nails 2in', 'category' => 'Fasteners', 'price' => 85, 'current_stock' => 6, 'reorder_threshold' => 10, 'receiving_unit' => 'kilogram'],
+            ['name' => 'Heavy Duty Padlock 50mm', 'category' => 'Hardware', 'price' => 190, 'current_stock' => 0, 'reorder_threshold' => 8, 'receiving_unit' => 'piece'],
+        ];
+
+        $created = 0;
+
+        foreach ($samples as $sample) {
+            $baseName = $sample['name'];
+            $name = $baseName;
+            $suffix = 2;
+
+            while (Product::where('name', $name)->exists()) {
+                $name = "{$baseName} ({$suffix})";
+                $suffix++;
+            }
+
+            Product::create([
+                'name' => $name,
+                'sku' => $this->generateSku($name),
+                'category' => $sample['category'],
+                'price' => $sample['price'],
+                'current_stock' => $sample['current_stock'],
+                'reorder_threshold' => $sample['reorder_threshold'],
+                'receiving_unit' => $sample['receiving_unit'],
+                'is_active' => true,
+            ]);
+            $created++;
+        }
+
+        return response()->json([
+            'message' => "{$created} sample products added.",
+        ], 201);
+    }
+
+    /**
+     * Delete all products, gracefully preserving any linked to sales or stock history.
+     */
+    public function destroyAll(): JsonResponse
+    {
+        $user = $this->currentUser();
+        if (! $user) {
+            return response()->json(['message' => 'Authentication required.'], 401);
+        }
+
+        $products = Product::all();
+
+        if ($products->isEmpty()) {
+            return response()->json(['message' => 'No products to delete.']);
+        }
+
+        $deleted = 0;
+        $skipped = 0;
+
+        foreach ($products as $product) {
+            try {
+                $product->delete();
+                $deleted++;
+            } catch (\Illuminate\Database\QueryException) {
+                $skipped++;
+            }
+        }
+
+        if ($deleted === 0 && $skipped > 0) {
+            return response()->json([
+                'message' => "Could not delete {$skipped} product(s) because they have linked transaction or stock history.",
+            ], 422);
+        }
+
+        $msg = $skipped > 0
+            ? "Deleted {$deleted} product(s) ({$skipped} kept due to linked transaction or stock history)."
+            : "All products deleted ({$deleted}).";
+
+        return response()->json(['message' => $msg]);
+    }
 }

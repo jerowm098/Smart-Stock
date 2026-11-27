@@ -5,8 +5,12 @@ import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import InfoTip from '../../components/InfoTip.jsx';
 import Tooltip from '../../components/Tooltip.jsx';
 import { FieldError, Toast } from '../../components/Feedback.jsx';
+import MessageDialog from '../../components/MessageDialog.jsx';
 import { del, get, post, put, validationMessages } from '../../lib/api.js';
 import { formatPeso } from '../../lib/format.js';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
 
 const EMPTY_PRODUCT = {
     name: '',
@@ -232,6 +236,13 @@ export default function Products() {
     const [clearError, setClearError] = useState(null);
     const [activityOptionsOpen, setActivityOptionsOpen] = useState(false);
     const activityOptionsRef = useRef(null);
+    const [productsOptionsOpen, setProductsOptionsOpen] = useState(false);
+    const productsOptionsRef = useRef(null);
+    const [seeding, setSeeding] = useState(false);
+    const [deleteAllConfirm, setDeleteAllConfirm] = useState(false);
+    const [deletingAll, setDeletingAll] = useState(false);
+    const [deleteAllError, setDeleteAllError] = useState(null);
+    const [emptyNotice, setEmptyNotice] = useState(null);
     const ACTIVITY_PER_PAGE = 3;
     const [loading, setLoading] = useState(true);
     usePageLoadbar(loading);
@@ -357,7 +368,7 @@ export default function Products() {
     // Options dropdown (kebab) on the Recent Activity card header: closes on
     // outside click and Escape, same behaviour as the topbar menus.
     useEffect(() => {
-        if (!activityOptionsOpen) {
+        if (!activityOptionsOpen && !productsOptionsOpen) {
             return;
         }
 
@@ -365,11 +376,15 @@ export default function Products() {
             if (activityOptionsRef.current && !activityOptionsRef.current.contains(event.target)) {
                 setActivityOptionsOpen(false);
             }
+            if (productsOptionsRef.current && !productsOptionsRef.current.contains(event.target)) {
+                setProductsOptionsOpen(false);
+            }
         };
 
         const onKey = (event) => {
             if (event.key === 'Escape') {
                 setActivityOptionsOpen(false);
+                setProductsOptionsOpen(false);
             }
         };
 
@@ -380,7 +395,7 @@ export default function Products() {
             document.removeEventListener('mousedown', onDown);
             document.removeEventListener('keydown', onKey);
         };
-    }, [activityOptionsOpen]);
+    }, [activityOptionsOpen, productsOptionsOpen]);
 
     // After each successful load, diff current stock against the previous
     // snapshot to surface a transient "+N" / "-N" badge on rows that changed.
@@ -486,6 +501,17 @@ export default function Products() {
         return [...filtered].sort((a, b) => {
             let av = a[sortBy];
             let bv = b[sortBy];
+
+            // Status comparison: Out of stock (0) -> Low stock (1) -> In stock (2)
+            if (sortBy === 'status') {
+                const rank = (p) => {
+                    const cls = stockState(p).className;
+                    if (cls === 'pill-danger') return 0;
+                    if (cls === 'pill-warn') return 1;
+                    return 2;
+                };
+                return (rank(a) - rank(b)) * dir;
+            }
 
             // Numeric comparison for stock, price, reorder_threshold
             if (sortBy === 'current_stock' || sortBy === 'price' || sortBy === 'reorder_threshold') {
@@ -1082,6 +1108,100 @@ export default function Products() {
         }
     }
 
+    async function handleSeedProducts() {
+        if (seeding) return;
+        setSeeding(true);
+
+        try {
+            const response = await post('/api/inventory/seed');
+            setMessage(response?.message ?? '7 sample products added.');
+            await refresh();
+        } catch (err) {
+            setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample products.');
+        } finally {
+            setSeeding(false);
+        }
+    }
+
+    async function handleDeleteAllConfirm() {
+        if (deletingAll) return;
+        setDeletingAll(true);
+        setDeleteAllError(null);
+
+        try {
+            const response = await del('/api/inventory');
+            setDeleteAllConfirm(false);
+            setMessage(response?.message ?? 'All products deleted.');
+            await refresh();
+        } catch (err) {
+            setDeleteAllError(validationMessages(err)[0] ?? err.message ?? 'Could not delete products.');
+        } finally {
+            setDeletingAll(false);
+        }
+    }
+
+    // SS-25 / SS-110 / SS-111: Export Inventory Catalogue to PDF & Excel
+    function handleExportPdf() {
+        if (sorted.length === 0) return;
+
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+        const generatedAt = new Date().toLocaleString();
+
+        doc.setFontSize(16);
+        doc.text('Smart-Stock — Inventory Catalogue Report', 40, 42);
+        doc.setFontSize(9.5);
+        doc.setTextColor(100);
+        doc.text(`Generated: ${generatedAt}  |  Total items: ${sorted.length}`, 40, 58);
+
+        autoTable(doc, {
+            startY: 72,
+            head: [['SKU', 'Product', 'Category', 'Unit', 'Price (PHP)', 'Stock', 'Reorder At', 'Status']],
+            body: sorted.map((p) => [
+                p.sku ?? '—',
+                p.name ?? '—',
+                p.category || '—',
+                p.receiving_unit || 'piece',
+                Number(p.price ?? 0).toFixed(2),
+                String(p.current_stock ?? 0),
+                String(p.reorder_threshold ?? 0),
+                stockState(p).label,
+            ]),
+            styles: { fontSize: 9, cellPadding: 6 },
+            headStyles: { fillColor: [37, 99, 235] },
+        });
+
+        const stamp = new Date().toISOString().slice(0, 10);
+        doc.save(`smart-stock-inventory-${stamp}.pdf`);
+        setMessage(`Exported ${sorted.length} product(s) to PDF.`);
+    }
+
+    function handleExportExcel() {
+        if (sorted.length === 0) return;
+
+        const rows = sorted.map((p) => ({
+            SKU: p.sku ?? '',
+            Product: p.name ?? '',
+            Category: p.category || '',
+            Unit: p.receiving_unit || 'piece',
+            'Price (PHP)': Number(p.price ?? 0),
+            'Current Stock': Number(p.current_stock ?? 0),
+            'Reorder Threshold': Number(p.reorder_threshold ?? 0),
+            Status: stockState(p).label,
+            Active: p.is_active ? 'Active' : 'Inactive',
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(rows);
+        worksheet['!cols'] = [
+            { wch: 16 }, { wch: 30 }, { wch: 20 }, { wch: 12 },
+            { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 14 }, { wch: 10 },
+        ];
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Inventory');
+        const stamp = new Date().toISOString().slice(0, 10);
+        XLSX.writeFile(workbook, `smart-stock-inventory-${stamp}.xlsx`);
+        setMessage(`Exported ${sorted.length} product(s) to Excel.`);
+    }
+
     async function handleReactivate(event) {
         event?.preventDefault();
         if (!reactivateProduct) {
@@ -1355,6 +1475,90 @@ export default function Products() {
                                 <h3>Product List</h3>
                                 <p className="muted">Overview of all registered products and their current stock levels.</p>
                             </div>
+                            <div className="head-actions">
+                                <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm"
+                                    onClick={handleExportPdf}
+                                    disabled={sorted.length === 0}
+                                >
+                                    Export PDF
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn btn-ghost btn-sm"
+                                    onClick={handleExportExcel}
+                                    disabled={sorted.length === 0}
+                                >
+                                    Export Excel
+                                </button>
+                                <div className="activity-options" ref={productsOptionsRef}>
+                                <button
+                                    type="button"
+                                    className="icon-btn is-outlined"
+                                    onClick={() => setProductsOptionsOpen((open) => !open)}
+                                    aria-haspopup="menu"
+                                    aria-expanded={productsOptionsOpen}
+                                    aria-label="Product list options"
+                                >
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+                                        <circle cx="12" cy="5" r="1.7" />
+                                        <circle cx="12" cy="12" r="1.7" />
+                                        <circle cx="12" cy="19" r="1.7" />
+                                    </svg>
+                                </button>
+                                {productsOptionsOpen && (
+                                    <div className="activity-options-panel" role="menu" aria-label="Product list options">
+                                        <button
+                                            type="button"
+                                            className="activity-options-item"
+                                            role="menuitem"
+                                            disabled={seeding || deletingAll}
+                                            onClick={() => {
+                                                setProductsOptionsOpen(false);
+                                                handleSeedProducts();
+                                            }}
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                                                <path d="m3.3 7 8.7 5 8.7-5" />
+                                                <path d="M12 22V12" />
+                                            </svg>
+                                            <span>Add 7 sample products</span>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="activity-options-item activity-options-danger"
+                                            role="menuitem"
+                                            disabled={seeding || deletingAll}
+                                            onClick={() => {
+                                                setProductsOptionsOpen(false);
+
+                                                if (products.length === 0) {
+                                                    setEmptyNotice({
+                                                        title: 'No products to delete',
+                                                        description: 'The product list is already empty. Add a product or add the 7 sample products first.',
+                                                    });
+                                                    return;
+                                                }
+
+                                                setDeleteAllError(null);
+                                                setDeleteAllConfirm(true);
+                                            }}
+                                        >
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                <path d="M3 6h18" />
+                                                <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                                                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                                <path d="M10 11v6" />
+                                                <path d="M14 11v6" />
+                                            </svg>
+                                            <span>Delete all products</span>
+                                        </button>
+                                    </div>
+                                )}
+                                </div>
+                            </div>
                         </div>
                         <div className="table-shell">
                         <div className="table-wrap">
@@ -1365,41 +1569,67 @@ export default function Products() {
                                             className="sort-header"
                                             onClick={() => toggleSort('name')}
                                         >
-                                            Product{sortBy === 'name' && sortDir === 'asc' ? ' ▲' : sortBy === 'name' ? ' ▼' : ''}
+                                            Product
+                                            <span className={`sort-indicator${sortBy === 'name' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'name' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('sku')}
                                             title="Stock Keeping Unit"
                                         >
-                                            SKU{sortBy === 'sku' && sortDir === 'asc' ? ' ▲' : sortBy === 'sku' ? ' ▼' : ''}
+                                            SKU
+                                            <span className={`sort-indicator${sortBy === 'sku' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'sku' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                             <span className="th-sub">Stock Keeping Unit</span>
                                         </th>
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('category')}
                                         >
-                                            Category{sortBy === 'category' && sortDir === 'asc' ? ' ▲' : sortBy === 'category' ? ' ▼' : ''}
+                                            Category
+                                            <span className={`sort-indicator${sortBy === 'category' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'category' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header"
                                             onClick={() => toggleSort('receiving_unit')}
                                         >
-                                            Unit{sortBy === 'receiving_unit' && sortDir === 'asc' ? ' ▲' : sortBy === 'receiving_unit' ? ' ▼' : ''}
+                                            Unit
+                                            <span className={`sort-indicator${sortBy === 'receiving_unit' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'receiving_unit' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header text-right"
                                             onClick={() => toggleSort('price')}
                                         >
-                                            Price{sortBy === 'price' && sortDir === 'asc' ? ' ▲' : sortBy === 'price' ? ' ▼' : ''}
+                                            Price
+                                            <span className={`sort-indicator${sortBy === 'price' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'price' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
                                         <th
                                             className="sort-header text-right"
                                             onClick={() => toggleSort('current_stock')}
                                         >
-                                            Current stock{sortBy === 'current_stock' && sortDir === 'asc' ? ' ▲' : sortBy === 'current_stock' ? ' ▼' : ''}
+                                            Current stock
+                                            <span className={`sort-indicator${sortBy === 'current_stock' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'current_stock' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
                                         </th>
-                                        <th>Status</th>
+                                        <th
+                                            className="sort-header"
+                                            onClick={() => toggleSort('status')}
+                                        >
+                                            Status
+                                            <span className={`sort-indicator${sortBy === 'status' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'status' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
+                                        </th>
                                         <th className="text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -1503,7 +1733,7 @@ export default function Products() {
                             </table>
 
                             {filtered.length === 0 && (
-                                <div className="table-empty">
+                                <div className="table-empty table-empty-solid">
                                     <span className="table-empty-icon" aria-hidden="true">
                                         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                                             <circle cx="11" cy="11" r="8" />
@@ -1515,7 +1745,7 @@ export default function Products() {
                                         {hasActiveFilters ? 'No results found' : 'No products yet'}
                                     </p>
                                     <p className="table-empty-sub">
-                                        {hasActiveFilters ? 'Try adjusting your search or filters.' : 'Add a product to get started.'}
+                                        {hasActiveFilters ? 'Try adjusting your search or filters.' : 'Add a product or add the 7 sample products to populate this list.'}
                                     </p>
                                 </div>
                             )}
@@ -1581,6 +1811,15 @@ export default function Products() {
                                             role="menuitem"
                                             onClick={() => {
                                                 setActivityOptionsOpen(false);
+
+                                                if (activity.length === 0) {
+                                                    setEmptyNotice({
+                                                        title: 'Nothing to clear',
+                                                        description: 'The activity list is already empty. Add, edit or adjust a product and its activity will show up here.',
+                                                    });
+                                                    return;
+                                                }
+
                                                 setClearError(null);
                                                 setClearConfirm(true);
                                             }}
@@ -2057,6 +2296,34 @@ export default function Products() {
                     onCancel={() => setReactivateProduct(null)}
                 />
             )}
+            {emptyNotice && (
+                <MessageDialog
+                    tone="info"
+                    title={emptyNotice.title}
+                    description={emptyNotice.description}
+                    onClose={() => setEmptyNotice(null)}
+                />
+            )}
+
+            {deleteAllConfirm && (
+                <ConfirmDialog
+                    tone="danger"
+                    title="Delete all products?"
+                    description={`This permanently deletes all ${products.length} product(s) in the catalogue. Any products linked to transaction or stock history are kept. This action cannot be undone.`}
+                    confirmLabel="Delete all"
+                    loadingLabel="Deleting…"
+                    loading={deletingAll}
+                    error={deleteAllError}
+                    onConfirm={handleDeleteAllConfirm}
+                    onCancel={() => {
+                        if (!deletingAll) {
+                            setDeleteAllConfirm(false);
+                            setDeleteAllError(null);
+                        }
+                    }}
+                />
+            )}
+
             {clearConfirm && (
                 <ConfirmDialog
                     tone="danger"
