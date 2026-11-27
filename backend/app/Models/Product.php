@@ -54,6 +54,7 @@ class Product extends Model
         'current_stock',
         'reorder_threshold',
         'is_active',
+        'is_listed',
         'receiving_unit',
         'pieces_per_receiving_unit',
     ];
@@ -70,6 +71,7 @@ class Product extends Model
             'current_stock' => 'integer',
             'reorder_threshold' => 'integer',
             'is_active' => 'boolean',
+            'is_listed' => 'boolean',
             'pieces_per_receiving_unit' => 'integer',
         ];
     }

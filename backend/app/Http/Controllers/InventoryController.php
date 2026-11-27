@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\StockAdjustment;
 use App\Models\StockIn;
+use App\Models\Supplier;
 use App\Services\ActivityLogger;
 use App\Services\SkuGenerator;
 use Illuminate\Http\JsonResponse;
@@ -28,6 +30,16 @@ class InventoryController extends Controller
     protected function generateSku(string $name): string
     {
         return SkuGenerator::next($name);
+    }
+
+    protected function resolveCategoryId(?string $categoryName): ?int
+    {
+        $name = trim((string) $categoryName);
+        if ($name === '' || strcasecmp($name, 'Uncategorized') === 0) {
+            return null;
+        }
+
+        return Category::whereRaw('LOWER(TRIM(name)) = LOWER(TRIM(?))', [$name])->value('id');
     }
 
     /**
@@ -54,6 +66,7 @@ class InventoryController extends Controller
             // Optional category for a NEW product; defaults to Uncategorized.
             'custom_category' => ['nullable', 'string', 'max:100'],
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'current_stock' => ['nullable', 'integer', 'min:0'],
             'quantity_received' => ['required', 'integer', 'min:1'],
             // The Receiving Unit dropdown pre-selects the product's configured
             // unit, so this is normally automatic. An override is a deliberate
@@ -126,6 +139,12 @@ class InventoryController extends Controller
                 if ($customSku !== '' && $customSku !== (string) $product->sku) {
                     $product->sku = $customSku;
                 }
+                if (array_key_exists('current_stock', $validated) && $validated['current_stock'] !== null) {
+                    $editedOnHand = (int) $validated['current_stock'];
+                    if ($editedOnHand !== (int) $product->current_stock) {
+                        $product->current_stock = $editedOnHand;
+                    }
+                }
                 if ($product->isDirty()) {
                     $product->save();
                 }
@@ -135,15 +154,18 @@ class InventoryController extends Controller
                 // 0 with a single-piece conversion; both are editable on the
                 // Products page afterwards. The chosen Receiving Unit becomes
                 // the new product's configured receiving unit.
+                $catName = trim((string) ($validated['custom_category'] ?? '')) ?: 'Uncategorized';
                 $product = Product::create([
                     'name' => $newProductName,
                     'sku' => $customSku !== '' ? $customSku : $this->generateSku($newProductName),
-                    'category' => trim((string) ($validated['custom_category'] ?? '')) ?: 'Uncategorized',
+                    'category' => $catName,
+                    'category_id' => $this->resolveCategoryId($catName),
                     'price' => 0,
                     'current_stock' => 0,
                     'reorder_threshold' => 0,
                     'user_id' => $user->id,
                     'is_active' => true,
+                    'is_listed' => false,
                     'receiving_unit' => trim((string) ($validated['unit_of_measure'] ?? '')) ?: 'piece',
                     'pieces_per_receiving_unit' => 1,
                 ]);
@@ -306,15 +328,19 @@ class InventoryController extends Controller
             return response()->json(['message' => 'Authentication required.'], 401);
         }
 
+        $publishing = $request->boolean('is_listed');
+
         $validated = $request->validate([
             'id' => ['required', 'integer'],
             'name' => 'required|string|max:255',
             'sku' => ['required', 'string', 'max:50', Rule::unique('products', 'sku')->ignore($request->input('id'))],
-            'category' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
+            'category' => $publishing ? 'required|string|max:100' : 'nullable|string',
+            'price' => $publishing ? 'required|numeric|gt:0' : 'required|numeric|min:0',
             'current_stock' => 'required|integer|min:0',
             'reorder_threshold' => 'required|integer|min:0',
-            'receiving_unit' => 'nullable|string|max:20',
+            'receiving_unit' => $publishing ? 'required|string|max:20' : 'nullable|string|max:20',
+            'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
+            'is_listed' => ['sometimes', 'boolean'],
         ]);
 
         $product = Product::find($validated['id']);
@@ -323,11 +349,17 @@ class InventoryController extends Controller
             return response()->json(['message' => 'Product not found.'], 404);
         }
 
+        $wasUnlisted = ! $product->is_listed;
+
         // SS-85: Execute SQL UPDATE query for the selected product ID.
         $updateData = collect($validated)
-            ->except(['id'])
+            ->except(['id', 'supplier_id'])
             ->filter(fn ($value) => $value !== null)
             ->toArray();
+
+        if (array_key_exists('category', $validated)) {
+            $updateData['category_id'] = $this->resolveCategoryId($validated['category']);
+        }
 
         // Snapshot the editable fields BEFORE the update so the activity feed
         // can describe exactly what changed (e.g. a rename or price change).
@@ -337,11 +369,42 @@ class InventoryController extends Controller
 
         $updatedRows = Product::where('id', $product->id)->update($updateData);
 
+        if ($request->has('supplier_id')) {
+            $supplierId = $validated['supplier_id'] ?? null;
+            $latestStockIn = StockIn::where('product_id', $product->id)
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->first();
+
+            if ($latestStockIn) {
+                $latestStockIn->update(['supplier_id' => $supplierId]);
+            } elseif ($supplierId !== null) {
+                StockIn::create([
+                    'product_id' => $product->id,
+                    'user_id' => $user->id,
+                    'supplier_id' => $supplierId,
+                    'quantity_received' => 0,
+                    'unit_of_measure' => $validated['receiving_unit'] ?? $product->receiving_unit ?? 'piece',
+                    'unit_conversion' => 1,
+                    'piece_delta' => 0,
+                    'stock_before' => (int) ($validated['current_stock'] ?? $product->current_stock),
+                    'stock_after' => (int) ($validated['current_stock'] ?? $product->current_stock),
+                    'note' => 'Supplier assigned',
+                ]);
+            }
+        }
+
         $fresh = $product->fresh();
-        ActivityLogger::safe(fn () => ActivityLogger::productUpdated($user, $fresh, $before));
+        if ($wasUnlisted && $fresh->is_listed) {
+            ActivityLogger::safe(fn () => ActivityLogger::productCreated($user, $fresh));
+        } else {
+            ActivityLogger::safe(fn () => ActivityLogger::productUpdated($user, $fresh, $before));
+        }
 
         return response()->json([
-            'message' => 'Product updated successfully',
+            'message' => ($wasUnlisted && $fresh->is_listed)
+                ? 'Product added to Product List.'
+                : 'Product updated successfully',
             'product' => $fresh,
             'updated_rows' => $updatedRows,
         ]);
@@ -418,12 +481,30 @@ public function getProducts(Request $request): JsonResponse
         ->when(! $request->boolean('include_inactive', true),
             fn ($q) => $q->where('is_active', true))
         ->addSelect([
+            'last_supplier_id' => function ($query) {
+                $query->select('stock_ins.supplier_id')
+                    ->from('stock_ins')
+                    ->whereColumn('stock_ins.product_id', 'products.id')
+                    ->orderByDesc('stock_ins.created_at')
+                    ->orderByDesc('stock_ins.id')
+                    ->limit(1);
+            },
             'last_supplier_name' => function ($query) {
                 $query->select('suppliers.name')
                     ->from('stock_ins')
-                    ->join('suppliers', 'stock_ins.supplier_id', '=', 'suppliers.id')
+                    ->leftJoin('suppliers', 'stock_ins.supplier_id', '=', 'suppliers.id')
                     ->whereColumn('stock_ins.product_id', 'products.id')
                     ->orderByDesc('stock_ins.created_at')
+                    ->orderByDesc('stock_ins.id')
+                    ->limit(1);
+            },
+            'last_supplier_active' => function ($query) {
+                $query->select('suppliers.is_active')
+                    ->from('stock_ins')
+                    ->leftJoin('suppliers', 'stock_ins.supplier_id', '=', 'suppliers.id')
+                    ->whereColumn('stock_ins.product_id', 'products.id')
+                    ->orderByDesc('stock_ins.created_at')
+                    ->orderByDesc('stock_ins.id')
                     ->limit(1);
             },
             'last_received_at' => function ($query) {
@@ -449,6 +530,9 @@ public function getProducts(Request $request): JsonResponse
                 ->timezone('UTC')
                 ->toISOString();
         }
+        $product->last_supplier_active = $product->last_supplier_active !== null
+            ? (bool) $product->last_supplier_active
+            : null;
     });
 
     return response()->json($products);
@@ -582,9 +666,31 @@ public function getProducts(Request $request): JsonResponse
             ['name' => 'Heavy Duty Padlock 50mm', 'category' => 'Hardware', 'price' => 190, 'current_stock' => 0, 'reorder_threshold' => 8, 'receiving_unit' => 'piece'],
         ];
 
+        $suppliers = Supplier::active()->orderBy('id')->get();
+        if ($suppliers->isEmpty()) {
+            $defaultSuppliers = [
+                ['name' => 'Metro Hardware Trading', 'contact_person' => 'Ramon Reyes', 'phone' => '0917-555-0101', 'email' => 'sales@metrohardware.ph'],
+                ['name' => 'BuildRight Supply Corp.', 'contact_person' => 'Elena Cruz', 'phone' => '0918-555-0102', 'email' => 'orders@buildright.ph'],
+                ['name' => 'PrimeCoat & Electrical Co.', 'contact_person' => 'Marco Santos', 'phone' => '0919-555-0103', 'email' => 'dispatch@primecoat.ph'],
+                ['name' => 'FlowLine Plumbing Depot', 'contact_person' => 'Liza Mendoza', 'phone' => '0920-555-0104', 'email' => 'supply@flowline.ph'],
+            ];
+            foreach ($defaultSuppliers as $row) {
+                Supplier::firstOrCreate(
+                    ['name' => $row['name']],
+                    [
+                        'contact_person' => $row['contact_person'],
+                        'phone' => $row['phone'],
+                        'email' => $row['email'],
+                        'is_active' => true,
+                    ]
+                );
+            }
+            $suppliers = Supplier::active()->orderBy('id')->get();
+        }
+
         $created = 0;
 
-        foreach ($samples as $sample) {
+        foreach ($samples as $index => $sample) {
             $baseName = $sample['name'];
             $name = $baseName;
             $suffix = 2;
@@ -594,21 +700,44 @@ public function getProducts(Request $request): JsonResponse
                 $suffix++;
             }
 
-            Product::create([
+            $product = Product::create([
                 'name' => $name,
                 'sku' => $this->generateSku($name),
                 'category' => $sample['category'],
+                'category_id' => $this->resolveCategoryId($sample['category']),
                 'price' => $sample['price'],
                 'current_stock' => $sample['current_stock'],
                 'reorder_threshold' => $sample['reorder_threshold'],
                 'receiving_unit' => $sample['receiving_unit'],
                 'is_active' => true,
+                'is_listed' => true,
             ]);
+
+            $supplier = $suppliers->isNotEmpty()
+                ? $suppliers[$index % $suppliers->count()]
+                : null;
+
+            if ($supplier) {
+                StockIn::create([
+                    'product_id' => $product->id,
+                    'user_id' => $user->id,
+                    'supplier_id' => $supplier->id,
+                    'quantity_received' => $sample['current_stock'],
+                    'unit_of_measure' => $sample['receiving_unit'],
+                    'unit_conversion' => 1,
+                    'piece_delta' => $sample['current_stock'],
+                    'stock_before' => 0,
+                    'stock_after' => $sample['current_stock'],
+                    'note' => 'Sample stock data',
+                ]);
+            }
+
             $created++;
         }
 
         return response()->json([
             'message' => "{$created} sample products added.",
+            'created' => $created,
         ], 201);
     }
 
@@ -625,7 +754,7 @@ public function getProducts(Request $request): JsonResponse
         $products = Product::all();
 
         if ($products->isEmpty()) {
-            return response()->json(['message' => 'No products to delete.']);
+            return response()->json(['message' => 'No products to delete.', 'deleted' => 0]);
         }
 
         $deleted = 0;
@@ -650,6 +779,6 @@ public function getProducts(Request $request): JsonResponse
             ? "Deleted {$deleted} product(s) ({$skipped} kept due to linked transaction or stock history)."
             : "All products deleted ({$deleted}).";
 
-        return response()->json(['message' => $msg]);
+        return response()->json(['message' => $msg, 'deleted' => $deleted]);
     }
 }

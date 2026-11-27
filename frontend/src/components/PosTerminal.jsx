@@ -7,6 +7,7 @@ import PosRecentActivity from './PosRecentActivity.jsx';
 import Alert, { Toast } from './Feedback.jsx';
 import { get, post, validationMessages } from '../lib/api.js';
 import { formatPeso } from '../lib/format.js';
+import { notifyConnectedNav } from '../lib/navBadges.js';
 
 const QUICK_CASH = [20, 50, 100, 200];
 const PER_PAGE = 12;
@@ -162,10 +163,11 @@ export default function PosTerminal({ channel = 'cashier' }) {
 
             if (status) {
                 // Same stock-state rule as the Products table and the card badges.
+                const deactivated = item.is_active === false || item.is_active === 0;
                 const stock = Number(item.current_stock);
-                const out = stock <= 0;
-                const low = !out && stock <= Number(item.reorder_threshold);
-                const state = out ? 'out' : low ? 'low' : 'in';
+                const out = !deactivated && stock <= 0;
+                const low = !deactivated && !out && stock <= Number(item.reorder_threshold);
+                const state = deactivated ? 'deactivated' : out ? 'out' : low ? 'low' : 'in';
 
                 if (state !== status) {
                     return false;
@@ -236,6 +238,10 @@ export default function PosTerminal({ channel = 'cashier' }) {
     }
 
     function addToCart(product) {
+        if (product.is_active === false || product.is_active === 0) {
+            return;
+        }
+
         const stock = Number(product.current_stock) || 0;
 
         if (stock <= 0) {
@@ -350,6 +356,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                 payment: response.payment_amount,
                 change: response.change_amount ?? response.change,
             });
+            notifyConnectedNav('saleCompleted', 1);
 
             // Merge the post-sale stock snapshot so the grid is instantly
             // accurate without a refetch.
@@ -596,6 +603,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                         <option value="in">In stock</option>
                                         <option value="low">Low stock</option>
                                         <option value="out">Out of stock</option>
+                                        <option value="deactivated">Deactivated</option>
                                     </select>
                                 </label>
                                 <label className="field">
@@ -643,28 +651,31 @@ export default function PosTerminal({ channel = 'cashier' }) {
                             {!error && filtered.length > 0 && (
                                 <div className={`pos-grid${paged.length >= 9 ? ' is-stretch' : ''}`}>
                                     {paged.map((item) => {
+                                        const deactivated = item.is_active === false || item.is_active === 0;
                                         const stock = Number(item.current_stock) || 0;
                                         // "left" is what can still be added, so it drops as
                                         // soon as the item is clicked into the cart.
                                         const available = availableOf(item);
-                                        const out = stock <= 0;
-                                        const allInCart = !out && available <= 0;
-                                        const low = !out && !allInCart && available <= Number(item.reorder_threshold);
+                                        const out = !deactivated && stock <= 0;
+                                        const allInCart = !deactivated && !out && available <= 0;
+                                        const low = !deactivated && !out && !allInCart && available <= Number(item.reorder_threshold);
                                         const delta = cartDeltas[item.id];
 
                                         return (
                                             <button
                                                 key={item.id}
                                                 type="button"
-                                                className={`card pos-card pos-pick ${out ? 'is-out' : low || allInCart ? 'is-low' : ''}`}
+                                                className={`card pos-card pos-pick ${deactivated || out ? 'is-out' : low || allInCart ? 'is-low' : ''}`}
                                                 onClick={() => addToCart(item)}
-                                                disabled={out || allInCart}
+                                                disabled={deactivated || out || allInCart}
                                                 title={
-                                                    out
-                                                        ? 'Out of stock'
-                                                        : allInCart
-                                                          ? 'All available stock is already in the cart'
-                                                          : `Add ${item.name} to cart`
+                                                    deactivated
+                                                        ? (item.last_supplier_active === false ? 'Inactive supplier' : 'Deactivated')
+                                                        : out
+                                                          ? 'Out of stock'
+                                                          : allInCart
+                                                            ? 'All available stock is already in the cart'
+                                                            : `Add ${item.name} to cart`
                                                 }
                                             >
                                                 {delta && (
@@ -682,8 +693,12 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                                 <h3>{item.name}</h3>
                                                 <div className="pos-card-meta">
                                                     <span className="mono muted pos-card-sku">{item.sku}</span>
-                                                    <span className={`pill ${out ? 'pill-danger' : low || allInCart ? 'pill-warn' : 'pill-ok'}`}>
-                                                        {out ? 'Out' : `${available} left`}
+                                                    <span className={`pill ${deactivated || out ? 'pill-danger' : low || allInCart ? 'pill-warn' : 'pill-ok'}`}>
+                                                        {deactivated
+                                                            ? (item.last_supplier_active === false ? 'Inactive supplier' : 'Deactivated')
+                                                            : out
+                                                              ? 'Out'
+                                                              : `${available} left`}
                                                     </span>
                                                 </div>
                                                 <footer>

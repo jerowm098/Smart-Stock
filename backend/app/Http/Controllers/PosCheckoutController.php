@@ -82,15 +82,26 @@ class PosCheckoutController extends Controller
         $search = trim((string) $request->query('search', ''));
 
         $query = Product::query()
-            ->where('is_active', true)
+            ->where('is_listed', true)
             // reorder_threshold is included because the POS stock badge needs it to
             // show the same low/out-of-stock styling as the Admin inventory list.
-            // The receiving-unit metadata is included so the POS can state, per
-            // row, which unit of measure is actually being sold.
+            // is_active is included so deactivated products remain visible in the
+            // catalog with a "Deactivated" status pill (disabled from checkout).
             ->select([
                 'id', 'name', 'sku', 'category', 'price', 'current_stock',
                 'reorder_threshold', 'receiving_unit', 'pieces_per_receiving_unit',
-                'updated_at',
+                'is_active', 'updated_at',
+            ])
+            ->addSelect([
+                'last_supplier_active' => function ($sub) {
+                    $sub->select('suppliers.is_active')
+                        ->from('stock_ins')
+                        ->leftJoin('suppliers', 'stock_ins.supplier_id', '=', 'suppliers.id')
+                        ->whereColumn('stock_ins.product_id', 'products.id')
+                        ->orderByDesc('stock_ins.created_at')
+                        ->orderByDesc('stock_ins.id')
+                        ->limit(1);
+                },
             ])
             // Most recently added-or-updated products first, consistent with the
             // Admin tables: a newly stocked or newly added item floats to the
@@ -141,6 +152,8 @@ class PosCheckoutController extends Controller
             'price' => $product->price,
             'current_stock' => $product->current_stock,
             'reorder_threshold' => $product->reorder_threshold,
+            'is_active' => (bool) $product->is_active,
+            'last_supplier_active' => $product->last_supplier_active !== null ? (bool) $product->last_supplier_active : null,
             'updated_at' => $product->updated_at,
             'receiving_unit' => $this->unitWord($receivingUnit),
             'pieces_per_receiving_unit' => $piecesPerUnit,
@@ -185,7 +198,7 @@ class PosCheckoutController extends Controller
 
                 // BRD (Inventory): discontinued items are deactivated, so they must
                 // not be sellable even if a stale cart still references them.
-                if (! $product->is_active) {
+                if (! $product->is_active || ! $product->is_listed) {
                     return response()->json([
                         'message' => 'This item is no longer available.',
                         'product_id' => $product->id,

@@ -7,7 +7,8 @@ import Tooltip from '../../components/Tooltip.jsx';
 import { FieldError, Toast } from '../../components/Feedback.jsx';
 import MessageDialog from '../../components/MessageDialog.jsx';
 import { del, get, post, put, validationMessages } from '../../lib/api.js';
-import { formatPeso } from '../../lib/format.js';
+import { formatPeso, timeAgo } from '../../lib/format.js';
+import { clearConnectedNav, notifyConnectedNav } from '../../lib/navBadges.js';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -212,25 +213,36 @@ function formatPriceInput(value) {
 }
 
 function stockState(product) {
+    if (product.is_active === false || product.is_active === 0) {
+        if (product.last_supplier_active === false) {
+            return { label: 'Inactive supplier', className: 'pill-danger', key: 'deactivated' };
+        }
+        return { label: 'Deactivated', className: 'pill-danger', key: 'deactivated' };
+    }
+
     if (Number(product.current_stock) <= 0) {
-        return { label: 'Out of stock', className: 'pill-danger' };
+        return { label: 'Out of stock', className: 'pill-danger', key: 'out' };
     }
 
     if (Number(product.current_stock) <= Number(product.reorder_threshold)) {
-        return { label: 'Low stock', className: 'pill-warn' };
+        return { label: 'Low stock', className: 'pill-warn', key: 'low' };
     }
 
-    return { label: 'In stock', className: 'pill-ok' };
+    return { label: 'In stock', className: 'pill-ok', key: 'in' };
 }
 
 export default function Products() {
     const [products, setProducts] = useState([]);
+    const [suppliers, setSuppliers] = useState([]);
     const [defectCount, setDefectCount] = useState(null);
     const [activity, setActivity] = useState([]);
     // The activity row whose detail popup is currently open (null = closed).
     const [activityDetail, setActivityDetail] = useState(null);
-    // Recent Activity pagination (3 rows per page).
+    // Recent Activity & Product Queue pagination (3 rows per page).
     const [activityPage, setActivityPage] = useState(1);
+    const [queuePage, setQueuePage] = useState(1);
+    const [editFromQueue, setEditFromQueue] = useState(false);
+    const QUEUE_PER_PAGE = 3;
     const [clearConfirm, setClearConfirm] = useState(false);
     const [clearing, setClearing] = useState(false);
     const [clearError, setClearError] = useState(null);
@@ -323,7 +335,7 @@ export default function Products() {
         // times before surfacing the error, so a transient hiccup never flashes.
         const fetchProducts = async (attempt = 0) => {
             try {
-                const [rows, defects, feed] = await Promise.all([
+                const [rows, defects, feed, supplierRows] = await Promise.all([
                     get('/api/inventory/products'),
                     get('/api/inventory/defects').catch(() => null),
                     // Products page feed is scoped to product actions only —
@@ -332,8 +344,9 @@ export default function Products() {
                         limit: 12,
                         actions: 'product_created,product_updated,product_deactivated,product_reactivated,stock_adjusted',
                     }).catch(() => null),
+                    get('/api/suppliers/active').catch(() => []),
                 ]);
-                return { rows, defects, feed };
+                return { rows, defects, feed, supplierRows };
             } catch (err) {
                 const retryable = !err.status || err.status >= 500;
                 if (retryable && attempt < 2) {
@@ -345,8 +358,9 @@ export default function Products() {
         };
 
         try {
-            const { rows, defects, feed } = await fetchProducts();
+            const { rows, defects, feed, supplierRows } = await fetchProducts();
             setProducts(Array.isArray(rows) ? rows : []);
+            setSuppliers(Array.isArray(supplierRows) ? supplierRows : []);
             if (defects && typeof defects.defect_count === 'number') {
                 setDefectCount(defects.defect_count);
             }
@@ -433,20 +447,41 @@ export default function Products() {
         stockDeltaTimer.current = setTimeout(() => setStockDeltas({}), 2600);
     }, [products, loading]);
 
+    const queuedProducts = useMemo(
+        () => products.filter((product) => product.is_listed === false),
+        [products],
+    );
+
+    const listedProducts = useMemo(
+        () => products.filter((product) => product.is_listed !== false),
+        [products],
+    );
+
+    const queueLastPage = Math.max(1, Math.ceil(queuedProducts.length / QUEUE_PER_PAGE));
+    const queueSafePage = Math.min(queuePage, queueLastPage);
+    const pagedQueue = useMemo(
+        () => queuedProducts.slice((queueSafePage - 1) * QUEUE_PER_PAGE, queueSafePage * QUEUE_PER_PAGE),
+        [queuedProducts, queueSafePage],
+    );
+
+    useEffect(() => {
+        setQueuePage(1);
+    }, [queuedProducts.length]);
+
     const categories = useMemo(() => {
         const set = new Set();
-        products.forEach((product) => {
+        listedProducts.forEach((product) => {
             if (product.category) {
                 set.add(product.category);
             }
         });
         return Array.from(set).sort((a, b) => a.localeCompare(b));
-    }, [products]);
+    }, [listedProducts]);
 
     const filtered = useMemo(() => {
         const needle = search.trim().toLowerCase();
 
-        return products.filter((product) => {
+        return listedProducts.filter((product) => {
             if (needle) {
                 const matches = [product.name, product.sku, product.category]
                     .filter(Boolean)
@@ -469,12 +504,7 @@ export default function Products() {
 
             if (statusFilter) {
                 const state = stockState(product);
-                const key = state.className === 'pill-danger'
-                    ? 'out'
-                    : state.className === 'pill-warn'
-                        ? 'low'
-                        : 'in';
-                if (key !== statusFilter) {
+                if (state.key !== statusFilter) {
                     return false;
                 }
             }
@@ -502,13 +532,14 @@ export default function Products() {
             let av = a[sortBy];
             let bv = b[sortBy];
 
-            // Status comparison: Out of stock (0) -> Low stock (1) -> In stock (2)
+            // Status comparison: Deactivated (0) -> Out of stock (1) -> Low stock (2) -> In stock (3)
             if (sortBy === 'status') {
                 const rank = (p) => {
-                    const cls = stockState(p).className;
-                    if (cls === 'pill-danger') return 0;
-                    if (cls === 'pill-warn') return 1;
-                    return 2;
+                    const key = stockState(p).key;
+                    if (key === 'deactivated') return 0;
+                    if (key === 'out') return 1;
+                    if (key === 'low') return 2;
+                    return 3;
                 };
                 return (rank(a) - rank(b)) * dir;
             }
@@ -624,7 +655,7 @@ export default function Products() {
     }, [activity.length]);
 
     const stats = useMemo(() => {
-        const active = products.filter((product) => product.is_active);
+        const active = listedProducts.filter((product) => product.is_active);
         const out = active.filter((product) => Number(product.current_stock) <= 0);
         const low = active.filter(
             (product) =>
@@ -633,7 +664,7 @@ export default function Products() {
         );
 
         return { total: active.length, low: low.length, out: out.length };
-    }, [products]);
+    }, [listedProducts]);
 
     // Fetch AI suggestions for the given name. These are shown ONLY as ghost
     // placeholder text — they are never committed to the form fields, so they
@@ -959,6 +990,7 @@ export default function Products() {
             // flash-highlight its row.
             setHighlightId(response.product?.id ?? null);
             setAddOpen(false);
+            notifyConnectedNav('productAdded', 1);
             await refresh();
         } catch (err) {
             setFormError(err.message);
@@ -985,39 +1017,84 @@ export default function Products() {
         lastAutoSuggestedName.current = '';
     }
 
-    function openEdit(product) {
+    function openEdit(product, fromQueue = false) {
         setEditProduct(product);
+        setEditFromQueue(fromQueue);
+        const rawCategory = product.category ?? '';
         setEditForm({
-            name: product.name,
-            sku: product.sku,
-            category: product.category ?? '',
-            price: product.price,
+            name: product.name ?? '',
+            sku: product.sku ?? '',
+            category: fromQueue && rawCategory === 'Uncategorized' ? '' : rawCategory,
+            price: fromQueue && Number(product.price) <= 0 ? '' : product.price,
             current_stock: product.current_stock,
-            reorder_threshold: product.reorder_threshold,
+            reorder_threshold: fromQueue && Number(product.reorder_threshold) <= 0 ? '' : product.reorder_threshold,
             receiving_unit: product.receiving_unit ?? 'piece',
+            supplier_id: product.last_supplier_id && product.last_supplier_active !== false
+                ? String(product.last_supplier_id)
+                : '',
         });
         setEditError(null);
     }
 
     async function handleEdit(event) {
         event.preventDefault();
+
+        if (editFromQueue) {
+            const nameVal = String(editForm.name ?? '').trim();
+            const skuVal = String(editForm.sku ?? '').trim();
+            const categoryVal = String(editForm.category ?? '').trim();
+            const unitVal = String(editForm.receiving_unit ?? '').trim();
+            const priceVal = Number(editForm.price);
+            const stockVal = editForm.current_stock === '' ? NaN : Number(editForm.current_stock);
+            const reorderVal = editForm.reorder_threshold === '' ? NaN : Number(editForm.reorder_threshold);
+
+            if (!nameVal || !skuVal || !categoryVal || !unitVal) {
+                setEditError('Please fill in all required fields before adding this product to the Product List.');
+                return;
+            }
+            if (!Number.isFinite(priceVal) || priceVal <= 0) {
+                setEditError('Please enter a valid selling price greater than ₱0.00.');
+                return;
+            }
+            if (!Number.isFinite(stockVal) || stockVal < 0) {
+                setEditError('Please enter a valid current stock count.');
+                return;
+            }
+            if (!Number.isFinite(reorderVal) || reorderVal < 0) {
+                setEditError('Please enter a valid reorder threshold.');
+                return;
+            }
+        }
+
         setEditSaving(true);
         setEditError(null);
 
         try {
-            const response = await put('/api/inventory/update', {
+            const payload = {
                 id: editProduct.id,
-                name: editForm.name,
-                sku: editForm.sku,
-                category: editForm.category || null,
+                name: String(editForm.name ?? '').trim(),
+                sku: String(editForm.sku ?? '').trim(),
+                category: String(editForm.category ?? '').trim() || null,
                 price: Number(editForm.price),
                 current_stock: Number(editForm.current_stock),
                 reorder_threshold: Number(editForm.reorder_threshold),
                 receiving_unit: editForm.receiving_unit || 'piece',
-            });
+                supplier_id: editForm.supplier_id ? Number(editForm.supplier_id) : null,
+            };
+            if (editFromQueue) {
+                payload.is_listed = true;
+            }
+
+            const response = await put('/api/inventory/update', payload);
 
             setMessage(response.message);
+            const listedId = editFromQueue ? (response.product?.id ?? editProduct.id) : null;
             setEditProduct(null);
+            setEditFromQueue(false);
+            if (listedId) {
+                setHighlightId(listedId);
+                notifyConnectedNav('productListed', 1);
+            }
             await refresh();
         } catch (err) {
             setEditError(validationMessages(err)[0] ?? err.message);
@@ -1098,6 +1175,7 @@ export default function Products() {
 
             setClearConfirm(false);
             setActivity([]);
+            clearConnectedNav('productAdded');
             setActivityPage(1);
             setMessage(response?.message ?? 'Activity list cleared.');
             await refresh();
@@ -1115,6 +1193,7 @@ export default function Products() {
         try {
             const response = await post('/api/inventory/seed');
             setMessage(response?.message ?? '7 sample products added.');
+            notifyConnectedNav('productAdded', response?.created ?? 7);
             await refresh();
         } catch (err) {
             setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample products.');
@@ -1131,6 +1210,11 @@ export default function Products() {
         try {
             const response = await del('/api/inventory');
             setDeleteAllConfirm(false);
+            const deleted = Number(response?.deleted) || 0;
+            clearConnectedNav('productAdded');
+            if (deleted > 0) {
+                notifyConnectedNav('productAdded', -deleted);
+            }
             setMessage(response?.message ?? 'All products deleted.');
             await refresh();
         } catch (err) {
@@ -1254,14 +1338,29 @@ export default function Products() {
                         ))}
                     </div>
 
-                    {/* Add New Product panel */}
-                    <section className="card panel panel-add">
-                        <div className="panel-head">
+                    {/* Product Queue List */}
+                    <section className="card padded recent-activity">
+                        <div className="filter-head">
                             <div>
                                 <span className="skeleton skeleton-lg" style={{ marginBottom: 8 }} />
                                 <span className="skeleton skeleton-line skeleton-sm" />
                             </div>
-                            <span className="skeleton" style={{ width: 118, height: 38, borderRadius: 8 }} />
+                        </div>
+                        <div className="activity-shell">
+                            <ul className="activity-list">
+                                {[0, 1].map((i) => (
+                                    <li key={i}>
+                                        <div className="activity-row" aria-hidden="true">
+                                            <span className="skeleton" style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0 }} />
+                                            <div className="activity-body">
+                                                <span className="skeleton skeleton-line" style={{ width: '55%', marginBottom: 8 }} />
+                                                <span className="skeleton skeleton-line skeleton-sm" style={{ width: '35%' }} />
+                                            </div>
+                                            <span className="skeleton skeleton-line" style={{ width: 90, height: 10, flexShrink: 0 }} />
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
                         </div>
                     </section>
 
@@ -1301,8 +1400,8 @@ export default function Products() {
                             <table className="table" aria-hidden="true">
                                 <thead>
                                     <tr>
-                                        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-                                            <th key={i} className={i === 4 || i === 5 || i === 7 ? 'text-right' : undefined}>
+                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                                            <th key={i} className={i === 4 || i === 5 || i === 6 || i === 8 ? 'text-right' : undefined}>
                                                 <span className="skeleton skeleton-line skeleton-sm" style={{ width: '70%' }} />
                                             </th>
                                         ))}
@@ -1311,9 +1410,9 @@ export default function Products() {
                                 <tbody>
                                     {[0, 1, 2, 3, 4, 5].map((r) => (
                                         <tr key={r}>
-                                            {[0, 1, 2, 3, 4, 5, 6, 7].map((c) => (
-                                                <td key={c} className={c === 4 || c === 5 || c === 7 ? 'text-right' : undefined}>
-                                                    <span className="skeleton skeleton-line" style={{ width: c === 7 ? '62%' : '85%' }} />
+                                            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((c) => (
+                                                <td key={c} className={c === 4 || c === 5 || c === 6 || c === 8 ? 'text-right' : undefined}>
+                                                    <span className="skeleton skeleton-line" style={{ width: c === 8 ? '62%' : '85%' }} />
                                                 </td>
                                             ))}
                                         </tr>
@@ -1386,16 +1485,99 @@ export default function Products() {
                         </article>
                     </div>
 
-                    <section className="card panel panel-add">
-                        <div className="panel-head">
+                    <section className="card padded recent-activity">
+                        <div className="filter-head">
                             <div>
-                                <h3>Add New Product</h3>
-                                <p className="muted">Create a product catalogue entry.</p>
+                                <h3>Product Queue List</h3>
+                                <p className="muted">Received stock waiting for complete product details before being listed.</p>
                             </div>
-                            <button type="button" className="btn btn-primary" onClick={() => { resetAdd(); setAddOpen(true); }}>
-                                Add product
-                            </button>
+                            {queuedProducts.length > 0 && (
+                                <span className="pill pill-warn">
+                                    {queuedProducts.length} pending
+                                </span>
+                            )}
                         </div>
+                        {queuedProducts.length === 0 ? (
+                            <div className="table-empty">
+                                <span className="table-empty-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5" />
+                                        <path d="M3.75 7.5h16.5" />
+                                        <path d="M9 7.5V4.5h6v3" />
+                                    </svg>
+                                </span>
+                                <p className="table-empty-title">No products in queue</p>
+                                <p className="table-empty-sub">New stock received on Stock Inventory will appear here to complete and add to the Product List.</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="activity-shell">
+                                    <ul className="activity-list">
+                                        {pagedQueue.map((product) => (
+                                            <li key={product.id}>
+                                                <button
+                                                    type="button"
+                                                    className="activity-row"
+                                                    onClick={() => openEdit(product, true)}
+                                                    aria-label={`Complete and add ${product.name}`}
+                                                >
+                                                    <span className="activity-icon activity-icon-warn" aria-hidden="true">
+                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                                                            <path d="m3.3 7 8.7 5 8.7-5" />
+                                                            <path d="M12 22V12" />
+                                                        </svg>
+                                                    </span>
+                                                    <div className="activity-body">
+                                                        <p className="activity-desc" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                            <span>{product.name}</span>
+                                                            <span className="activity-role">{product.current_stock} {product.receiving_unit || 'piece'}</span>
+                                                        </p>
+                                                        <p className="activity-meta muted">
+                                                            <span className="mono">{product.sku}</span>
+                                                        </p>
+                                                    </div>
+                                                    <time
+                                                        className="activity-time muted"
+                                                        dateTime={product.last_received_at ?? product.created_at ?? undefined}
+                                                    >
+                                                        {timeAgo(product.last_received_at ?? product.created_at)}
+                                                    </time>
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                                {queuedProducts.length > QUEUE_PER_PAGE && (
+                                    <div className="pagination">
+                                        <button
+                                            type="button"
+                                            className="btn btn-ghost btn-sm page-btn"
+                                            disabled={queueSafePage <= 1}
+                                            onClick={() => setQueuePage((p) => Math.max(1, p - 1))}
+                                            aria-label="Previous queue page"
+                                        >
+                                            <svg className="page-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                                <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </button>
+                                        <span className="page-count">{queueSafePage}</span>
+                                        <button
+                                            type="button"
+                                            className="btn btn-ghost btn-sm page-btn"
+                                            disabled={queueSafePage >= queueLastPage}
+                                            onClick={() => setQueuePage((p) => Math.min(queueLastPage, p + 1))}
+                                            aria-label="Next queue page"
+                                        >
+                                            <svg className="page-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                                                <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </button>
+                                        <span className="page-detail">{Math.min(queueSafePage * QUEUE_PER_PAGE, queuedProducts.length)} of {queuedProducts.length}</span>
+                                    </div>
+                                )}
+                            </>
+                        )}
                     </section>
 
                     <section className="card padded">
@@ -1440,6 +1622,7 @@ export default function Products() {
                                         <option value="in">In stock</option>
                                         <option value="low">Low stock</option>
                                         <option value="out">Out of stock</option>
+                                        <option value="deactivated">Deactivated</option>
                                     </select>
                                 </label>
                                 <label className="field">
@@ -1616,9 +1799,18 @@ export default function Products() {
                                             className="sort-header text-right"
                                             onClick={() => toggleSort('current_stock')}
                                         >
-                                            Current stock
+                                            Current<br />stock
                                             <span className={`sort-indicator${sortBy === 'current_stock' ? ' is-active' : ''}`} aria-hidden="true">
                                                 {sortBy === 'current_stock' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
+                                        </th>
+                                        <th
+                                            className="sort-header text-right"
+                                            onClick={() => toggleSort('reorder_threshold')}
+                                        >
+                                            Reorder<br />at
+                                            <span className={`sort-indicator${sortBy === 'reorder_threshold' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'reorder_threshold' && sortDir === 'desc' ? '▼' : '▲'}
                                             </span>
                                         </th>
                                         <th
@@ -1662,8 +1854,8 @@ export default function Products() {
                                                             </span>
                                                         )}
                                                     </span>
-                                                    <span className="muted"> / reorder at {product.reorder_threshold}</span>
                                                 </td>
+                                                <td className="text-right">{product.reorder_threshold}</td>
                                                 <td>
                                                     <span className={`pill ${state.className}`}>{state.label}</span>
                                                 </td>
@@ -1678,53 +1870,6 @@ export default function Products() {
                                                             <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
                                                         </svg>
                                                     </Tooltip>
-                                                    <Tooltip
-                                                        label="Adjust stock"
-                                                        className="btn btn-ghost btn-sm action-icon-btn"
-                                                        onClick={() => {
-                                                            setAdjustProduct(product);
-                                                            setAdjustForm({ delta: '', reason: 'correction', reason_note: '' });
-                                                            setAdjustError(null);
-                                                        }}
-                                                    >
-                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                            <path d="M12 4A8 8 0 0 1 20 12" />
-                                                            <path d="M21.72 9.79 20 12 18.28 9.79" />
-                                                            <path d="M18.93 16A8 8 0 0 1 8 18.93" />
-                                                            <path d="M9.05 21.53 8 18.93 10.77 18.54" />
-                                                            <path d="M5.07 16A8 8 0 0 1 8 5.07" />
-                                                            <path d="M5.23 4.68 8 5.07 6.95 7.67" />
-                                                        </svg>
-                                                    </Tooltip>
-                                                    {product.is_active ? (
-                                                        <Tooltip
-                                                            label="Deactivate"
-                                                            className="btn btn-ghost btn-sm btn-danger-text action-toggle action-icon-btn"
-                                                            onClick={() => {
-                                                                setDeactivateProduct(product);
-                                                                setDeactivateError(null);
-                                                            }}
-                                                        >
-                                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <circle cx="12" cy="12" r="9" />
-                                                                <path d="m5.6 5.6 12.8 12.8" />
-                                                            </svg>
-                                                        </Tooltip>
-                                                    ) : (
-                                                        <Tooltip
-                                                            label="Activate"
-                                                            className="btn btn-ghost btn-sm btn-success-text action-toggle action-icon-btn"
-                                                            onClick={() => {
-                                                                setReactivateProduct(product);
-                                                                setReactivateError(null);
-                                                            }}
-                                                        >
-                                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <circle cx="12" cy="12" r="9" />
-                                                                <path d="m8.5 12 2.5 2.5 4.5-5" />
-                                                            </svg>
-                                                        </Tooltip>
-                                                    )}
                                                 </td>
                                             </tr>
                                         );
@@ -2051,9 +2196,9 @@ export default function Products() {
                 <Modal
                     bare
                     noClose
-                    ariaLabel="Edit product"
+                    ariaLabel={editFromQueue ? 'Add product' : 'Edit product'}
                     className="modal-edit"
-                    onClose={() => setEditProduct(null)}
+                    onClose={() => { setEditProduct(null); setEditFromQueue(false); }}
                 >
                     <form className="form" onSubmit={handleEdit}>
                         <div className="confirm-dialog confirm-dialog-info">
@@ -2064,8 +2209,12 @@ export default function Products() {
                                 </svg>
                             </span>
                             <div className="confirm-dialog-body">
-                                <p className="confirm-dialog-title">Edit</p>
-                                <p className="muted confirm-dialog-text">Update this product's details.</p>
+                                <p className="confirm-dialog-title">{editFromQueue ? 'Add Product' : 'Edit'}</p>
+                                <p className="muted confirm-dialog-text">
+                                    {editFromQueue
+                                        ? 'Fill in all required fields to list this received item in the Product List.'
+                                        : "Update this product's details."}
+                                </p>
                             </div>
                         </div>
                         <label className="field">
@@ -2078,8 +2227,8 @@ export default function Products() {
                                 <input type="text" className="mono" required maxLength={50} placeholder="Item code" value={editForm.sku} onChange={(event) => setEditForm((c) => ({ ...c, sku: event.target.value.toUpperCase() }))} />
                             </label>
                             <label className="field">
-                                <span className="field-label">Category</span>
-                                <input type="text" maxLength={100} placeholder="e.g. Power Tools" value={editForm.category} onChange={(event) => setEditForm((c) => ({ ...c, category: event.target.value }))} />
+                                <span className="field-label">Category{editFromQueue && <> <span className="text-danger">*</span></>}</span>
+                                <input type="text" required={editFromQueue} maxLength={100} placeholder="e.g. Power Tools" value={editForm.category} onChange={(event) => setEditForm((c) => ({ ...c, category: event.target.value }))} />
                             </label>
                         </div>
                         <div className="field-row">
@@ -2091,8 +2240,8 @@ export default function Products() {
                                 </div>
                             </label>
                             <label className="field">
-                                <span className="field-label">Unit of measure</span>
-                                <select className="input" value={editForm.receiving_unit} onChange={(event) => setEditForm((c) => ({ ...c, receiving_unit: event.target.value }))}>
+                                <span className="field-label">Unit of measure{editFromQueue && <> <span className="text-danger">*</span></>}</span>
+                                <select className="input" required={editFromQueue} value={editForm.receiving_unit} onChange={(event) => setEditForm((c) => ({ ...c, receiving_unit: event.target.value }))}>
                                     {UNITS.map((unit) => (
                                         <option key={unit} value={unit}>{unit}</option>
                                     ))}
@@ -2109,13 +2258,43 @@ export default function Products() {
                                 <input type="number" required min="0" step="1" placeholder="0" value={editForm.reorder_threshold} onChange={(event) => setEditForm((c) => ({ ...c, reorder_threshold: event.target.value }))} />
                             </label>
                         </div>
+                        <label className="field">
+                            <span className="field-label">Supplier</span>
+                            <select
+                                className="input"
+                                value={editForm.supplier_id ?? ''}
+                                onChange={(event) => setEditForm((c) => ({ ...c, supplier_id: event.target.value }))}
+                            >
+                                <option value="">No supplier</option>
+                                {editProduct.last_supplier_id &&
+                                    editProduct.last_supplier_name &&
+                                    editProduct.last_supplier_active !== false &&
+                                    !suppliers.some((sup) => String(sup.id) === String(editProduct.last_supplier_id)) && (
+                                        <option value={String(editProduct.last_supplier_id)}>
+                                            {editProduct.last_supplier_name}
+                                        </option>
+                                    )}
+                                {suppliers.map((sup) => (
+                                    <option key={sup.id} value={String(sup.id)}>
+                                        {sup.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {editProduct.last_supplier_active === false && editProduct.last_supplier_name && (
+                                <small className="text-danger">
+                                    Previous supplier &ldquo;{editProduct.last_supplier_name}&rdquo; was removed.
+                                </small>
+                            )}
+                        </label>
 
                         {editError && <div className="alert alert-error" role="alert"><span>{editError}</span></div>}
 
                         <div className="modal-actions modal-actions-center">
-                            <button type="button" className="btn btn-ghost" onClick={() => setEditProduct(null)}>Cancel</button>
+                            <button type="button" className="btn btn-ghost" onClick={() => { setEditProduct(null); setEditFromQueue(false); }}>Cancel</button>
                             <button type="submit" className="btn btn-primary" disabled={editSaving}>
-                                {editSaving ? 'Saving…' : 'Save changes'}
+                                {editFromQueue
+                                    ? (editSaving ? 'Adding…' : 'Add product')
+                                    : (editSaving ? 'Saving…' : 'Save changes')}
                             </button>
                         </div>
                     </form>

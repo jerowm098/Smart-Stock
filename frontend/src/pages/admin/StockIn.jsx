@@ -3,11 +3,19 @@ import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import { FieldError, Toast } from '../../components/Feedback.jsx';
 import { get, post, del, validationMessages } from '../../lib/api.js';
 import { timeAgo } from '../../lib/format.js';
+import { clearConnectedNav, notifyConnectedNav } from '../../lib/navBadges.js';
 import Modal from '../../components/Modal.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import MessageDialog from '../../components/MessageDialog.jsx';
 import Tooltip from '../../components/Tooltip.jsx';
 import InfoTip from '../../components/InfoTip.jsx';
+
+const ADJUST_REASONS = [
+    { value: 'damaged', label: 'Damaged items' },
+    { value: 'lost', label: 'Lost / missing' },
+    { value: 'internal_transfer', label: 'Internal transfer' },
+    { value: 'correction', label: 'Count correction' },
+];
 
 function highlight(text, needle) {
     if (!needle) return text;
@@ -113,6 +121,7 @@ const EMPTY_RECEIVE_FORM = {
     product_id: '',
     product_name: '',
     sku: '',
+    current_stock: '',
     supplier_id: '',
     unit_of_measure: '',
     quantity_received: '',
@@ -145,9 +154,29 @@ function stockStateKey(product) {
     return 'in';
 }
 
+function stockStatusPill(product) {
+    if (product.is_active === false || product.is_active === 0) {
+        if (product.last_supplier_active === false) {
+            return { label: 'Inactive supplier', className: 'pill-danger', rank: 0 };
+        }
+        return { label: 'Deactivated', className: 'pill-danger', rank: 1 };
+    }
+
+    if (Number(product.current_stock) <= 0) {
+        return { label: 'Critical stock', className: 'pill-danger', rank: 2 };
+    }
+
+    if (Number(product.current_stock) <= Number(product.reorder_threshold)) {
+        return { label: 'Low stock', className: 'pill-warn', rank: 3 };
+    }
+
+    return { label: 'In stock', className: 'pill-ok', rank: 4 };
+}
+
 export default function StockIn() {
     const [products, setProducts] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
+    const [categoriesList, setCategoriesList] = useState([]);
     const [stats, setStats] = useState(null);
     // Drives the hero's load bar only; the sections below render as data arrives.
     const [loading, setLoading] = useState(true);
@@ -201,6 +230,16 @@ export default function StockIn() {
     const [deletingAll, setDeletingAll] = useState(false);
     const [deleteAllError, setDeleteAllError] = useState(null);
     const [emptyNotice, setEmptyNotice] = useState(null);
+    const [adjustProduct, setAdjustProduct] = useState(null);
+    const [adjustForm, setAdjustForm] = useState({ delta: '', reason: 'correction', reason_note: '' });
+    const [adjustSaving, setAdjustSaving] = useState(false);
+    const [adjustError, setAdjustError] = useState(null);
+    const [deactivateProduct, setDeactivateProduct] = useState(null);
+    const [deactivateSaving, setDeactivateSaving] = useState(false);
+    const [deactivateError, setDeactivateError] = useState(null);
+    const [reactivateProduct, setReactivateProduct] = useState(null);
+    const [reactivateSaving, setReactivateSaving] = useState(false);
+    const [reactivateError, setReactivateError] = useState(null);
     const ACTIVITY_PER_PAGE = 3;
 
     // Options dropdowns (kebabs) on Stock Receiving and Recent Activity card
@@ -236,11 +275,12 @@ export default function StockIn() {
     }, [activityOptionsOpen, stockOptionsOpen]);
 
     const refresh = useCallback(async () => {
-        const [productsRes, suppliersRes, statsRes, feedRes] = await Promise.allSettled([
+        const [productsRes, suppliersRes, categoriesRes, statsRes, feedRes] = await Promise.allSettled([
             get('/api/inventory/products'),
             get('/api/suppliers/active'),
+            get('/api/categories'),
             get('/api/dashboard/stats'),
-            get('/api/activity/recent', { limit: 12, actions: 'stock_received' }),
+            get('/api/activity/recent', { limit: 12, actions: 'stock_received,stock_adjusted,product_deactivated,product_reactivated' }),
         ]);
 
         if (productsRes.status === 'fulfilled') {
@@ -248,6 +288,10 @@ export default function StockIn() {
         }
         if (suppliersRes.status === 'fulfilled') {
             setSuppliers(Array.isArray(suppliersRes.value) ? suppliersRes.value : []);
+        }
+        if (categoriesRes.status === 'fulfilled') {
+            const rawCats = categoriesRes.value?.categories ?? categoriesRes.value;
+            setCategoriesList(Array.isArray(rawCats) ? rawCats : []);
         }
         if (statsRes.status === 'fulfilled') {
             setStats(statsRes.value);
@@ -327,6 +371,17 @@ export default function StockIn() {
         [products]
     );
 
+    const dropdownCategories = useMemo(() => {
+        const set = new Set();
+        categoriesList.forEach((cat) => {
+            if (cat?.name) set.add(cat.name);
+        });
+        products.forEach((product) => {
+            if (product?.category && product.category !== 'Uncategorized') set.add(product.category);
+        });
+        return [...set].sort((a, b) => a.localeCompare(b));
+    }, [categoriesList, products]);
+
     const unitOptions = useMemo(
         () => [...new Set(products.map((product) => product.receiving_unit).filter(Boolean))]
             .sort((a, b) => a.localeCompare(b)),
@@ -340,7 +395,8 @@ export default function StockIn() {
             const matchesSearch = !q
                 || String(product.name ?? '').toLowerCase().includes(q)
                 || String(product.sku ?? '').toLowerCase().includes(q)
-                || String(product.category ?? '').toLowerCase().includes(q);
+                || String(product.category ?? '').toLowerCase().includes(q)
+                || String(product.last_supplier_name ?? '').toLowerCase().includes(q);
             const matchesCategory = !categoryFilter || product.category === categoryFilter;
             const matchesUnit = !unitFilter || product.receiving_unit === unitFilter;
             const matchesLevel = !levelFilter || stockStateKey(product) === levelFilter;
@@ -394,6 +450,11 @@ export default function StockIn() {
                 return (av - bv) * dir;
             }
 
+            // Status comparison
+            if (sortBy === 'status') {
+                return (stockStatusPill(a).rank - stockStatusPill(b).rank) * dir;
+            }
+
             // Date comparison for latest received (falls back to created date)
             if (sortBy === 'last_received_at') {
                 av = new Date(a.last_received_at ?? a.created_at ?? 0).getTime();
@@ -440,6 +501,10 @@ export default function StockIn() {
             product_id: String(product.id),
             product_name: product.name || '',
             sku: product.sku || '',
+            current_stock: String(product.current_stock ?? 0),
+            supplier_id: product.last_supplier_id && product.last_supplier_active !== false
+                ? String(product.last_supplier_id)
+                : '',
             unit_of_measure: product.receiving_unit || '',
         });
         setReceiveError(null);
@@ -483,7 +548,7 @@ export default function StockIn() {
         return {
             ...addForm,
             sku: addForm.sku || suggestions.sku || '',
-            category: addForm.category || suggestions.category || '',
+            category: addForm.category || '',
         };
     }
 
@@ -544,10 +609,11 @@ export default function StockIn() {
         setClearError(null);
 
         try {
-            const response = await del('/api/activity/recent?actions=stock_received');
+            const response = await del('/api/activity/recent?actions=stock_received,stock_adjusted,product_deactivated,product_reactivated');
 
             setClearConfirm(false);
             setActivity([]);
+            clearConnectedNav('productAdded');
             setActivityPage(1);
             setToast(response?.message ?? 'Activity list cleared.');
             await refresh();
@@ -565,6 +631,7 @@ export default function StockIn() {
         try {
             const response = await post('/api/inventory/seed');
             setToast(response?.message ?? '7 sample products added.');
+            notifyConnectedNav('productAdded', response?.created ?? 7);
             await refresh();
         } catch (err) {
             setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample products.');
@@ -581,6 +648,11 @@ export default function StockIn() {
         try {
             const response = await del('/api/inventory');
             setDeleteAllConfirm(false);
+            const deleted = Number(response?.deleted) || 0;
+            clearConnectedNav('productAdded');
+            if (deleted > 0) {
+                notifyConnectedNav('productAdded', -deleted);
+            }
             setToast(response?.message ?? 'All products deleted.');
             await refresh();
         } catch (err) {
@@ -608,6 +680,7 @@ export default function StockIn() {
                 product_id: receiveForm.product_id || null,
                 product_name: receiveForm.product_name || null,
                 custom_sku: receiveForm.sku || null,
+                current_stock: receiveForm.current_stock !== '' ? Number(receiveForm.current_stock) : null,
                 supplier_id: receiveForm.supplier_id || null,
                 quantity_received: receiveForm.quantity_received,
                 unit_of_measure: receiveForm.unit_of_measure || null,
@@ -616,12 +689,75 @@ export default function StockIn() {
 
             setToast(stockInToast(response));
             setReceiveOpen(false);
+            notifyConnectedNav('stockReceived', 1);
             await refresh();
         } catch (err) {
             setReceiveError(err.message);
             setReceiveFieldErrors(validationMessages(err));
         } finally {
             setReceiveSubmitting(false);
+        }
+    }
+
+    async function handleAdjust(event) {
+        event.preventDefault();
+        if (!adjustProduct) return;
+        setAdjustSaving(true);
+        setAdjustError(null);
+
+        try {
+            const response = await post('/api/inventory/adjust', {
+                product_id: adjustProduct.id,
+                delta: Number(adjustForm.delta),
+                reason: adjustForm.reason,
+                reason_note: adjustForm.reason_note || null,
+            });
+
+            setToast(`${response.message}: ${response.adjustment.stock_before} → ${response.adjustment.stock_after}.`);
+            setAdjustProduct(null);
+            await refresh();
+        } catch (err) {
+            setAdjustError(validationMessages(err)[0] ?? err.message ?? 'Could not adjust stock.');
+        } finally {
+            setAdjustSaving(false);
+        }
+    }
+
+    async function handleDeactivate(event) {
+        event?.preventDefault();
+        if (!deactivateProduct) return;
+        setDeactivateSaving(true);
+        setDeactivateError(null);
+
+        try {
+            const response = await del(`/api/inventory/${deactivateProduct.id}`);
+            setToast(response?.message ?? 'Product deactivated.');
+            setDeactivateProduct(null);
+            notifyConnectedNav('productDeactivated', -1);
+            await refresh();
+        } catch (err) {
+            setDeactivateError(validationMessages(err)[0] ?? err.message ?? 'Could not deactivate product.');
+        } finally {
+            setDeactivateSaving(false);
+        }
+    }
+
+    async function handleReactivate(event) {
+        event?.preventDefault();
+        if (!reactivateProduct) return;
+        setReactivateSaving(true);
+        setReactivateError(null);
+
+        try {
+            const response = await del(`/api/inventory/${reactivateProduct.id}?reactivate=1`);
+            setToast(response?.message ?? 'Product reactivated.');
+            setReactivateProduct(null);
+            notifyConnectedNav('productReactivated', 1);
+            await refresh();
+        } catch (err) {
+            setReactivateError(validationMessages(err)[0] ?? err.message ?? 'Could not activate product.');
+        } finally {
+            setReactivateSaving(false);
         }
     }
 
@@ -652,6 +788,7 @@ export default function StockIn() {
             setSuggesting(false);
             lastSuggestedName.current = '';
             currentNameRef.current = '';
+            notifyConnectedNav('stockNewProductReceived', 1);
             await refresh();
         } catch (err) {
             setAddError(err.message);
@@ -750,7 +887,7 @@ export default function StockIn() {
                             <table className="table" aria-hidden="true">
                                 <thead>
                                     <tr>
-                                        {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
                                             <th key={i}>
                                                 <span className="skeleton skeleton-line skeleton-sm" style={{ width: '70%' }} />
                                             </th>
@@ -760,9 +897,9 @@ export default function StockIn() {
                                 <tbody>
                                     {[0, 1, 2, 3, 4, 5].map((r) => (
                                         <tr key={r}>
-                                            {[0, 1, 2, 3, 4, 5, 6].map((c) => (
+                                            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((c) => (
                                                 <td key={c}>
-                                                    <span className="skeleton skeleton-line" style={{ width: c === 6 ? '62%' : '85%' }} />
+                                                    <span className="skeleton skeleton-line" style={{ width: c === 8 ? '62%' : '85%' }} />
                                                 </td>
                                             ))}
                                         </tr>
@@ -1025,7 +1162,7 @@ export default function StockIn() {
                                             className="sort-header"
                                             onClick={() => toggleSort('current_stock')}
                                         >
-                                            Current stock
+                                            Current<br />stock
                                             <span className={`sort-indicator${sortBy === 'current_stock' ? ' is-active' : ''}`} aria-hidden="true">
                                                 {sortBy === 'current_stock' && sortDir === 'desc' ? '▼' : '▲'}
                                             </span>
@@ -1041,11 +1178,29 @@ export default function StockIn() {
                                         </th>
                                         <th
                                             className="sort-header"
+                                            onClick={() => toggleSort('last_supplier_name')}
+                                        >
+                                            Supplier
+                                            <span className={`sort-indicator${sortBy === 'last_supplier_name' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'last_supplier_name' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
+                                        </th>
+                                        <th
+                                            className="sort-header"
                                             onClick={() => toggleSort('last_received_at')}
                                         >
-                                            Latest received
+                                            Latest<br />received
                                             <span className={`sort-indicator${sortBy === 'last_received_at' ? ' is-active' : ''}`} aria-hidden="true">
                                                 {sortBy === 'last_received_at' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
+                                        </th>
+                                        <th
+                                            className="sort-header"
+                                            onClick={() => toggleSort('status')}
+                                        >
+                                            Status
+                                            <span className={`sort-indicator${sortBy === 'status' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'status' && sortDir === 'desc' ? '▼' : '▲'}
                                             </span>
                                         </th>
                                         <th>Actions</th>
@@ -1053,7 +1208,7 @@ export default function StockIn() {
                                 </thead>
                                 <tbody>
                                     {pagedProducts.map((product) => (
-                                        <tr key={product.id}>
+                                        <tr key={product.id} className={!product.is_active ? 'row-inactive' : undefined}>
                                             <td>
                                                 {highlight(product.name, search.trim())}
                                             </td>
@@ -1062,22 +1217,86 @@ export default function StockIn() {
                                             <td>{product.current_stock}</td>
                                             <td>{product.receiving_unit || '—'}</td>
                                             <td>
+                                                {product.last_supplier_name
+                                                    ? highlight(product.last_supplier_name, search.trim())
+                                                    : '—'}
+                                            </td>
+                                            <td className="txn-date" style={{ fontSize: '0.82em' }}>
                                                 {product.last_received_at
                                                     ? timeAgo(product.last_received_at)
                                                     : timeAgo(product.created_at)
                                                 }
                                             </td>
+                                            <td>
+                                                {(() => {
+                                                    const st = stockStatusPill(product);
+                                                    return st.label
+                                                        ? <span className={`pill ${st.className}`}>{st.label}</span>
+                                                        : <span className="muted">—</span>;
+                                                })()}
+                                            </td>
                                             <td className="actions-cell">
                                                 <Tooltip
-                                                    label="Edit stock received"
+                                                    label="Receive stock"
                                                     className="btn btn-ghost btn-sm action-icon-btn"
                                                     onClick={() => openReceive(product)}
                                                 >
                                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M12 20h9" />
-                                                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                                        <path d="M12 3v9" />
+                                                        <path d="m9 9 3 3 3-3" />
+                                                        <rect x="3" y="13" width="18" height="8" rx="2" />
                                                     </svg>
                                                 </Tooltip>
+                                                <Tooltip
+                                                    label="Adjust stock"
+                                                    className="btn btn-ghost btn-sm action-icon-btn"
+                                                    onClick={() => {
+                                                        setAdjustProduct(product);
+                                                        setAdjustForm({ delta: '', reason: 'correction', reason_note: '' });
+                                                        setAdjustError(null);
+                                                    }}
+                                                >
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <line x1="21" x2="14" y1="4" y2="4" />
+                                                        <line x1="10" x2="3" y1="4" y2="4" />
+                                                        <line x1="21" x2="12" y1="12" y2="12" />
+                                                        <line x1="8" x2="3" y1="12" y2="12" />
+                                                        <line x1="21" x2="16" y1="20" y2="20" />
+                                                        <line x1="12" x2="3" y1="20" y2="20" />
+                                                        <line x1="14" x2="14" y1="2" y2="6" />
+                                                        <line x1="8" x2="8" y1="10" y2="14" />
+                                                        <line x1="16" x2="16" y1="18" y2="22" />
+                                                    </svg>
+                                                </Tooltip>
+                                                {product.is_active ? (
+                                                    <Tooltip
+                                                        label="Deactivate"
+                                                        className="btn btn-ghost btn-sm btn-danger-text action-toggle action-icon-btn"
+                                                        onClick={() => {
+                                                            setDeactivateProduct(product);
+                                                            setDeactivateError(null);
+                                                        }}
+                                                    >
+                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <circle cx="12" cy="12" r="9" />
+                                                            <path d="m5.6 5.6 12.8 12.8" />
+                                                        </svg>
+                                                    </Tooltip>
+                                                ) : (
+                                                    <Tooltip
+                                                        label="Activate"
+                                                        className="btn btn-ghost btn-sm btn-success-text action-toggle action-icon-btn"
+                                                        onClick={() => {
+                                                            setReactivateProduct(product);
+                                                            setReactivateError(null);
+                                                        }}
+                                                    >
+                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                            <circle cx="12" cy="12" r="9" />
+                                                            <path d="m8.5 12 2.5 2.5 4.5-5" />
+                                                        </svg>
+                                                    </Tooltip>
+                                                )}
                                             </td>
                                         </tr>
                                     ))}
@@ -1273,19 +1492,133 @@ export default function StockIn() {
                 </>
             )}
 
+            {adjustProduct && (
+                <Modal
+                    bare
+                    noClose
+                    ariaLabel="Adjust stock"
+                    className="modal-adjust"
+                    onClose={() => setAdjustProduct(null)}
+                >
+                    <form className="form" onSubmit={handleAdjust}>
+                        <div className="confirm-dialog confirm-dialog-info">
+                            <span className="confirm-dialog-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="21" x2="14" y1="4" y2="4" />
+                                    <line x1="10" x2="3" y1="4" y2="4" />
+                                    <line x1="21" x2="12" y1="12" y2="12" />
+                                    <line x1="8" x2="3" y1="12" y2="12" />
+                                    <line x1="21" x2="16" y1="20" y2="20" />
+                                    <line x1="12" x2="3" y1="20" y2="20" />
+                                    <line x1="14" x2="14" y1="2" y2="6" />
+                                    <line x1="8" x2="8" y1="10" y2="14" />
+                                    <line x1="16" x2="16" y1="18" y2="22" />
+                                </svg>
+                            </span>
+                            <div className="confirm-dialog-body">
+                                <p className="confirm-dialog-title">Adjust stock</p>
+                                <p className="muted confirm-dialog-text">Manually correct the on-hand count for this product.</p>
+                            </div>
+                        </div>
+                        <div className="field">
+                            <span className="field-label">Product</span>
+                            <div className="readonly-value readonly-static">{adjustProduct.name}</div>
+                        </div>
+                        <div className="field-row">
+                            <label className="field">
+                                <span className="field-label">
+                                    Delta <span className="text-danger">*</span>
+                                </span>
+                                <input
+                                    type="number"
+                                    className="input"
+                                    required
+                                    step="1"
+                                    placeholder="e.g. -2 or 5"
+                                    value={adjustForm.delta}
+                                    onChange={(event) => setAdjustForm((c) => ({ ...c, delta: event.target.value }))}
+                                />
+                            </label>
+                            <label className="field">
+                                <span className="field-label">
+                                    Reason <span className="text-danger">*</span>
+                                </span>
+                                <select
+                                    className="input"
+                                    value={adjustForm.reason}
+                                    onChange={(event) => setAdjustForm((c) => ({ ...c, reason: event.target.value }))}
+                                >
+                                    {ADJUST_REASONS.map((reason) => (
+                                        <option key={reason.value} value={reason.value}>{reason.label}</option>
+                                    ))}
+                                </select>
+                            </label>
+                        </div>
+                        <label className="field">
+                            <span className="field-label">Note</span>
+                            <input
+                                type="text"
+                                maxLength={255}
+                                placeholder="e.g. Dented items found in box"
+                                value={adjustForm.reason_note}
+                                onChange={(event) => setAdjustForm((c) => ({ ...c, reason_note: event.target.value }))}
+                            />
+                        </label>
+
+                        {adjustError && <div className="alert alert-error" role="alert"><span>{adjustError}</span></div>}
+
+                        <div className="modal-actions modal-actions-center">
+                            <button type="button" className="btn btn-ghost" onClick={() => setAdjustProduct(null)}>Cancel</button>
+                            <button type="submit" className="btn btn-primary" disabled={adjustSaving}>
+                                {adjustSaving ? 'Applying…' : 'Apply adjustment'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {deactivateProduct && (
+                <ConfirmDialog
+                    tone="danger"
+                    title={<>Deactivate <strong>{deactivateProduct.name}</strong>?</>}
+                    description="This removes the product from the active catalogue. Its stock history and transactions are preserved, and the SKU stays reserved."
+                    confirmLabel="Deactivate"
+                    loadingLabel="Deactivating…"
+                    loading={deactivateSaving}
+                    error={deactivateError}
+                    onConfirm={handleDeactivate}
+                    onCancel={() => setDeactivateProduct(null)}
+                />
+            )}
+
+            {reactivateProduct && (
+                <ConfirmDialog
+                    tone="info"
+                    title={<>Activate <strong>{reactivateProduct.name}</strong>?</>}
+                    description="This puts the product back into the active catalogue so it shows in the Product List and the POS catalog again."
+                    confirmLabel="Activate"
+                    loadingLabel="Activating…"
+                    loading={reactivateSaving}
+                    error={reactivateError}
+                    onConfirm={handleReactivate}
+                    onCancel={() => setReactivateProduct(null)}
+                />
+            )}
+
             {receiveOpen && (
                 <Modal bare noClose className="modal-edit" onClose={resetReceive}>
                     <form className="form" onSubmit={handleReceive}>
                         <div className="confirm-dialog confirm-dialog-info">
                             <span className="confirm-dialog-icon" aria-hidden="true">
                                 <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z" />
+                                    <path d="M12 3v9" />
+                                    <path d="m9 9 3 3 3-3" />
+                                    <rect x="3" y="13" width="18" height="8" rx="2" />
                                 </svg>
                             </span>
                             <div className="confirm-dialog-body">
-                                <p className="confirm-dialog-title">Edit Stock</p>
-                                <p className="muted confirm-dialog-text">Update the receiving details for this product.</p>
+                                <p className="confirm-dialog-title">Receive Stock</p>
+                                <p className="muted confirm-dialog-text">Log incoming delivery quantity for this product.</p>
                             </div>
                         </div>
                         {/* Both fields are editable: the modal opens prefilled from
@@ -1317,10 +1650,18 @@ export default function StockIn() {
                                 />
                             </label>
                             {selected && (
-                                <div className="field">
-                                    <span>On hand now</span>
-                                    <div className="readonly-value">{selected.current_stock} {selected.receiving_unit}</div>
-                                </div>
+                                <label className="field">
+                                    <span>On hand</span>
+                                    <input
+                                        className="input"
+                                        type="number"
+                                        min="0"
+                                        step="1"
+                                        required
+                                        value={receiveForm.current_stock}
+                                        onChange={(event) => setReceiveField('current_stock', event.target.value)}
+                                    />
+                                </label>
                             )}
                         </div>
 
@@ -1385,164 +1726,177 @@ export default function StockIn() {
             )}
 
             {addOpen && (
-                <Modal title={(
-                    <span className="activity-detail-title">
-                        <span className="activity-detail-infoicon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <circle cx="12" cy="12" r="9" />
-                                <path d="M12 11v5M12 8h.01" />
-                            </svg>
+                <Modal
+                    title={(
+                        <span className="activity-detail-title">
+                            <span className="activity-detail-infoicon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 3v9" />
+                                    <path d="m9 9 3 3 3-3" />
+                                    <rect x="3" y="13" width="18" height="8" rx="2" />
+                                </svg>
+                            </span>
+                            Receive stock
                         </span>
-                        New Product
-                    </span>
-                )} onClose={resetAdd} noClose loading={suggesting}>
+                    )}
+                    className="modal-receive-wide"
+                    onClose={resetAdd}
+                    noClose
+                    loading={suggesting}
+                >
                     <form className="form" onSubmit={handleAdd}>
-                        <div className="field-row">
-                            <label className="field">
-                                <span className="field-label">New product name <InfoTip text="The product name as it will appear in the catalogue." /><span className="text-danger">*</span></span>
-                                <input
-                                    type="text"
-                                    required
-                                    maxLength={255}
-                                    placeholder="e.g. Paint Brush"
-                                    autoFocus
-                                    value={addForm.name}
-                                    onChange={(event) => setAddForm((current) => ({ ...current, name: event.target.value }))}
-                                    onKeyDown={handleNameTab}
-                                />
-                            </label>
-                            <label className="field">
-                                <span className="field-label">Quantity received <InfoTip text="How many units were received in this stock-in." /><span className="text-danger">*</span></span>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    step="1"
-                                    required
-                                    placeholder="e.g. 10"
-                                    {...addInput('quantity_received')}
-                                />
-                            </label>
-                        </div>
-                        <div className="choice-field">
-                            <span className="field-label">Receiving unit <InfoTip text="The unit each quantity is counted in, such as per piece or per kilo." /></span>
-                            <div className="choice-list">
-                                <label className="choice-item">
-                                    <input
-                                        type="checkbox"
-                                        name="unit_choice"
-                                        checked={addForm.unit_choice === 'piece'}
-                                        onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'piece' ? '' : 'piece' }))}
-                                    />
-                                    <span>Per piece</span>
-                                </label>
-                                <label className="choice-item">
-                                    <input
-                                        type="checkbox"
-                                        name="unit_choice"
-                                        checked={addForm.unit_choice === 'kilogram'}
-                                        onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'kilogram' ? '' : 'kilogram' }))}
-                                    />
-                                    <span>Per kilo</span>
-                                </label>
-                                <div className="choice-item choice-item-other">
-                                    <label className="choice-item-radio">
+                        <div className="receive-modal-grid">
+                            <div className="receive-modal-main">
+                                <div className="field-row">
+                                    <label className="field">
+                                        <span className="field-label">New product name <InfoTip text="The product name as it will appear in the catalogue." /><span className="text-danger">*</span></span>
                                         <input
-                                            type="checkbox"
-                                            name="unit_choice"
-                                            checked={addForm.unit_choice === 'other'}
-                                            onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'other' ? '' : 'other' }))}
+                                            type="text"
+                                            required
+                                            maxLength={255}
+                                            placeholder="e.g. Paint Brush"
+                                            autoFocus
+                                            value={addForm.name}
+                                            onChange={(event) => setAddForm((current) => ({ ...current, name: event.target.value }))}
+                                            onKeyDown={handleNameTab}
                                         />
-                                        <span>Other:</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        className="input choice-item-input"
-                                        maxLength={20}
-                                        placeholder="Please specify"
-                                        value={addForm.unit_other}
-                                        onChange={(event) => setAddForm((current) => ({ ...current, unit_other: event.target.value }))}
-                                        disabled={addForm.unit_choice !== 'other'}
-                                    />
+                                    <label className="field">
+                                        <span className="field-label">Quantity received <InfoTip text="How many units were received in this stock-in." /><span className="text-danger">*</span></span>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            step="1"
+                                            required
+                                            placeholder="e.g. 10"
+                                            {...addInput('quantity_received')}
+                                        />
+                                    </label>
+                                </div>
+                                <div className="choice-field">
+                                    <span className="field-label">Receiving unit <InfoTip text="The unit each quantity is counted in, such as per piece or per kilo." /></span>
+                                    <div className="choice-list">
+                                        <label className="choice-item">
+                                            <input
+                                                type="checkbox"
+                                                name="unit_choice"
+                                                checked={addForm.unit_choice === 'piece'}
+                                                onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'piece' ? '' : 'piece' }))}
+                                            />
+                                            <span>Per piece</span>
+                                        </label>
+                                        <label className="choice-item">
+                                            <input
+                                                type="checkbox"
+                                                name="unit_choice"
+                                                checked={addForm.unit_choice === 'kilogram'}
+                                                onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'kilogram' ? '' : 'kilogram' }))}
+                                            />
+                                            <span>Per kilo</span>
+                                        </label>
+                                        <div className="choice-item choice-item-other">
+                                            <label className="choice-item-radio">
+                                                <input
+                                                    type="checkbox"
+                                                    name="unit_choice"
+                                                    checked={addForm.unit_choice === 'other'}
+                                                    onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'other' ? '' : 'other' }))}
+                                                />
+                                                <span>Other:</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="input choice-item-input"
+                                                maxLength={20}
+                                                placeholder="Please specify"
+                                                value={addForm.unit_other}
+                                                onChange={(event) => setAddForm((current) => ({ ...current, unit_other: event.target.value }))}
+                                                disabled={addForm.unit_choice !== 'other'}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="field-row">
+                                    <label className="field">
+                                        <span className="field-label">SKU <InfoTip text="Item code used to identify the product." /></span>
+                                        <input
+                                            type="text"
+                                            className="mono"
+                                            maxLength={50}
+                                            placeholder={suggestions.sku || 'e.g. PAI-BRU'}
+                                            value={addForm.sku}
+                                            onChange={(event) => setAddForm((current) => ({ ...current, sku: event.target.value.toUpperCase() }))}
+                                            onKeyDown={handleSuggestionTab('sku')}
+                                            disabled={suggesting}
+                                        />
+                                    </label>
+                                    <span aria-hidden="true" />
+                                </div>
+                                <div className="choice-field">
+                                    <span className="field-label">Note <InfoTip text="Optional remarks such as delivery receipt number." /></span>
+                                    <div className="choice-list">
+                                        <label className="choice-item">
+                                            <input
+                                                type="checkbox"
+                                                name="note_type"
+                                                value="received"
+                                                checked={addForm.note_type === 'received'}
+                                                onChange={() => setAddForm((current) => ({ ...current, note_type: current.note_type === 'received' ? '' : 'received' }))}
+                                            />
+                                            <span>Received</span>
+                                        </label>
+                                        <div className="choice-item choice-item-other">
+                                            <label className="choice-item-radio">
+                                                <input
+                                                    type="checkbox"
+                                                    name="note_type"
+                                                    value="others"
+                                                    checked={addForm.note_type === 'others'}
+                                                    onChange={() => setAddForm((current) => ({ ...current, note_type: current.note_type === 'others' ? '' : 'others' }))}
+                                                />
+                                                <span>Others:</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                className="input choice-item-input"
+                                                maxLength={255}
+                                                placeholder="Delivery receipt #, remarks…"
+                                                value={addForm.note}
+                                                onChange={(event) => setAddForm((current) => ({ ...current, note: event.target.value }))}
+                                                disabled={addForm.note_type !== 'others'}
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="field-row">
-                            <label className="field">
-                                <span className="field-label">SKU <InfoTip text="Item code used to identify the product." /></span>
-                                <input
-                                    type="text"
-                                    className="mono"
-                                    maxLength={50}
-                                    placeholder={suggestions.sku || 'e.g. PAI-BRU'}
-                                    value={addForm.sku}
-                                    onChange={(event) => setAddForm((current) => ({ ...current, sku: event.target.value.toUpperCase() }))}
-                                    onKeyDown={handleSuggestionTab('sku')}
-                                    disabled={suggesting}
-                                />
-                            </label>
-                            <label className="field">
-                                <span className="field-label">Category <InfoTip text="Groups products for easier filtering." /></span>
-                                <input
-                                    type="text"
-                                    maxLength={100}
-                                    placeholder={suggestions.category || 'e.g. Paint & Sundries'}
-                                    value={addForm.category}
-                                    onChange={(event) => setAddForm((current) => ({ ...current, category: event.target.value }))}
-                                    onKeyDown={handleSuggestionTab('category')}
-                                    disabled={suggesting}
-                                />
-                            </label>
-                        </div>
-                        <div className="field-row">
-                            <label className="field">
-                                <span className="field-label">Supplier <InfoTip text="Supplier who delivered the stock. Choose 'No supplier' if none." /></span>
-                                <select className="input" {...addInput('supplier_id')}>
-                                    <option value="">No supplier</option>
-                                    {suppliers.map((supplier) => (
-                                        <option key={supplier.id} value={supplier.id}>
-                                            {supplier.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            {/* Spacer keeps Supplier at its half-width column now
-                                that Note moved to its own row below. */}
-                            <span aria-hidden="true" />
-                        </div>
-                        <div className="choice-field">
-                            <span className="field-label">Note <InfoTip text="Optional remarks such as delivery receipt number." /></span>
-                            <div className="choice-list">
-                                <label className="choice-item">
-                                    <input
-                                        type="checkbox"
-                                        name="note_type"
-                                        value="received"
-                                        checked={addForm.note_type === 'received'}
-                                        onChange={() => setAddForm((current) => ({ ...current, note_type: current.note_type === 'received' ? '' : 'received' }))}
-                                    />
-                                    <span>Received</span>
+
+                            <div className="receive-modal-aside">
+                                <label className="field">
+                                    <span className="field-label">Supplier <InfoTip text="Supplier who delivered the stock. Choose 'No supplier' if none." /></span>
+                                    <select className="input" {...addInput('supplier_id')}>
+                                        <option value="">No supplier</option>
+                                        {suppliers.map((supplier) => (
+                                            <option key={supplier.id} value={supplier.id}>
+                                                {supplier.name}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </label>
-                                <div className="choice-item choice-item-other">
-                                    <label className="choice-item-radio">
-                                        <input
-                                            type="checkbox"
-                                            name="note_type"
-                                            value="others"
-                                            checked={addForm.note_type === 'others'}
-                                            onChange={() => setAddForm((current) => ({ ...current, note_type: current.note_type === 'others' ? '' : 'others' }))}
-                                        />
-                                        <span>Others:</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="input choice-item-input"
-                                        maxLength={255}
-                                        placeholder="Delivery receipt #, remarks…"
-                                        value={addForm.note}
-                                        onChange={(event) => setAddForm((current) => ({ ...current, note: event.target.value }))}
-                                        disabled={addForm.note_type !== 'others'}
-                                    />
-                                </div>
+                                <label className="field">
+                                    <span className="field-label">Category <InfoTip text="Groups products for easier filtering." /></span>
+                                    <select
+                                        className="input"
+                                        value={addForm.category}
+                                        onChange={(event) => setAddForm((current) => ({ ...current, category: event.target.value }))}
+                                    >
+                                        <option value="">No category</option>
+                                        {dropdownCategories.map((cat) => (
+                                            <option key={cat} value={cat}>
+                                                {cat}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
                             </div>
                         </div>
 
