@@ -64,6 +64,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
     // direction — adding to the cart takes stock off the shelf (so "-1" and the
     // "N left" pill drops by one), while removing a line or clearing the cart
     // puts stock back (so "+N" and the pill climbs back).
+    const [confirmCheckoutOpen, setConfirmCheckoutOpen] = useState(false);
     const [cartDeltas, setCartDeltas] = useState({});
     const cartDeltaSeq = useRef(0);
     const deltaTimers = useRef(new Map());
@@ -163,11 +164,12 @@ export default function PosTerminal({ channel = 'cashier' }) {
 
             if (status) {
                 // Same stock-state rule as the Products table and the card badges.
-                const deactivated = item.is_active === false || item.is_active === 0;
+                const isDefect = Boolean(item.is_defect);
+                const deactivated = !isDefect && (item.is_active === false || item.is_active === 0);
                 const stock = Number(item.current_stock);
-                const out = !deactivated && stock <= 0;
-                const low = !deactivated && !out && stock <= Number(item.reorder_threshold);
-                const state = deactivated ? 'deactivated' : out ? 'out' : low ? 'low' : 'in';
+                const out = !isDefect && !deactivated && stock <= 0;
+                const low = !isDefect && !deactivated && !out && stock <= Number(item.reorder_threshold);
+                const state = isDefect ? 'defect' : deactivated ? 'deactivated' : out ? 'out' : low ? 'low' : 'in';
 
                 if (state !== status) {
                     return false;
@@ -238,7 +240,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
     }
 
     function addToCart(product) {
-        if (product.is_active === false || product.is_active === 0) {
+        if (product.is_defect || product.is_active === false || product.is_active === 0) {
             return;
         }
 
@@ -341,6 +343,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                 payment_amount: paymentValue,
             });
 
+            setConfirmCheckoutOpen(false);
             setReceipt({
                 saleId: response.sale_id,
                 channel: response.channel ?? channel,
@@ -355,24 +358,12 @@ export default function PosTerminal({ channel = 'cashier' }) {
                 total: response.total_amount,
                 payment: response.payment_amount,
                 change: response.change_amount ?? response.change,
+                stockUpdates: response.products ?? [],
             });
             notifyConnectedNav('saleCompleted', 1);
-
-            // Merge the post-sale stock snapshot so the grid is instantly
-            // accurate without a refetch.
-            const updates = response.products ?? [];
-            setItems((current) =>
-                current.map((item) => {
-                    const updated = updates.find((row) => row.id === item.id);
-
-                    return updated ? { ...item, ...updated } : item;
-                }),
-            );
-
-            setCart([]);
-            setPayment('');
             setSalesVersion((value) => value + 1);
         } catch (err) {
+            setConfirmCheckoutOpen(false);
             if (err.status === 401) {
                 navigate('/login', { replace: true });
 
@@ -405,16 +396,33 @@ export default function PosTerminal({ channel = 'cashier' }) {
         }
     }
 
+    function finalizeSaleUi() {
+        const updates = receipt?.stockUpdates ?? [];
+        if (updates.length > 0) {
+            setItems((current) =>
+                current.map((item) => {
+                    const updated = updates.find((row) => row.id === item.id);
+
+                    return updated ? { ...item, ...updated } : item;
+                }),
+            );
+        }
+
+        setCart([]);
+        setPayment('');
+        setReceipt(null);
+    }
+
     /**
      * Dismiss the receipt and confirm the completed sale with a toast. The
      * receipt modal is the transaction summary; this is the "done" signal once
-     * the cashier clicks "New sale". The close (X) button only closes.
+     * the cashier clicks "New sale". Closing via backdrop/Esc only resets.
      */
     function dismissReceipt() {
         const saleId = receipt?.saleId;
         const saleTotal = receipt?.total;
 
-        setReceipt(null);
+        finalizeSaleUi();
         setToast(
             saleId
                 ? `Sale ${receiptNo(saleId)} completed successfully. Total ${formatPeso(saleTotal ?? 0)}.`
@@ -604,6 +612,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                         <option value="low">Low stock</option>
                                         <option value="out">Out of stock</option>
                                         <option value="deactivated">Deactivated</option>
+                                        <option value="defect">Defect items</option>
                                     </select>
                                 </label>
                                 <label className="field">
@@ -651,7 +660,8 @@ export default function PosTerminal({ channel = 'cashier' }) {
                             {!error && filtered.length > 0 && (
                                 <div className={`pos-grid${paged.length >= 9 ? ' is-stretch' : ''}`}>
                                     {paged.map((item) => {
-                                        const deactivated = item.is_active === false || item.is_active === 0;
+                                        const isDefect = Boolean(item.is_defect);
+                                        const deactivated = isDefect || item.is_active === false || item.is_active === 0;
                                         const stock = Number(item.current_stock) || 0;
                                         // "left" is what can still be added, so it drops as
                                         // soon as the item is clicked into the cart.
@@ -660,6 +670,9 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                         const allInCart = !deactivated && !out && available <= 0;
                                         const low = !deactivated && !out && !allInCart && available <= Number(item.reorder_threshold);
                                         const delta = cartDeltas[item.id];
+                                        const inactiveLabel = isDefect
+                                            ? 'Defect items'
+                                            : (item.last_supplier_active === false ? 'Inactive supplier' : 'Deactivated');
 
                                         return (
                                             <button
@@ -670,7 +683,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                                 disabled={deactivated || out || allInCart}
                                                 title={
                                                     deactivated
-                                                        ? (item.last_supplier_active === false ? 'Inactive supplier' : 'Deactivated')
+                                                        ? inactiveLabel
                                                         : out
                                                           ? 'Out of stock'
                                                           : allInCart
@@ -695,9 +708,9 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                                     <span className="mono muted pos-card-sku">{item.sku}</span>
                                                     <span className={`pill ${deactivated || out ? 'pill-danger' : low || allInCart ? 'pill-warn' : 'pill-ok'}`}>
                                                         {deactivated
-                                                            ? (item.last_supplier_active === false ? 'Inactive supplier' : 'Deactivated')
+                                                            ? inactiveLabel
                                                             : out
-                                                              ? 'Out'
+                                                              ? 'Out of stock'
                                                               : `${available} left`}
                                                     </span>
                                                 </div>
@@ -851,7 +864,10 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                         type="button"
                                         className="btn btn-primary btn-lg btn-block"
                                         disabled={cart.length === 0 || submitting || paymentValue < total}
-                                        onClick={handleCheckout}
+                                        onClick={() => {
+                                            setCheckoutError(null);
+                                            setConfirmCheckoutOpen(true);
+                                        }}
                                     >
                                         {submitting ? 'Processing…' : `Checkout · ${formatPeso(total)}`}
                                     </button>
@@ -902,6 +918,81 @@ export default function PosTerminal({ channel = 'cashier' }) {
 
             {!loading && isAdmin && <PosRecentActivity refreshKey={salesVersion} />}
 
+            {confirmCheckoutOpen && !receipt && (
+                <Modal
+                    title="Confirm Checkout"
+                    titleIcon={
+                        <span className="modal-title-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 11v5M12 8h.01" />
+                            </svg>
+                        </span>
+                    }
+                    noClose
+                    className="modal-receipt"
+                    onClose={() => {
+                        if (!submitting) {
+                            setConfirmCheckoutOpen(false);
+                        }
+                    }}
+                >
+                    <div className="receipt">
+                        <p className="muted receipt-id">
+                            Review items and payment before completing this sale.
+                        </p>
+
+                        <ul className="receipt-items">
+                            {cart.map((line) => (
+                                <li key={line.product.id} className="receipt-item">
+                                    <span className="receipt-item-name">
+                                        {line.product.name}
+                                        <small className="muted"> ×{line.quantity} {line.quantity === 1 ? 'item' : 'items'}</small>
+                                    </span>
+                                    <span className="receipt-item-amount">
+                                        {formatPeso(Math.round(Number(line.product.price) * line.quantity * 100) / 100)}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <div className="receipt-divider" role="separator" aria-hidden="true" />
+
+                        <div className="cart-row">
+                            <span>Total</span>
+                            <strong>{formatPeso(total)}</strong>
+                        </div>
+                        <div className="cart-row">
+                            <span>Payment</span>
+                            <strong>{formatPeso(paymentValue)}</strong>
+                        </div>
+                        <div className="cart-row change-row">
+                            <span>Change</span>
+                            <strong>{formatPeso(Math.max(0, change))}</strong>
+                        </div>
+
+                        <div className="modal-actions modal-actions-center">
+                            <button
+                                type="button"
+                                className="btn btn-ghost"
+                                disabled={submitting}
+                                onClick={() => setConfirmCheckoutOpen(false)}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="btn btn-primary"
+                                disabled={submitting}
+                                onClick={handleCheckout}
+                            >
+                                {submitting ? 'Processing…' : 'Confirm payment'}
+                            </button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
             {receipt && (
                 <Modal
                     title={`Receipt ${receiptNo(receipt.saleId)}`}
@@ -914,7 +1005,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                         </span>
                     }
                     className="modal-receipt"
-                    onClose={() => setReceipt(null)}
+                    onClose={finalizeSaleUi}
                 >
                     <div className="receipt">
                         <p className="receipt-store">Smart-Stock Hardware</p>
@@ -927,7 +1018,7 @@ export default function PosTerminal({ channel = 'cashier' }) {
                                 <li key={index} className="receipt-item">
                                     <span className="receipt-item-name">
                                         {item.name}
-                                        <small className="muted"> ×{item.quantity} {item.unit}</small>
+                                        <small className="muted"> ×{item.quantity} {item.quantity === 1 ? 'item' : 'items'}</small>
                                     </span>
                                     <span className="receipt-item-amount">{formatPeso(item.lineTotal)}</span>
                                 </li>

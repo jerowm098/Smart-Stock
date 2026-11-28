@@ -309,18 +309,6 @@ export default function PosRecentActivity({ refreshKey = 0 }) {
                                 </span>
                             </dd>
                         </div>
-                        <div className="activity-detail-item">
-                            <dt>Total</dt>
-                            <dd>{formatPeso(detail.meta?.total_amount ?? 0)}</dd>
-                        </div>
-                        <div className="activity-detail-item">
-                            <dt>Payment</dt>
-                            <dd>{formatPeso(detail.meta?.payment_amount ?? 0)}</dd>
-                        </div>
-                        <div className="activity-detail-item">
-                            <dt>Change</dt>
-                            <dd>{formatPeso(detail.meta?.change_amount ?? 0)}</dd>
-                        </div>
                         {itemLines(detail).length > 0 && (
                             <div className="activity-detail-item">
                                 <dt>Items</dt>
@@ -335,6 +323,18 @@ export default function PosRecentActivity({ refreshKey = 0 }) {
                                 </dd>
                             </div>
                         )}
+                        <div className="activity-detail-item">
+                            <dt>Total</dt>
+                            <dd>{formatPeso(detail.meta?.total_amount ?? 0)}</dd>
+                        </div>
+                        <div className="activity-detail-item">
+                            <dt>Payment</dt>
+                            <dd>{formatPeso(detail.meta?.payment_amount ?? 0)}</dd>
+                        </div>
+                        <div className="activity-detail-item">
+                            <dt>Change</dt>
+                            <dd>{formatPeso(detail.meta?.change_amount ?? 0)}</dd>
+                        </div>
                     </dl>
                     <div className="modal-actions modal-actions-center">
                         <button type="button" className="btn btn-ghost" onClick={() => setDetail(null)}>Close</button>
