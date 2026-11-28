@@ -181,7 +181,7 @@ class InventoryController extends Controller
                     'reorder_threshold' => (int) ($validated['reorder_threshold'] ?? 0),
                     'user_id' => $user->id,
                     'is_active' => true,
-                    'is_listed' => false,
+                    'is_listed' => true,
                     'receiving_unit' => trim((string) ($validated['unit_of_measure'] ?? '')) ?: 'piece',
                     'pieces_per_receiving_unit' => 1,
                 ]);
@@ -528,23 +528,101 @@ public function getProducts(Request $request): JsonResponse
                     ->from('stock_ins')
                     ->whereColumn('stock_ins.product_id', 'products.id')
                     ->orderByDesc('stock_ins.created_at')
+                    ->orderByDesc('stock_ins.id')
                     ->limit(1);
-            }
+            },
+            'last_received_qty' => function ($query) {
+                $query->select('stock_ins.quantity_received')
+                    ->from('stock_ins')
+                    ->whereColumn('stock_ins.product_id', 'products.id')
+                    ->orderByDesc('stock_ins.created_at')
+                    ->orderByDesc('stock_ins.id')
+                    ->limit(1);
+            },
+            'last_received_by' => function ($query) {
+                $query->select('users.name')
+                    ->from('stock_ins')
+                    ->leftJoin('users', 'stock_ins.user_id', '=', 'users.id')
+                    ->whereColumn('stock_ins.product_id', 'products.id')
+                    ->orderByDesc('stock_ins.created_at')
+                    ->orderByDesc('stock_ins.id')
+                    ->limit(1);
+            },
+            'last_stock_in_note' => function ($query) {
+                $query->select('stock_ins.note')
+                    ->from('stock_ins')
+                    ->whereColumn('stock_ins.product_id', 'products.id')
+                    ->orderByDesc('stock_ins.created_at')
+                    ->orderByDesc('stock_ins.id')
+                    ->limit(1);
+            },
+            'last_adjustment_note' => function ($query) {
+                $query->select('stock_adjustments.reason_note')
+                    ->from('stock_adjustments')
+                    ->whereColumn('stock_adjustments.product_id', 'products.id')
+                    ->orderByDesc('stock_adjustments.created_at')
+                    ->orderByDesc('stock_adjustments.id')
+                    ->limit(1);
+            },
+            'last_adjustment_reason' => function ($query) {
+                $query->select('stock_adjustments.reason')
+                    ->from('stock_adjustments')
+                    ->whereColumn('stock_adjustments.product_id', 'products.id')
+                    ->orderByDesc('stock_adjustments.created_at')
+                    ->orderByDesc('stock_adjustments.id')
+                    ->limit(1);
+            },
+            'last_adjusted_at' => function ($query) {
+                $query->select('stock_adjustments.created_at')
+                    ->from('stock_adjustments')
+                    ->whereColumn('stock_adjustments.product_id', 'products.id')
+                    ->orderByDesc('stock_adjustments.created_at')
+                    ->orderByDesc('stock_adjustments.id')
+                    ->limit(1);
+            },
         ])
         // Most recently added-or-updated products float to the top of the
         // Products and Stock-In tables. updated_at is bumped by every flow:
         // add, edit, price change, stock adjustment and stock-in receive.
         ->latest('updated_at')->get();
 
+    $reasonLabels = [
+        'damaged' => 'Damaged',
+        'lost' => 'Lost / shrinkage',
+        'internal_transfer' => 'Internal transfer',
+        'correction' => 'Stock count correction',
+    ];
+
     // The last_received_at subselect returns a naive "YYYY-MM-DD HH:MM:SS"
     // string straight from Postgres. Without a timezone marker the browser's
     // Date() parses it as LOCAL time, shifting every "Latest Received" label
     // by the UTC offset (e.g. +8 hrs in Manila). Normalize to ISO-8601 UTC.
-    $products->each(function ($product) {
-        if (! empty($product->last_received_at)) {
-            $product->last_received_at = \Carbon\Carbon::parse($product->last_received_at)
-                ->timezone('UTC')
-                ->toISOString();
+    $products->each(function ($product) use ($reasonLabels) {
+        $receivedCarbon = ! empty($product->last_received_at)
+            ? \Carbon\Carbon::parse($product->last_received_at)
+            : null;
+        $adjustedCarbon = ! empty($product->last_adjusted_at)
+            ? \Carbon\Carbon::parse($product->last_adjusted_at)
+            : null;
+
+        $stockInNote = trim((string) ($product->last_stock_in_note ?? ''));
+        $adjustNote = trim((string) ($product->last_adjustment_note ?? ''));
+        $adjustReason = $reasonLabels[$product->last_adjustment_reason ?? ''] ?? trim((string) ($product->last_adjustment_reason ?? ''));
+
+        // Unified latest note: Receive Stock note initially, superseded by
+        // Adjust Stock note whenever a stock adjustment is newer.
+        if ($adjustedCarbon && (! $receivedCarbon || $adjustedCarbon->greaterThanOrEqualTo($receivedCarbon))) {
+            $product->latest_note = $adjustNote !== ''
+                ? $adjustNote
+                : ($adjustReason !== '' ? $adjustReason : ($stockInNote !== '' ? $stockInNote : null));
+        } else {
+            $product->latest_note = $stockInNote !== ''
+                ? $stockInNote
+                : ($adjustNote !== '' ? $adjustNote : null);
+        }
+
+        if ($receivedCarbon) {
+            $product->last_received_at = $receivedCarbon->timezone('UTC')->toISOString();
         }
         $product->last_supplier_active = $product->last_supplier_active !== null
             ? (bool) $product->last_supplier_active
@@ -587,10 +665,16 @@ public function getProducts(Request $request): JsonResponse
 
         // ?reactivate=1 brings a discontinued item back into the catalogue.
         if ($request->boolean('reactivate')) {
-            $product->update([
+            $wasDefect = (bool) $product->is_defect;
+            $updates = [
                 'is_active' => true,
                 'is_queue_dismissed' => false,
-            ]);
+                'is_defect' => false,
+            ];
+            if ($wasDefect) {
+                $updates['is_listed'] = true;
+            }
+            $product->update($updates);
 
             ActivityLogger::safe(fn () => ActivityLogger::productReactivated($user, $product));
 
@@ -649,7 +733,9 @@ public function getProducts(Request $request): JsonResponse
             ]);
         }
 
-        DB::transaction(function () use ($product, $user, $validated, $delta, $stockBefore, $stockAfter, &$adjustment) {
+        $defectProduct = null;
+
+        DB::transaction(function () use ($product, $user, $validated, $delta, $stockBefore, $stockAfter, &$adjustment, &$defectProduct) {
             Product::where('id', $product->id)->update([
                 'current_stock' => $stockAfter,
             ]);
@@ -663,6 +749,70 @@ public function getProducts(Request $request): JsonResponse
                 'stock_before' => $stockBefore,
                 'stock_after' => $stockAfter,
             ]);
+
+            // Deducted damaged items stay visible in Stock Inventory as a deactivated "Defect items" row.
+            if ($validated['reason'] === 'damaged' && $delta < 0) {
+                $defectQty = abs($delta);
+                $baseDefectSku = substr((string) $product->sku, 0, 44) . '-DEF';
+
+                $existingDefect = Product::where('is_defect', true)
+                    ->where('sku', $baseDefectSku)
+                    ->first();
+
+                if ($existingDefect) {
+                    $existingDefect->update([
+                        'current_stock' => (int) $existingDefect->current_stock + $defectQty,
+                        'is_active' => false,
+                        'is_listed' => false,
+                        'is_queue_dismissed' => true,
+                        'is_defect' => true,
+                    ]);
+                    $defectProduct = $existingDefect->fresh();
+                } else {
+                    $defectSku = $baseDefectSku;
+                    $suffix = 2;
+                    while (Product::where('sku', $defectSku)->exists()) {
+                        $defectSku = substr((string) $product->sku, 0, 41) . '-DEF' . $suffix;
+                        $suffix++;
+                    }
+
+                    $defectProduct = Product::create([
+                        'user_id' => $user->id,
+                        'name' => $product->name,
+                        'sku' => $defectSku,
+                        'category' => $product->category,
+                        'category_id' => $product->category_id,
+                        'price' => $product->price,
+                        'current_stock' => $defectQty,
+                        'reorder_threshold' => 0,
+                        'receiving_unit' => $product->receiving_unit,
+                        'pieces_per_receiving_unit' => $product->pieces_per_receiving_unit ?? 1,
+                        'is_active' => false,
+                        'is_listed' => false,
+                        'is_queue_dismissed' => true,
+                        'is_defect' => true,
+                    ]);
+
+                    // Preserve the source product's supplier link on the defect row
+                    // (quantity_received = 0 so total received-unit stats stay accurate).
+                    $latestSourceStockIn = StockIn::where('product_id', $product->id)
+                        ->whereNotNull('supplier_id')
+                        ->orderByDesc('created_at')
+                        ->orderByDesc('id')
+                        ->first();
+
+                    if ($latestSourceStockIn) {
+                        StockIn::create([
+                            'product_id' => $defectProduct->id,
+                            'supplier_id' => $latestSourceStockIn->supplier_id,
+                            'user_id' => $user->id,
+                            'quantity_received' => 0,
+                            'unit_of_measure' => $product->receiving_unit ?: 'piece',
+                            'note' => 'Defect items from ' . $product->sku,
+                        ]);
+                    }
+                }
+            }
         });
 
         ActivityLogger::safe(fn () => ActivityLogger::stockAdjusted($user, $adjustment, $product));
@@ -670,6 +820,7 @@ public function getProducts(Request $request): JsonResponse
         return response()->json([
             'message' => 'Stock adjusted successfully',
             'product' => $product->fresh(),
+            'defect_product' => $defectProduct,
             'adjustment' => [
                 'reason' => $validated['reason'],
                 'delta' => $delta,
@@ -692,15 +843,16 @@ public function getProducts(Request $request): JsonResponse
         $queued = $request->boolean('queued');
 
         $samples = [
-            ['name' => 'Claw Hammer 16oz', 'category' => 'Hand Tools', 'price' => 245, 'current_stock' => 24, 'reorder_threshold' => 10, 'receiving_unit' => 'piece'],
-            ['name' => 'Portland Cement 40kg', 'category' => 'Building Materials', 'price' => 260, 'current_stock' => 45, 'reorder_threshold' => 15, 'receiving_unit' => 'sack'],
-            ['name' => 'Latex Paint White 4L', 'category' => 'Paints & Coatings', 'price' => 680, 'current_stock' => 4, 'reorder_threshold' => 8, 'receiving_unit' => 'gallon'],
-            ['name' => 'PVC Pipe 1/2in 3m', 'category' => 'Plumbing', 'price' => 95, 'current_stock' => 0, 'reorder_threshold' => 12, 'receiving_unit' => 'piece'],
-            ['name' => 'THHN Wire 12 AWG', 'category' => 'Electrical', 'price' => 38, 'current_stock' => 80, 'reorder_threshold' => 25, 'receiving_unit' => 'meter'],
-            ['name' => 'Common Wire Nails 2in', 'category' => 'Fasteners', 'price' => 85, 'current_stock' => 6, 'reorder_threshold' => 10, 'receiving_unit' => 'kilogram'],
-            ['name' => 'Cordless Drill 18V', 'category' => 'Power Tools', 'price' => 1850, 'current_stock' => 12, 'reorder_threshold' => 5, 'receiving_unit' => 'piece'],
+            ['name' => 'Claw Hammer 16oz', 'category' => 'Hand Tools', 'category_desc' => 'Manual carpentry and workshop hand tools.', 'price' => 245, 'current_stock' => 24, 'reorder_threshold' => 10, 'receiving_unit' => 'piece', 'note' => 'Received — DR #1041'],
+            ['name' => 'Portland Cement 40kg', 'category' => 'Building Materials', 'category_desc' => 'Cement, lumber, aggregates, and structural supplies.', 'price' => 260, 'current_stock' => 45, 'reorder_threshold' => 15, 'receiving_unit' => 'sack', 'note' => 'Supplier delivery — verified'],
+            ['name' => 'Latex Paint White 4L', 'category' => 'Paints & Coatings', 'category_desc' => 'Interior and exterior paints, primers, rollers, and brushes.', 'price' => 680, 'current_stock' => 4, 'reorder_threshold' => 8, 'receiving_unit' => 'gallon', 'note' => 'Received — batch checked'],
+            ['name' => 'PVC Pipe 1/2in 3m', 'category' => 'Plumbing', 'category_desc' => 'PVC pipes, fittings, valves, and sealants.', 'price' => 95, 'current_stock' => 0, 'reorder_threshold' => 12, 'receiving_unit' => 'piece', 'note' => 'Initial stock entry — awaiting restock'],
+            ['name' => 'THHN Wire 12 AWG', 'category' => 'Electrical', 'category_desc' => 'Wires, conduits, switches, breakers, and lighting.', 'price' => 38, 'current_stock' => 80, 'reorder_threshold' => 25, 'receiving_unit' => 'meter', 'note' => 'Supplier delivery — DR #1045'],
+            ['name' => 'Common Wire Nails 2in', 'category' => 'Fasteners', 'category_desc' => 'Nails, screws, bolts, anchors, and washers.', 'price' => 85, 'current_stock' => 0, 'reorder_threshold' => 10, 'receiving_unit' => 'kilogram', 'note' => 'Initial stock entry — awaiting restock'],
+            ['name' => 'Cordless Drill 18V', 'category' => 'Power Tools', 'category_desc' => 'Cordless drills, grinders, saws, and electric equipment.', 'price' => 1850, 'current_stock' => 3, 'reorder_threshold' => 5, 'receiving_unit' => 'piece', 'note' => 'Received — warranty sealed'],
         ];
 
+        $createdSuppliers = 0;
         $suppliers = Supplier::active()->orderBy('id')->get();
         if ($suppliers->isEmpty()) {
             $defaultSuppliers = [
@@ -708,22 +860,38 @@ public function getProducts(Request $request): JsonResponse
                 ['name' => 'BuildRight Supply Corp.', 'contact_person' => 'Elena Cruz', 'phone' => '0918-555-0102', 'email' => 'orders@buildright.ph'],
                 ['name' => 'PrimeCoat & Electrical Co.', 'contact_person' => 'Marco Santos', 'phone' => '0919-555-0103', 'email' => 'dispatch@primecoat.ph'],
                 ['name' => 'FlowLine Plumbing Depot', 'contact_person' => 'Liza Mendoza', 'phone' => '0920-555-0104', 'email' => 'supply@flowline.ph'],
+                ['name' => 'VoltEdge Electrical Supplies', 'contact_person' => 'Carlos Villanueva', 'phone' => '0921-555-0105', 'email' => 'sales@voltedge.ph'],
+                ['name' => 'SteelGrip Fasteners Inc.', 'contact_person' => 'Grace Bautista', 'phone' => '0922-555-0106', 'email' => 'orders@steelgrip.ph'],
+                ['name' => 'Apex Power Tools Distribution', 'contact_person' => 'Dennis Aquino', 'phone' => '0923-555-0107', 'email' => 'support@apexpowertools.ph'],
             ];
             foreach ($defaultSuppliers as $row) {
-                Supplier::firstOrCreate(
-                    ['name' => $row['name']],
-                    [
+                $existing = Supplier::where('name', $row['name'])->first();
+                if ($existing) {
+                    if (! $existing->is_active) {
+                        $existing->update([
+                            'contact_person' => $row['contact_person'],
+                            'phone' => $row['phone'],
+                            'email' => $row['email'],
+                            'is_active' => true,
+                        ]);
+                        $createdSuppliers++;
+                    }
+                } else {
+                    Supplier::create([
+                        'name' => $row['name'],
                         'contact_person' => $row['contact_person'],
                         'phone' => $row['phone'],
                         'email' => $row['email'],
                         'is_active' => true,
-                    ]
-                );
+                    ]);
+                    $createdSuppliers++;
+                }
             }
             $suppliers = Supplier::active()->orderBy('id')->get();
         }
 
         $created = 0;
+        $createdCategories = 0;
 
         foreach ($samples as $index => $sample) {
             $baseName = $sample['name'];
@@ -735,17 +903,27 @@ public function getProducts(Request $request): JsonResponse
                 $suffix++;
             }
 
+            $categoryId = $this->resolveCategoryId($sample['category']);
+            if ($categoryId === null) {
+                $cat = Category::create([
+                    'name' => $sample['category'],
+                    'description' => $sample['category_desc'],
+                ]);
+                $categoryId = $cat->id;
+                $createdCategories++;
+            }
+
             $product = Product::create([
                 'name' => $name,
                 'sku' => $this->generateSku($name),
                 'category' => $sample['category'],
-                'category_id' => $this->resolveCategoryId($sample['category']),
-                'price' => $queued ? 0 : $sample['price'],
+                'category_id' => $categoryId,
+                'price' => $sample['price'],
                 'current_stock' => $sample['current_stock'],
                 'reorder_threshold' => $sample['reorder_threshold'],
                 'receiving_unit' => $sample['receiving_unit'],
                 'is_active' => true,
-                'is_listed' => ! $queued,
+                'is_listed' => true,
                 'is_queue_dismissed' => false,
             ]);
 
@@ -764,7 +942,7 @@ public function getProducts(Request $request): JsonResponse
                     'piece_delta' => $sample['current_stock'],
                     'stock_before' => 0,
                     'stock_after' => $sample['current_stock'],
-                    'note' => 'Sample stock data',
+                    'note' => $sample['note'] ?? 'Received',
                 ]);
             }
 
@@ -772,10 +950,10 @@ public function getProducts(Request $request): JsonResponse
         }
 
         return response()->json([
-            'message' => $queued
-                ? "{$created} sample stock items received and queued on Products."
-                : "{$created} sample products added.",
+            'message' => "{$created} sample products added.",
             'created' => $created,
+            'created_categories' => $createdCategories,
+            'created_suppliers' => $createdSuppliers,
         ], 201);
     }
 
@@ -800,7 +978,7 @@ public function getProducts(Request $request): JsonResponse
         $skipped = 0;
 
         foreach ($products as $product) {
-            $wasListed = (bool) $product->is_listed;
+            $wasListed = (bool) $product->is_listed || (bool) $product->is_defect;
             try {
                 $product->delete();
                 $deleted++;

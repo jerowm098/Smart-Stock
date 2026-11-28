@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import { FieldError, Toast } from '../../components/Feedback.jsx';
-import { get, post, del, validationMessages } from '../../lib/api.js';
+import { get, post, put, del, validationMessages } from '../../lib/api.js';
 import { timeAgo } from '../../lib/format.js';
 import { clearConnectedNav, notifyConnectedNav } from '../../lib/navBadges.js';
+import { prefetchPriceHint } from '../../lib/priceHints.js';
 import Modal from '../../components/Modal.jsx';
 import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import MessageDialog from '../../components/MessageDialog.jsx';
@@ -166,6 +168,12 @@ const UNIT_SUGGESTION_RULES = [
         sizePlaceholder: 'e.g. 12',
     },
     {
+        pattern: /\b(brush|brotsa|roller)\b/i,
+        defaultUnit: 'inch',
+        units: ['inch', 'piece', 'set'],
+        sizePlaceholder: 'e.g. 2',
+    },
+    {
         pattern: /\b(paint|pintura|thinner|primer|varnish|enamel|latex|epoxy|glue|rugby|oil|sealant)\b/i,
         defaultUnit: 'liter',
         units: ['liter', 'gallon', 'milliliter', 'can', 'bottle'],
@@ -178,7 +186,7 @@ const UNIT_SUGGESTION_RULES = [
         sizePlaceholder: 'e.g. 40',
     },
     {
-        pattern: /\b(hammer|martilyo|mallet|wrench|pliers|screwdriver|chisel|saw|lagari|brush|roller)\b/i,
+        pattern: /\b(hammer|martilyo|mallet|wrench|pliers|screwdriver|chisel|saw|lagari)\b/i,
         defaultUnit: 'ounce',
         units: ['ounce', 'inch', 'piece', 'set'],
         sizePlaceholder: 'e.g. 16',
@@ -209,16 +217,71 @@ function matchUnitSuggestion(productName) {
     return UNIT_SUGGESTION_RULES.find((rule) => rule.pattern.test(text)) ?? null;
 }
 
+const CATEGORY_SUGGESTION_RULES = [
+    {
+        pattern: /\b(pako|nail|nails|turnilyo|screw|screws|bolt|bolts|nut|nuts|washer|rivet|staple|anchor)\b/i,
+        category: 'Fasteners',
+    },
+    {
+        pattern: /\b(pipe|tubo|pvc|faucet|gripo|valve|elbow|coupling|hose|drain|teflon|plumbing)\b/i,
+        category: 'Plumbing',
+    },
+    {
+        pattern: /\b(wire|kawad|cable|thhn|cord|bulb|led|lamp|ilaw|spotlight|floodlight|breaker|outlet|switch|socket|fuse|conduit)\b/i,
+        category: 'Electrical',
+    },
+    {
+        pattern: /\b(paint|pintura|thinner|primer|varnish|enamel|latex|epoxy|glue|rugby|sealant|brush|brotsa|roller|lacquer)\b/i,
+        category: 'Paints & Coatings',
+    },
+    {
+        pattern: /\b(cement|semento|sand|buhangin|gravel|graba|lumber|kahoy|plywood|rebar|bakal|yero|hollow|block|skim|putty|grout|masilya|tile|tiles)\b/i,
+        category: 'Building Materials',
+    },
+    {
+        pattern: /\b(drill|grinder|sander|jigsaw|blower|welder|welding|compressor|impact|rotary|cordless)\b/i,
+        category: 'Power Tools',
+    },
+    {
+        pattern: /\b(hammer|martilyo|mallet|wrench|liyabe|pliers|plais|screwdriver|distornilyador|chisel|pait|saw|lagari|shovel|pala|crowbar|bareta|trowel|paleta|clamp|cutter|padlock|kandado|hinge|bisagra)\b/i,
+        category: 'Hand Tools',
+    },
+];
+
+function matchCategorySuggestion(productName, availableCategories = []) {
+    const text = String(productName ?? '').trim();
+    if (!text) return null;
+    const rule = CATEGORY_SUGGESTION_RULES.find((r) => r.pattern.test(text));
+    if (!rule) return null;
+    const exact = availableCategories.find(
+        (cat) => String(cat).trim().toLowerCase() === rule.category.toLowerCase(),
+    );
+    return exact ?? rule.category;
+}
+
 const EMPTY_RECEIVE_FORM = {
     product_id: '',
     product_name: '',
     sku: '',
     category: '',
+    price: 0,
     current_stock: '',
     reorder_threshold: '',
     supplier_id: '',
     unit_of_measure: '',
     quantity_received: '',
+    note_type: '',
+    note: '',
+};
+
+const EMPTY_ADD_STOCK_FORM = {
+    product_id: '',
+    product_name: '',
+    current_stock: '',
+    supplier_id: '',
+    unit_of_measure: '',
+    quantity_received: '',
+    note_type: '',
     note: '',
 };
 
@@ -238,7 +301,90 @@ const EMPTY_ADD_FORM = {
 
 const PRODUCTS_PER_PAGE = 6;
 
+const STOCK_TABS = [
+    {
+        key: 'receive',
+        label: 'Receive Stock',
+        title: 'Stock Receiving',
+        description: 'Active items ready for incoming stock deliveries.',
+        emptyTitle: 'No active stock items yet',
+        emptySub: 'Receive a new stock item to populate this list.',
+    },
+    {
+        key: 'in',
+        label: 'In Stock',
+        title: 'In Stock Items',
+        description: 'Active items currently above their reorder threshold.',
+        emptyTitle: 'No in-stock items',
+        emptySub: 'Active items with stock above their reorder threshold will appear here.',
+    },
+    {
+        key: 'low',
+        label: 'Low Stock',
+        title: 'Low Stock Items',
+        description: 'Active items at or below their reorder threshold.',
+        emptyTitle: 'No low-stock items',
+        emptySub: 'Items that drop to or below their reorder threshold will appear here.',
+    },
+    {
+        key: 'out',
+        label: 'Critical Stock',
+        title: 'Critical Stock Items',
+        description: 'Active items with zero stock on hand.',
+        emptyTitle: 'No critical-stock items',
+        emptySub: 'Active items that reach zero stock will appear here.',
+    },
+    {
+        key: 'deactivated',
+        label: 'Deactivated',
+        title: 'Deactivated Items',
+        description: 'Items manually deactivated from receiving and active catalogue.',
+        emptyTitle: 'No deactivated items',
+        emptySub: 'Deactivated items will appear here and can be reactivated anytime.',
+    },
+    {
+        key: 'no_supplier',
+        label: 'No Supplier',
+        title: 'Items Without Supplier',
+        description: 'Stock items not currently linked to any supplier.',
+        emptyTitle: 'No items without a supplier',
+        emptySub: 'Items with no assigned supplier will appear here.',
+    },
+    {
+        key: 'inactive_supplier',
+        label: 'Inactive Supplier',
+        title: 'Inactive Supplier Items',
+        description: 'Items deactivated because their linked supplier was removed.',
+        emptyTitle: 'No inactive-supplier items',
+        emptySub: 'Items whose supplier was removed will appear here.',
+    },
+    {
+        key: 'defect',
+        label: 'Defect Items',
+        title: 'Defect Items',
+        description: 'Damaged items deducted via stock adjustments.',
+        emptyTitle: 'No defect items yet',
+        emptySub: 'Damaged items deducted via stock adjustments will appear here.',
+    },
+    {
+        key: 'all',
+        label: 'All',
+        title: 'All Stock Items',
+        description: 'Complete overview of every stock item across all statuses.',
+        emptyTitle: 'No products yet',
+        emptySub: 'Receive a new product to populate this list.',
+    },
+];
+
 function stockStateKey(product) {
+    if (product.is_defect) {
+        return 'defect';
+    }
+
+    if (product.is_active === false || product.is_active === 0) {
+        return 'inactive';
+    }
+
     if (Number(product.current_stock) <= 0) {
         return 'out';
     }
@@ -251,25 +397,35 @@ function stockStateKey(product) {
 }
 
 function stockStatusPill(product) {
+    if (product.is_defect) {
+        return { label: 'Defect items', className: 'pill-danger', rank: 0 };
+    }
+
     if (product.is_active === false || product.is_active === 0) {
         if (product.last_supplier_active === false) {
-            return { label: 'Inactive supplier', className: 'pill-danger', rank: 0 };
+            return { label: 'Inactive supplier', className: 'pill-danger', rank: 1 };
         }
-        return { label: 'Deactivated', className: 'pill-danger', rank: 1 };
+        return { label: 'Deactivated', className: 'pill-danger', rank: 2 };
     }
 
     if (Number(product.current_stock) <= 0) {
-        return { label: 'Critical stock', className: 'pill-danger', rank: 2 };
+        return { label: 'Critical stock', className: 'pill-danger', rank: 3 };
     }
 
     if (Number(product.current_stock) <= Number(product.reorder_threshold)) {
-        return { label: 'Low stock', className: 'pill-warn', rank: 3 };
+        return { label: 'Low stock', className: 'pill-warn', rank: 4 };
     }
 
-    return { label: 'In stock', className: 'pill-ok', rank: 4 };
+    return { label: 'In stock', className: 'pill-ok', rank: 5 };
 }
 
 export default function StockIn() {
+    const navigate = useNavigate();
+    const stockTableRef = useRef(null);
+    const statGridRef = useRef(null);
+    const [activeStat, setActiveStat] = useState(null);
+    const [viewingStock, setViewingStock] = useState(null);
+    const [stockTab, setStockTab] = useState('receive');
     const [products, setProducts] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
     const [categoriesList, setCategoriesList] = useState([]);
@@ -288,6 +444,13 @@ export default function StockIn() {
     const [receiveError, setReceiveError] = useState(null);
     const [receiveFieldErrors, setReceiveFieldErrors] = useState([]);
 
+    // Compact Add Stock modal state (quantity + note only)
+    const [addStockOpen, setAddStockOpen] = useState(false);
+    const [addStockForm, setAddStockForm] = useState(EMPTY_ADD_STOCK_FORM);
+    const [addStockSubmitting, setAddStockSubmitting] = useState(false);
+    const [addStockError, setAddStockError] = useState(null);
+    const [addStockFieldErrors, setAddStockFieldErrors] = useState([]);
+
     // Receive New Stock (create + first stock-in) — modal via its panel
     // button. SKU + Category hints show up as ghost placeholders while the
     // product name is typed; they are never labelled in the UI.
@@ -303,7 +466,9 @@ export default function StockIn() {
     const currentNameRef = useRef('');
     const reorderTouchedRef = useRef(false);
     const unitTouchedRef = useRef(false);
+    const categoryTouchedRef = useRef(false);
     const [showAllUnits, setShowAllUnits] = useState(false);
+    const [showAllCategories, setShowAllCategories] = useState(false);
 
     // Search & filter over the receiving table.
     const [search, setSearch] = useState('');
@@ -431,6 +596,12 @@ export default function StockIn() {
 
             const s = response.suggestion || {};
             setSuggestions({ sku: s.sku || '', category: s.category || '' });
+            if (s.category && !categoryTouchedRef.current) {
+                setAddForm((current) => {
+                    if (categoryTouchedRef.current) return current;
+                    return { ...current, category: s.category };
+                });
+            }
             lastSuggestedName.current = key;
         } catch {
             if (currentNameRef.current === key) {
@@ -498,10 +669,36 @@ export default function StockIn() {
         [products]
     );
 
+    const activeTabMeta = STOCK_TABS.find((tab) => tab.key === stockTab) ?? STOCK_TABS[0];
+
+    const tabProducts = useMemo(() => {
+        switch (stockTab) {
+            case 'receive':
+                return products.filter((p) => Boolean(p.is_active) && !p.is_defect);
+            case 'in':
+                return products.filter((p) => stockStateKey(p) === 'in');
+            case 'low':
+                return products.filter((p) => stockStateKey(p) === 'low');
+            case 'out':
+                return products.filter((p) => stockStateKey(p) === 'out');
+            case 'deactivated':
+                return products.filter((p) => !p.is_active && !p.is_defect && p.last_supplier_active !== false);
+            case 'no_supplier':
+                return products.filter((p) => !p.is_defect && !p.last_supplier_id && !p.last_supplier_name);
+            case 'inactive_supplier':
+                return products.filter((p) => !p.is_active && !p.is_defect && p.last_supplier_active === false);
+            case 'defect':
+                return products.filter((p) => Boolean(p.is_defect));
+            case 'all':
+            default:
+                return products;
+        }
+    }, [products, stockTab]);
+
     const filteredProducts = useMemo(() => {
         const q = search.trim().toLowerCase();
 
-        return products.filter((product) => {
+        return tabProducts.filter((product) => {
             const matchesSearch = !q
                 || String(product.name ?? '').toLowerCase().includes(q)
                 || String(product.sku ?? '').toLowerCase().includes(q)
@@ -513,7 +710,7 @@ export default function StockIn() {
 
             return matchesSearch && matchesCategory && matchesUnit && matchesLevel;
         });
-    }, [products, search, categoryFilter, unitFilter, levelFilter]);
+    }, [tabProducts, search, categoryFilter, unitFilter, levelFilter]);
 
     const hasActiveFilters = Boolean(search.trim() || categoryFilter || unitFilter || levelFilter);
 
@@ -599,6 +796,17 @@ export default function StockIn() {
         setActivityPage(1);
     }, [activity.length]);
 
+    useEffect(() => {
+        if (!activeStat) return undefined;
+        const onMouseDown = (event) => {
+            if (!statGridRef.current?.contains(event.target)) {
+                setActiveStat(null);
+            }
+        };
+        document.addEventListener('mousedown', onMouseDown);
+        return () => document.removeEventListener('mousedown', onMouseDown);
+    }, [activeStat]);
+
     const selected = products.find((product) => String(product.id) === String(receiveForm.product_id));
 
     function setReceiveField(name, value) {
@@ -612,6 +820,7 @@ export default function StockIn() {
             product_name: product.name || '',
             sku: product.sku || '',
             category: product.category && product.category !== 'Uncategorized' ? product.category : '',
+            price: Number(product.price ?? 0),
             current_stock: String(product.current_stock ?? 0),
             reorder_threshold: String(product.reorder_threshold ?? 0),
             supplier_id: product.last_supplier_id && product.last_supplier_active !== false
@@ -630,6 +839,28 @@ export default function StockIn() {
         setReceiveFieldErrors([]);
     }
 
+    function openAddStock(product) {
+        setAddStockForm({
+            ...EMPTY_ADD_STOCK_FORM,
+            product_id: String(product.id),
+            product_name: product.name || '',
+            current_stock: String(product.current_stock ?? 0),
+            supplier_id: product.last_supplier_id && product.last_supplier_active !== false
+                ? String(product.last_supplier_id)
+                : '',
+            unit_of_measure: product.receiving_unit || '',
+        });
+        setAddStockError(null);
+        setAddStockFieldErrors([]);
+        setAddStockOpen(true);
+    }
+
+    function resetAddStock() {
+        setAddStockOpen(false);
+        setAddStockError(null);
+        setAddStockFieldErrors([]);
+    }
+
     function openAdd() {
         setAddForm(EMPTY_ADD_FORM);
         setSuggestions({});
@@ -638,7 +869,9 @@ export default function StockIn() {
         currentNameRef.current = '';
         reorderTouchedRef.current = false;
         unitTouchedRef.current = false;
+        categoryTouchedRef.current = false;
         setShowAllUnits(false);
+        setShowAllCategories(false);
         setAddError(null);
         setAddFieldErrors([]);
         setAddOpen(true);
@@ -654,7 +887,9 @@ export default function StockIn() {
         currentNameRef.current = '';
         reorderTouchedRef.current = false;
         unitTouchedRef.current = false;
+        categoryTouchedRef.current = false;
         setShowAllUnits(false);
+        setShowAllCategories(false);
         setAddError(null);
         setAddFieldErrors([]);
     }
@@ -747,9 +982,15 @@ export default function StockIn() {
         setSeeding(true);
 
         try {
-            const response = await post('/api/inventory/seed', { queued: true });
-            setToast(response?.message ?? '7 sample stock items received and queued on Products.');
-            notifyConnectedNav('stockNewProductReceived', response?.created ?? 7);
+            const response = await post('/api/inventory/seed');
+            setToast(response?.message ?? '7 sample products added.');
+            notifyConnectedNav('productAdded', response?.created ?? 7);
+            if (Number(response?.created_categories) > 0) {
+                notifyConnectedNav('categoriesSynced', Number(response.created_categories));
+            }
+            if (Number(response?.created_suppliers) > 0) {
+                notifyConnectedNav('suppliersSynced', Number(response.created_suppliers));
+            }
             await refresh();
         } catch (err) {
             setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample products.');
@@ -767,13 +1008,9 @@ export default function StockIn() {
             const response = await del('/api/inventory');
             setDeleteAllConfirm(false);
             const deleted = Number(response?.deleted) || 0;
-            const deletedListed = Number(response?.deleted_listed) || 0;
             clearConnectedNav('productAdded');
             if (deleted > 0) {
-                notifyConnectedNav('stockNewProductReceived', -deleted);
-            }
-            if (deletedListed > 0) {
-                notifyConnectedNav('productListed', -deletedListed);
+                notifyConnectedNav('productAdded', -deleted, '/stock-in');
             }
             setToast(response?.message ?? 'All products deleted.');
             await refresh();
@@ -798,28 +1035,57 @@ export default function StockIn() {
         setReceiveFieldErrors([]);
 
         try {
-            const response = await post('/api/inventory/stock-in', {
-                product_id: receiveForm.product_id || null,
-                product_name: receiveForm.product_name || null,
-                custom_sku: receiveForm.sku || null,
-                custom_category: receiveForm.category || null,
-                current_stock: receiveForm.current_stock !== '' ? Number(receiveForm.current_stock) : null,
-                reorder_threshold: receiveForm.reorder_threshold !== '' ? Number(receiveForm.reorder_threshold) : null,
-                supplier_id: receiveForm.supplier_id || null,
-                quantity_received: receiveForm.quantity_received,
-                unit_of_measure: receiveForm.unit_of_measure || null,
-                note: receiveForm.note || null,
+            const response = await put('/api/inventory/update', {
+                id: Number(receiveForm.product_id),
+                name: receiveForm.product_name.trim(),
+                sku: receiveForm.sku.trim(),
+                category: receiveForm.category || null,
+                price: Number(receiveForm.price ?? 0),
+                current_stock: Number(receiveForm.current_stock ?? 0),
+                reorder_threshold: Number(receiveForm.reorder_threshold ?? 0),
+                receiving_unit: receiveForm.unit_of_measure || null,
+                supplier_id: receiveForm.supplier_id ? Number(receiveForm.supplier_id) : null,
             });
 
-            setToast(stockInToast(response));
+            setToast(response?.message ?? 'Stock details updated successfully.');
             setReceiveOpen(false);
-            notifyConnectedNav('stockReceived', 1);
             await refresh();
         } catch (err) {
             setReceiveError(err.message);
             setReceiveFieldErrors(validationMessages(err));
         } finally {
             setReceiveSubmitting(false);
+        }
+    }
+
+    async function handleAddStock(event) {
+        event.preventDefault();
+        setAddStockSubmitting(true);
+        setAddStockError(null);
+        setAddStockFieldErrors([]);
+
+        try {
+            const resolvedNote = addStockForm.note_type === 'other'
+                ? (addStockForm.note.trim() || null)
+                : (addStockForm.note_type || null);
+
+            const response = await post('/api/inventory/stock-in', {
+                product_id: addStockForm.product_id || null,
+                supplier_id: addStockForm.supplier_id || null,
+                quantity_received: addStockForm.quantity_received,
+                unit_of_measure: addStockForm.unit_of_measure || null,
+                note: resolvedNote,
+            });
+
+            setToast(stockInToast(response));
+            setAddStockOpen(false);
+            notifyConnectedNav('stockReceived', 1);
+            await refresh();
+        } catch (err) {
+            setAddStockError(err.message);
+            setAddStockFieldErrors(validationMessages(err));
+        } finally {
+            setAddStockSubmitting(false);
         }
     }
 
@@ -838,6 +1104,12 @@ export default function StockIn() {
             });
 
             setToast(`${response.message}: ${response.adjustment.stock_before} → ${response.adjustment.stock_after}.`);
+            const adjustedDelta = Number(response.adjustment?.delta ?? adjustForm.delta);
+            if (adjustedDelta < 0) {
+                notifyConnectedNav('productDeactivated', adjustedDelta);
+            } else if (adjustedDelta > 0) {
+                notifyConnectedNav('productReactivated', adjustedDelta);
+            }
             setAdjustProduct(null);
             await refresh();
         } catch (err) {
@@ -927,7 +1199,15 @@ export default function StockIn() {
             setSuggesting(false);
             lastSuggestedName.current = '';
             currentNameRef.current = '';
-            notifyConnectedNav('stockNewProductReceived', 1);
+            notifyConnectedNav('stockReceivedNew', 1);
+            if (response?.product?.id) {
+                // Pre-fetch AI price suggestion in the background so Products -> Add Price is instant.
+                prefetchPriceHint(
+                    response.product.id,
+                    response.product.name || fullProductName,
+                    response.product.receiving_unit || resolvedUnit || 'piece',
+                );
+            }
             await refresh();
         } catch (err) {
             setAddError(err.message);
@@ -1026,7 +1306,7 @@ export default function StockIn() {
                             <table className="table" aria-hidden="true">
                                 <thead>
                                     <tr>
-                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+                                        {[0, 1, 2, 3, 4, 5].map((i) => (
                                             <th key={i}>
                                                 <span className="skeleton skeleton-line skeleton-sm" style={{ width: '70%' }} />
                                             </th>
@@ -1036,9 +1316,9 @@ export default function StockIn() {
                                 <tbody>
                                     {[0, 1, 2, 3, 4, 5].map((r) => (
                                         <tr key={r}>
-                                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((c) => (
+                                            {[0, 1, 2, 3, 4, 5].map((c) => (
                                                 <td key={c}>
-                                                    <span className="skeleton skeleton-line" style={{ width: c === 9 ? '62%' : '85%' }} />
+                                                    <span className="skeleton skeleton-line" style={{ width: c === 5 ? '62%' : '85%' }} />
                                                 </td>
                                             ))}
                                         </tr>
@@ -1089,27 +1369,63 @@ export default function StockIn() {
             {!loading && (
                 <>
                 {stats && (
-                    <div className="stat-grid">
-                        <article className="card stat">
-                            <span>Products</span>
-                            <strong>{stats.total_products}</strong>
-                            <small className="stat-hint">Items in the catalogue.</small>
-                        </article>
-                        <article className="card stat">
+                    <div className="stat-grid" ref={statGridRef}>
+                        <button
+                            type="button"
+                            className={`card stat stat-clickable${activeStat === 'products' ? ' is-active' : ''}`}
+                            onClick={() => {
+                                setActiveStat('products');
+                                setStockTab('all');
+                                clearFilters();
+                                setProductPage(1);
+                                stockTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                        >
+                            <span>Overall stocks</span>
+                            <strong>{products.length}</strong>
+                            <small className="stat-hint">All stock items across every status.</small>
+                        </button>
+                        <button
+                            type="button"
+                            className={`card stat stat-clickable${activeStat === 'low' ? ' is-active' : ''}`}
+                            onClick={() => {
+                                const next = stockTab === 'low' ? 'receive' : 'low';
+                                setActiveStat(next === 'low' ? 'low' : null);
+                                setStockTab(next);
+                                clearFilters();
+                                setProductPage(1);
+                                stockTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                        >
                             <span>Low stock</span>
                             <strong className={stats.low_stock_count > 0 ? 'text-warn' : ''}>{stats.low_stock_count}</strong>
                             <small className="stat-hint">At or below reorder threshold.</small>
-                        </article>
-                        <article className="card stat">
+                        </button>
+                        <button
+                            type="button"
+                            className={`card stat stat-clickable${activeStat === 'out' ? ' is-active' : ''}`}
+                            onClick={() => {
+                                const next = stockTab === 'out' ? 'receive' : 'out';
+                                setActiveStat(next === 'out' ? 'out' : null);
+                                setStockTab(next);
+                                clearFilters();
+                                setProductPage(1);
+                                stockTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                        >
                             <span>Critical stock</span>
                             <strong className={stats.critical_stock_count > 0 ? 'text-danger' : ''}>{stats.critical_stock_count ?? 0}</strong>
                             <small className="stat-hint">Out of stock or zero on hand.</small>
-                        </article>
-                        <article className="card stat">
+                        </button>
+                        <button
+                            type="button"
+                            className="card stat stat-clickable"
+                            onClick={() => navigate('/suppliers', { state: { fromStockIn: true } })}
+                        >
                             <span>Suppliers</span>
                             <strong>{stats.supplier_count}</strong>
                             <small className="stat-hint">Active suppliers.</small>
-                        </article>
+                        </button>
                     </div>
                 )}
 
@@ -1131,7 +1447,7 @@ export default function StockIn() {
                     <div className="filter-head">
                         <div>
                             <h3>Search & Filter Options</h3>
-                            <p className="muted">Narrow products by name, SKU, category, unit or stock level.</p>
+                            <p className="muted">Narrow products by name, SKU, category, unit or stock status.</p>
                         </div>
                     </div>
                     <div className="filter-shell">
@@ -1164,12 +1480,13 @@ export default function StockIn() {
                                 </select>
                             </label>
                             <label className="field">
-                                <span>Stock level</span>
+                                <span>Stock status</span>
                                 <select className="input" value={levelFilter} onChange={(event) => setLevelFilter(event.target.value)}>
-                                    <option value="">All levels</option>
+                                    <option value="">All statuses</option>
                                     <option value="in">In stock</option>
                                     <option value="low">Low stock</option>
                                     <option value="out">Critical / out of stock</option>
+                                    <option value="defect">Defect items</option>
                                 </select>
                             </label>
                             <div className="field">
@@ -1187,14 +1504,34 @@ export default function StockIn() {
                     </div>
                 </section>
 
+                <section className="card padded tabs-card">
+                    <div className="mode-tabs" role="tablist">
+                        {STOCK_TABS.map((tab) => (
+                            <button
+                                key={tab.key}
+                                type="button"
+                                role="tab"
+                                aria-selected={stockTab === tab.key}
+                                className={`mode-tab${stockTab === tab.key ? ' is-active' : ''}`}
+                                onClick={() => {
+                                    setStockTab(tab.key);
+                                    setProductPage(1);
+                                }}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                </section>
+
                 {/* One row per catalogue product (mirrors the products/receiving
                     data): the Receive action opens the stock-in modal with the
                     product pre-selected. */}
-                <section className="card padded">
+                <section className="card padded" ref={stockTableRef}>
                     <div className="filter-head">
                         <div>
-                            <h3>Stock Receiving</h3>
-                            <p className="muted">Overview of all products and their receiving status.</p>
+                            <h3>{activeTabMeta.title}</h3>
+                            <p className="muted">{activeTabMeta.description}</p>
                         </div>
                         <div className="activity-options" ref={stockOptionsRef}>
                             <button
@@ -1241,7 +1578,7 @@ export default function StockIn() {
                                             if (products.length === 0) {
                                                 setEmptyNotice({
                                                     title: 'No products to delete',
-                                                    description: 'The stock list is already empty. Receive a new product or add the 7 sample products first.',
+                                                    description: 'The stock list is already empty. Receive a new product first.',
                                                 });
                                                 return;
                                             }
@@ -1279,53 +1616,6 @@ export default function StockIn() {
                                         </th>
                                         <th
                                             className="sort-header"
-                                            onClick={() => toggleSort('sku')}
-                                            title="Stock Keeping Unit"
-                                        >
-                                            SKU
-                                            <span className={`sort-indicator${sortBy === 'sku' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'sku' && sortDir === 'desc' ? '▼' : '▲'}
-                                            </span>
-                                            <span className="th-sub">Stock Keeping Unit</span>
-                                        </th>
-                                        <th
-                                            className="sort-header"
-                                            onClick={() => toggleSort('category')}
-                                        >
-                                            Category
-                                            <span className={`sort-indicator${sortBy === 'category' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'category' && sortDir === 'desc' ? '▼' : '▲'}
-                                            </span>
-                                        </th>
-                                        <th
-                                            className="sort-header"
-                                            onClick={() => toggleSort('current_stock')}
-                                        >
-                                            Current<br />stock
-                                            <span className={`sort-indicator${sortBy === 'current_stock' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'current_stock' && sortDir === 'desc' ? '▼' : '▲'}
-                                            </span>
-                                        </th>
-                                        <th
-                                            className="sort-header"
-                                            onClick={() => toggleSort('reorder_threshold')}
-                                        >
-                                            Reorder<br />at
-                                            <span className={`sort-indicator${sortBy === 'reorder_threshold' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'reorder_threshold' && sortDir === 'desc' ? '▼' : '▲'}
-                                            </span>
-                                        </th>
-                                        <th
-                                            className="sort-header"
-                                            onClick={() => toggleSort('receiving_unit')}
-                                        >
-                                            Unit
-                                            <span className={`sort-indicator${sortBy === 'receiving_unit' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'receiving_unit' && sortDir === 'desc' ? '▼' : '▲'}
-                                            </span>
-                                        </th>
-                                        <th
-                                            className="sort-header"
                                             onClick={() => toggleSort('last_supplier_name')}
                                         >
                                             Supplier
@@ -1335,11 +1625,24 @@ export default function StockIn() {
                                         </th>
                                         <th
                                             className="sort-header"
+                                            onClick={() => toggleSort('current_stock')}
+                                        >
+                                            <span className="sort-header-inner">
+                                                <span>Current<br />stock</span>
+                                                <span className={`sort-indicator${sortBy === 'current_stock' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'current_stock' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
+                                            </span>
+                                        </th>
+                                        <th
+                                            className="sort-header"
                                             onClick={() => toggleSort('last_received_at')}
                                         >
-                                            Latest<br />received
-                                            <span className={`sort-indicator${sortBy === 'last_received_at' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'last_received_at' && sortDir === 'desc' ? '▼' : '▲'}
+                                            <span className="sort-header-inner">
+                                                <span>Latest<br />received</span>
+                                                <span className={`sort-indicator${sortBy === 'last_received_at' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'last_received_at' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                             </span>
                                         </th>
                                         <th
@@ -1356,20 +1659,16 @@ export default function StockIn() {
                                 </thead>
                                 <tbody>
                                     {pagedProducts.map((product) => (
-                                        <tr key={product.id} className={!product.is_active ? 'row-inactive' : undefined}>
+                                        <tr
+                                            key={product.id}
+                                            className={`row-clickable${!product.is_active ? ' row-inactive' : ''}`}
+                                            onClick={() => setViewingStock(product)}
+                                        >
                                             <td>
                                                 {highlight(product.name, search.trim())}
                                             </td>
-                                            <td className="mono">{product.sku}</td>
-                                            <td>{product.category || '—'}</td>
+                                            <td>{product.last_supplier_name || '—'}</td>
                                             <td>{product.current_stock}</td>
-                                            <td>{product.reorder_threshold ?? 0}</td>
-                                            <td>{product.receiving_unit || '—'}</td>
-                                            <td>
-                                                {product.last_supplier_name
-                                                    ? highlight(product.last_supplier_name, search.trim())
-                                                    : '—'}
-                                            </td>
                                             <td className="txn-date" style={{ fontSize: '0.82em' }}>
                                                 {product.last_received_at
                                                     ? timeAgo(product.last_received_at)
@@ -1384,24 +1683,38 @@ export default function StockIn() {
                                                         : <span className="muted">—</span>;
                                                 })()}
                                             </td>
-                                            <td className="actions-cell">
+                                            <td
+                                                className="actions-cell"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
                                                 <Tooltip
-                                                    label="Receive stock"
+                                                    label={product.is_defect ? 'Defect items cannot add stock' : 'Add stock'}
                                                     className="btn btn-ghost btn-sm action-icon-btn"
-                                                    onClick={() => openReceive(product)}
+                                                    disabled={Boolean(product.is_defect)}
+                                                    onClick={() => openAddStock(product)}
                                                 >
                                                     <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                        <path d="M12 3v9" />
-                                                        <path d="m9 9 3 3 3-3" />
-                                                        <rect x="3" y="13" width="18" height="8" rx="2" />
+                                                        <path d="M12 5v14M5 12h14" />
                                                     </svg>
                                                 </Tooltip>
                                                 <Tooltip
-                                                    label="Adjust stock"
+                                                    label={product.is_defect ? 'Defect items cannot be edited' : 'Edit stock'}
                                                     className="btn btn-ghost btn-sm action-icon-btn"
+                                                    disabled={Boolean(product.is_defect)}
+                                                    onClick={() => openReceive(product)}
+                                                >
+                                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M12 20h9" />
+                                                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                                    </svg>
+                                                </Tooltip>
+                                                <Tooltip
+                                                    label={product.is_defect ? 'Defect items cannot be adjusted' : 'Adjust stock'}
+                                                    className="btn btn-ghost btn-sm action-icon-btn"
+                                                    disabled={Boolean(product.is_defect)}
                                                     onClick={() => {
                                                         setAdjustProduct(product);
-                                                        setAdjustForm({ delta: '', reason: 'correction', reason_note: '' });
+                                                        setAdjustForm({ delta: '', reason: 'damaged', reason_note: '' });
                                                         setAdjustError(null);
                                                     }}
                                                 >
@@ -1462,10 +1775,10 @@ export default function StockIn() {
                                         </svg>
                                     </span>
                                     <p className="table-empty-title">
-                                        {hasActiveFilters ? 'No results found' : 'No products yet'}
+                                        {hasActiveFilters ? 'No results found' : activeTabMeta.emptyTitle}
                                     </p>
                                     <p className="table-empty-sub">
-                                        {hasActiveFilters ? 'Try adjusting your search or filters.' : 'Receive a new product or add the 7 sample products to populate this list.'}
+                                        {hasActiveFilters ? 'Try adjusting your search or filters.' : activeTabMeta.emptySub}
                                     </p>
                                 </div>
                             )}
@@ -1643,32 +1956,27 @@ export default function StockIn() {
 
             {adjustProduct && (
                 <Modal
-                    bare
+                    title="Adjust stock"
+                    titleIcon={(
+                        <span className="modal-title-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="21" x2="14" y1="4" y2="4" />
+                                <line x1="10" x2="3" y1="4" y2="4" />
+                                <line x1="21" x2="12" y1="12" y2="12" />
+                                <line x1="8" x2="3" y1="12" y2="12" />
+                                <line x1="21" x2="16" y1="20" y2="20" />
+                                <line x1="12" x2="3" y1="20" y2="20" />
+                                <line x1="14" x2="14" y1="2" y2="6" />
+                                <line x1="8" x2="8" y1="10" y2="14" />
+                                <line x1="16" x2="16" y1="18" y2="22" />
+                            </svg>
+                        </span>
+                    )}
                     noClose
-                    ariaLabel="Adjust stock"
                     className="modal-adjust"
                     onClose={() => setAdjustProduct(null)}
                 >
                     <form className="form" onSubmit={handleAdjust}>
-                        <div className="confirm-dialog confirm-dialog-info">
-                            <span className="confirm-dialog-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="21" x2="14" y1="4" y2="4" />
-                                    <line x1="10" x2="3" y1="4" y2="4" />
-                                    <line x1="21" x2="12" y1="12" y2="12" />
-                                    <line x1="8" x2="3" y1="12" y2="12" />
-                                    <line x1="21" x2="16" y1="20" y2="20" />
-                                    <line x1="12" x2="3" y1="20" y2="20" />
-                                    <line x1="14" x2="14" y1="2" y2="6" />
-                                    <line x1="8" x2="8" y1="10" y2="14" />
-                                    <line x1="16" x2="16" y1="18" y2="22" />
-                                </svg>
-                            </span>
-                            <div className="confirm-dialog-body">
-                                <p className="confirm-dialog-title">Adjust stock</p>
-                                <p className="muted confirm-dialog-text">Manually correct the on-hand count for this product.</p>
-                            </div>
-                        </div>
                         <div className="field">
                             <span className="field-label">Product</span>
                             <div className="readonly-value readonly-static">{adjustProduct.name}</div>
@@ -1755,21 +2063,21 @@ export default function StockIn() {
             )}
 
             {receiveOpen && (
-                <Modal bare noClose className="modal-receive-wide" onClose={resetReceive}>
+                <Modal
+                    title="Edit Stock"
+                    titleIcon={(
+                        <span className="modal-title-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z" />
+                            </svg>
+                        </span>
+                    )}
+                    noClose
+                    className="modal-receive-wide"
+                    onClose={resetReceive}
+                >
                     <form className="form" onSubmit={handleReceive}>
-                        <div className="confirm-dialog confirm-dialog-info">
-                            <span className="confirm-dialog-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M12 3v9" />
-                                    <path d="m9 9 3 3 3-3" />
-                                    <rect x="3" y="13" width="18" height="8" rx="2" />
-                                </svg>
-                            </span>
-                            <div className="confirm-dialog-body">
-                                <p className="confirm-dialog-title">Receive Stock</p>
-                                <p className="muted confirm-dialog-text">Log incoming delivery quantity for this product.</p>
-                            </div>
-                        </div>
 
                         <div className="receive-modal-grid">
                             <div className="receive-modal-main">
@@ -1786,15 +2094,14 @@ export default function StockIn() {
                                         />
                                     </label>
                                     <label className="field">
-                                        <span>On hand</span>
+                                        <span>SKU code</span>
                                         <input
-                                            className="input"
-                                            type="number"
-                                            min="0"
-                                            step="1"
+                                            className="input mono"
+                                            type="text"
                                             required
-                                            value={receiveForm.current_stock}
-                                            onChange={(event) => setReceiveField('current_stock', event.target.value)}
+                                            maxLength={50}
+                                            value={receiveForm.sku}
+                                            onChange={(event) => setReceiveField('sku', event.target.value)}
                                         />
                                     </label>
                                 </div>
@@ -1825,41 +2132,19 @@ export default function StockIn() {
                                 </div>
 
                                 <div className="field-row">
-                                    <label className="field">
-                                        <span>SKU code</span>
-                                        <input
-                                            className="input mono"
-                                            type="text"
-                                            maxLength={50}
-                                            value={receiveForm.sku}
-                                            onChange={(event) => setReceiveField('sku', event.target.value)}
-                                        />
-                                    </label>
-                                    <label className="field">
-                                        <span>Received qty <span className="text-danger">*</span></span>
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            step="1"
-                                            required
-                                            autoFocus
-                                            placeholder="e.g. 10"
-                                            {...receiveInput('quantity_received')}
-                                        />
-                                    </label>
+                                    <div className="field">
+                                        <span>Current stock</span>
+                                        <div className="readonly-field">{receiveForm.current_stock}</div>
+                                    </div>
+                                    <span aria-hidden="true" />
                                 </div>
-
-                                <label className="field">
-                                    <span>Note</span>
-                                    <input type="text" maxLength={255} placeholder="Delivery receipt #, remarks…" {...receiveInput('note')} />
-                                </label>
                             </div>
 
                             <div className="receive-modal-aside">
                                 <label className="field">
                                     <span>Supplier</span>
-                                    <select className="input" {...receiveInput('supplier_id')}>
-                                        <option value="" disabled>No supplier</option>
+                                    <select className="input" disabled={suppliers.length === 0} {...receiveInput('supplier_id')}>
+                                        <option value="" disabled hidden>No supplier</option>
                                         {suppliers.map((supplier) => (
                                             <option key={supplier.id} value={supplier.id}>
                                                 {supplier.name}
@@ -1871,10 +2156,11 @@ export default function StockIn() {
                                     <span>Category</span>
                                     <select
                                         className="input"
+                                        disabled={dropdownCategories.length === 0}
                                         value={receiveForm.category}
                                         onChange={(event) => setReceiveField('category', event.target.value)}
                                     >
-                                        <option value="" disabled>No category</option>
+                                        <option value="" disabled hidden>No category</option>
                                         {dropdownCategories.map((cat) => (
                                             <option key={cat} value={cat}>
                                                 {cat}
@@ -1895,7 +2181,121 @@ export default function StockIn() {
                         <div className="modal-actions modal-actions-center">
                             <button type="button" className="btn btn-ghost" onClick={resetReceive}>Cancel</button>
                             <button type="submit" className="btn btn-primary" disabled={receiveSubmitting}>
-                                {receiveSubmitting ? 'Receiving…' : 'Receive'}
+                                {receiveSubmitting ? 'Saving…' : 'Save changes'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {addStockOpen && (
+                <Modal
+                    title="Add Stock"
+                    titleIcon={(
+                        <span className="modal-title-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                        </span>
+                    )}
+                    noClose
+                    className="modal-adjust"
+                    onClose={resetAddStock}
+                >
+                    <form className="form" onSubmit={handleAddStock}>
+                        <div className="field">
+                            <span className="field-label">Product</span>
+                            <div className="readonly-field">{addStockForm.product_name}</div>
+                        </div>
+                        <div className="field">
+                            <span className="field-label">Note</span>
+                            {addStockForm.note_type === 'other' ? (
+                                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        style={{ paddingRight: 36 }}
+                                        maxLength={255}
+                                        placeholder="Delivery receipt number, remarks…"
+                                        autoFocus
+                                        value={addStockForm.note}
+                                        onChange={(event) => setAddStockForm((c) => ({ ...c, note: event.target.value }))}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setAddStockForm((c) => ({ ...c, note_type: '', note: '' }))}
+                                        title="Back to note list"
+                                        aria-label="Back to note list"
+                                        style={{
+                                            position: 'absolute',
+                                            right: 4,
+                                            top: '50%',
+                                            transform: 'translateY(-50%)',
+                                            width: 28,
+                                            height: 28,
+                                            border: 'none',
+                                            background: 'transparent',
+                                            color: 'var(--muted)',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            borderRadius: 6,
+                                        }}
+                                    >
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="6 9 12 15 18 9" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            ) : (
+                                <select
+                                    className="input"
+                                    value={addStockForm.note_type}
+                                    onChange={(event) => setAddStockForm((c) => ({
+                                        ...c,
+                                        note_type: event.target.value,
+                                        note: '',
+                                    }))}
+                                >
+                                    <option value="" disabled hidden>Select note</option>
+                                    <option value="Received">Received</option>
+                                    <option value="other">Other…</option>
+                                </select>
+                            )}
+                        </div>
+                        <div className="field-row">
+                            <div className="field">
+                                <span className="field-label">Current stock</span>
+                                <div className="readonly-field">{addStockForm.current_stock}</div>
+                            </div>
+                            <label className="field">
+                                <span className="field-label">Quantity to add <span className="text-danger">*</span></span>
+                                <input
+                                    type="number"
+                                    className="input"
+                                    min="1"
+                                    step="1"
+                                    required
+                                    autoFocus
+                                    placeholder="e.g. 10"
+                                    value={addStockForm.quantity_received}
+                                    onChange={(event) => setAddStockForm((c) => ({ ...c, quantity_received: event.target.value }))}
+                                />
+                            </label>
+                        </div>
+
+                        {addStockError && (
+                            <div className="alert alert-error" role="alert">
+                                <span>{addStockError}</span>
+                                <FieldError messages={addStockFieldErrors} />
+                            </div>
+                        )}
+
+                        <div className="modal-actions modal-actions-center">
+                            <button type="button" className="btn btn-ghost" onClick={resetAddStock}>Cancel</button>
+                            <button type="submit" className="btn btn-primary" disabled={addStockSubmitting}>
+                                {addStockSubmitting ? 'Adding…' : 'Add stock'}
                             </button>
                         </div>
                     </form>
@@ -1937,12 +2337,18 @@ export default function StockIn() {
                                             onChange={(event) => {
                                                 const nextName = event.target.value;
                                                 const rule = matchUnitSuggestion(nextName);
+                                                const catMatch = matchCategorySuggestion(nextName, dropdownCategories);
                                                 setShowAllUnits(false);
+                                                setShowAllCategories(false);
                                                 setAddForm((current) => {
+                                                    const next = { ...current, name: nextName };
                                                     if (!unitTouchedRef.current && rule) {
-                                                        return { ...current, name: nextName, unit_choice: rule.defaultUnit };
+                                                        next.unit_choice = rule.defaultUnit;
                                                     }
-                                                    return { ...current, name: nextName };
+                                                    if (!categoryTouchedRef.current && catMatch) {
+                                                        next.category = catMatch;
+                                                    }
+                                                    return next;
                                                 });
                                             }}
                                             onKeyDown={handleNameTab}
@@ -1959,7 +2365,23 @@ export default function StockIn() {
                                     const sizePlaceholder = activeMeta?.sizePlaceholder ?? rule?.sizePlaceholder ?? 'e.g. 1';
 
                                     return (
-                                        <div className="field-row">
+                                        <div className="field-row field-row-reverse">
+                                            <label className="field">
+                                                <span className="field-label">Product size <InfoTip text="Optional whole number size/spec (numbers only, no fractions). Combined with the unit." /></span>
+                                                <input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    className="input"
+                                                    maxLength={10}
+                                                    placeholder={sizePlaceholder}
+                                                    value={addForm.spec_value}
+                                                    onChange={(event) => {
+                                                        const digitsOnly = event.target.value.replace(/[^0-9]/g, '');
+                                                        setAddForm((current) => ({ ...current, spec_value: digitsOnly }));
+                                                    }}
+                                                />
+                                            </label>
                                             <div className="field">
                                                 <span className="field-label">Receiving unit <InfoTip text="Unit of measure for this product. Choose 'Other' to specify a custom unit." /></span>
                                                 {addForm.unit_choice === 'other' ? (
@@ -2018,7 +2440,7 @@ export default function StockIn() {
                                                             setAddForm((current) => ({ ...current, unit_choice: val }));
                                                         }}
                                                     >
-                                                        <option value="" disabled>Select unit</option>
+                                                        <option value="" disabled hidden>Select unit</option>
                                                         {unitOptionsToShow.map((opt) => (
                                                             <option key={opt.value} value={opt.value}>
                                                                 {opt.label}
@@ -2031,22 +2453,6 @@ export default function StockIn() {
                                                     </select>
                                                 )}
                                             </div>
-                                            <label className="field">
-                                                <span className="field-label">Product size <InfoTip text="Optional whole number size/spec (numbers only, no fractions). Combined with the unit." /></span>
-                                                <input
-                                                    type="text"
-                                                    inputMode="numeric"
-                                                    pattern="[0-9]*"
-                                                    className="input"
-                                                    maxLength={10}
-                                                    placeholder={sizePlaceholder}
-                                                    value={addForm.spec_value}
-                                                    onChange={(event) => {
-                                                        const digitsOnly = event.target.value.replace(/[^0-9]/g, '');
-                                                        setAddForm((current) => ({ ...current, spec_value: digitsOnly }));
-                                                    }}
-                                                />
-                                            </label>
                                         </div>
                                     );
                                 })()}
@@ -2148,8 +2554,8 @@ export default function StockIn() {
                             <div className="receive-modal-aside">
                                 <label className="field">
                                     <span className="field-label">Supplier <InfoTip text="Supplier who delivered the stock. Choose 'No supplier' if none." /></span>
-                                    <select className="input" {...addInput('supplier_id')}>
-                                        <option value="" disabled>No supplier</option>
+                                    <select className="input" disabled={suppliers.length === 0} {...addInput('supplier_id')}>
+                                        <option value="" disabled hidden>No supplier</option>
                                         {suppliers.map((supplier) => (
                                             <option key={supplier.id} value={supplier.id}>
                                                 {supplier.name}
@@ -2157,21 +2563,50 @@ export default function StockIn() {
                                         ))}
                                     </select>
                                 </label>
-                                <label className="field">
-                                    <span className="field-label">Category <InfoTip text="Groups products for easier filtering." /></span>
-                                    <select
-                                        className="input"
-                                        value={addForm.category}
-                                        onChange={(event) => setAddForm((current) => ({ ...current, category: event.target.value }))}
-                                    >
-                                        <option value="" disabled>No category</option>
-                                        {dropdownCategories.map((cat) => (
-                                            <option key={cat} value={cat}>
-                                                {cat}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
+                                {(() => {
+                                    const localCat = matchCategorySuggestion(addForm.name, dropdownCategories);
+                                    const aiCatRaw = suggestions.category ? String(suggestions.category).trim() : '';
+                                    const aiCat = aiCatRaw
+                                        ? (dropdownCategories.find((c) => c.toLowerCase() === aiCatRaw.toLowerCase()) ?? aiCatRaw)
+                                        : '';
+                                    const matchedCat = localCat || aiCat;
+                                    const allCats = matchedCat && !dropdownCategories.includes(matchedCat)
+                                        ? [matchedCat, ...dropdownCategories]
+                                        : dropdownCategories;
+                                    const categoryOptionsToShow = matchedCat && !showAllCategories
+                                        ? [...new Set([matchedCat, addForm.category].filter(Boolean))]
+                                        : allCats;
+
+                                    return (
+                                        <label className="field">
+                                            <span className="field-label">Category <InfoTip text="Groups products for easier filtering." /></span>
+                                            <select
+                                                className="input"
+                                                disabled={categoryOptionsToShow.length === 0}
+                                                value={addForm.category}
+                                                onChange={(event) => {
+                                                    const val = event.target.value;
+                                                    if (val === '__all__') {
+                                                        setShowAllCategories(true);
+                                                        return;
+                                                    }
+                                                    categoryTouchedRef.current = val !== '';
+                                                    setAddForm((current) => ({ ...current, category: val }));
+                                                }}
+                                            >
+                                                <option value="" disabled hidden>No category</option>
+                                                {categoryOptionsToShow.map((cat) => (
+                                                    <option key={cat} value={cat}>
+                                                        {cat}
+                                                    </option>
+                                                ))}
+                                                {matchedCat && !showAllCategories && (
+                                                    <option value="__all__">Show all categories…</option>
+                                                )}
+                                            </select>
+                                        </label>
+                                    );
+                                })()}
                             </div>
                         </div>
 
@@ -2253,6 +2688,97 @@ export default function StockIn() {
                     </div>
                 </Modal>
             )}
+
+            {viewingStock && (() => {
+                const st = stockStatusPill(viewingStock);
+                const receivedTs = viewingStock.last_received_at || viewingStock.created_at;
+                return (
+                    <Modal
+                        title={(
+                            <span className="activity-detail-title">
+                                <span className="activity-detail-infoicon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="9" />
+                                        <path d="M12 11v5M12 8h.01" />
+                                    </svg>
+                                </span>
+                                Stock details
+                            </span>
+                        )}
+                        className="modal-detail-wide"
+                        noClose
+                        onClose={() => setViewingStock(null)}
+                    >
+                        <dl className="activity-detail-list detail-grid-2">
+                            <div className="activity-detail-item">
+                                <dt>Product</dt>
+                                <dd><strong>{viewingStock.name}</strong></dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>SKU</dt>
+                                <dd className="mono">{viewingStock.sku}</dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>Category</dt>
+                                <dd>{viewingStock.category || '—'}</dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>Supplier</dt>
+                                <dd>{viewingStock.last_supplier_name || '—'}</dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>Current Stock</dt>
+                                <dd>{viewingStock.current_stock}</dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>Unit</dt>
+                                <dd>{viewingStock.receiving_unit || 'piece'}</dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>Reorder At</dt>
+                                <dd>{viewingStock.reorder_threshold}</dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>Status</dt>
+                                <dd>
+                                    {st.label
+                                        ? <span className={`pill ${st.className}`}>{st.label}</span>
+                                        : <span className="muted">—</span>}
+                                </dd>
+                            </div>
+                            {viewingStock.last_received_qty !== null && viewingStock.last_received_qty !== undefined && (
+                                <div className="activity-detail-item">
+                                    <dt>Last Received Qty</dt>
+                                    <dd>{viewingStock.last_received_qty}</dd>
+                                </div>
+                            )}
+                            {viewingStock.last_received_by && (
+                                <div className="activity-detail-item">
+                                    <dt>Received By</dt>
+                                    <dd>{viewingStock.last_received_by}</dd>
+                                </div>
+                            )}
+                            <div className="activity-detail-item detail-grid-full">
+                                <dt>Latest Received</dt>
+                                <dd>
+                                    {receivedTs
+                                        ? `${timeAgo(receivedTs)} (${new Date(receivedTs).toLocaleString()})`
+                                        : '—'}
+                                </dd>
+                            </div>
+                            <div className="activity-detail-item detail-grid-full">
+                                <dt>Note</dt>
+                                <dd>{viewingStock.latest_note || '—'}</dd>
+                            </div>
+                        </dl>
+                        <div className="modal-actions modal-actions-center">
+                            <button type="button" className="btn btn-ghost" onClick={() => setViewingStock(null)}>
+                                Close
+                            </button>
+                        </div>
+                    </Modal>
+                );
+            })()}
 
             {emptyNotice && (
                 <MessageDialog

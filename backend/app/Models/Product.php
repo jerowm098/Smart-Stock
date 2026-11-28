@@ -56,6 +56,7 @@ class Product extends Model
         'is_active',
         'is_listed',
         'is_queue_dismissed',
+        'is_defect',
         'receiving_unit',
         'pieces_per_receiving_unit',
     ];
@@ -74,6 +75,7 @@ class Product extends Model
             'is_active' => 'boolean',
             'is_listed' => 'boolean',
             'is_queue_dismissed' => 'boolean',
+            'is_defect' => 'boolean',
             'pieces_per_receiving_unit' => 'integer',
         ];
     }
