@@ -9,6 +9,7 @@ import MessageDialog from '../../components/MessageDialog.jsx';
 import { del, get, post, put, validationMessages } from '../../lib/api.js';
 import { formatPeso, timeAgo } from '../../lib/format.js';
 import { clearConnectedNav, notifyConnectedNav } from '../../lib/navBadges.js';
+import { clearPriceHint, getPriceHint, prefetchPriceHint } from '../../lib/priceHints.js';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
@@ -212,7 +213,78 @@ function formatPriceInput(value) {
     return num.toFixed(2);
 }
 
+const PRODUCT_TABS = [
+    {
+        key: 'all',
+        label: 'Active Products',
+        title: 'Active Products',
+        description: 'Overview of all active registered products and their current stock levels.',
+        emptyTitle: 'No active products yet',
+        emptySub: 'Receive stock in Stock Inventory to populate this list.',
+    },
+    {
+        key: 'in',
+        label: 'In Stock',
+        title: 'In Stock Products',
+        description: 'Active products currently above their reorder threshold.',
+        emptyTitle: 'No in-stock products',
+        emptySub: 'Active products with stock above their reorder threshold will appear here.',
+    },
+    {
+        key: 'low',
+        label: 'Low Stock',
+        title: 'Low Stock Products',
+        description: 'Active products at or below their reorder threshold.',
+        emptyTitle: 'No low-stock products',
+        emptySub: 'Products that drop to or below their reorder threshold will appear here.',
+    },
+    {
+        key: 'out',
+        label: 'Out of Stock',
+        title: 'Out of Stock Products',
+        description: 'Active products with zero stock on hand.',
+        emptyTitle: 'No out-of-stock products',
+        emptySub: 'Active products that reach zero stock will appear here.',
+    },
+    {
+        key: 'deactivated',
+        label: 'Deactivated',
+        title: 'Deactivated Products',
+        description: 'Products manually deactivated from the active catalogue.',
+        emptyTitle: 'No deactivated products',
+        emptySub: 'Deactivated products will appear here and can be reactivated anytime.',
+    },
+    {
+        key: 'inactive_supplier',
+        label: 'Inactive Supplier',
+        title: 'Inactive Supplier Products',
+        description: 'Products deactivated because their linked supplier was removed.',
+        emptyTitle: 'No inactive-supplier products',
+        emptySub: 'Products whose supplier was removed will appear here.',
+    },
+    {
+        key: 'defect',
+        label: 'Defect Items',
+        title: 'Defect Items',
+        description: 'Damaged items deducted via stock adjustments, marked as discontinued.',
+        emptyTitle: 'No defect items yet',
+        emptySub: 'Damaged items deducted via stock adjustments will appear here.',
+    },
+    {
+        key: 'all_products',
+        label: 'All',
+        title: 'All Products',
+        description: 'Overview of all products across every status.',
+        emptyTitle: 'No products yet',
+        emptySub: 'Receive stock in Stock Inventory to populate this list.',
+    },
+];
+
 function stockState(product) {
+    if (product.is_defect) {
+        return { label: 'Discontinued', className: 'pill-danger', key: 'deactivated' };
+    }
+
     if (product.is_active === false || product.is_active === 0) {
         if (product.last_supplier_active === false) {
             return { label: 'Inactive supplier', className: 'pill-danger', key: 'deactivated' };
@@ -256,6 +328,7 @@ export default function Products() {
     const [deletingAll, setDeletingAll] = useState(false);
     const [deleteAllError, setDeleteAllError] = useState(null);
     const [emptyNotice, setEmptyNotice] = useState(null);
+    const [viewingProduct, setViewingProduct] = useState(null);
     const ACTIVITY_PER_PAGE = 3;
     const [loading, setLoading] = useState(true);
     usePageLoadbar(loading);
@@ -265,6 +338,28 @@ export default function Products() {
     const [categoryFilter, setCategoryFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('');
     const [activeFilter, setActiveFilter] = useState('');
+    const [productTab, setProductTab] = useState('all');
+    const [activeStat, setActiveStat] = useState(null);
+    const statGridRef = useRef(null);
+    const productTableRef = useRef(null);
+
+    // Export Products modal state (mirrors Run Backup Now modal)
+    const [exportModalOpen, setExportModalOpen] = useState(false);
+    const [exportFormat, setExportFormat] = useState('');
+    const [exportScope, setExportScope] = useState('');
+    const [exportRange, setExportRange] = useState('');
+    const [exportFrom, setExportFrom] = useState('');
+    const [exportTo, setExportTo] = useState('');
+    const [exportModalError, setExportModalError] = useState(null);
+
+    // Focused Set Price modal state
+    const [priceProduct, setPriceProduct] = useState(null);
+    const [priceValue, setPriceValue] = useState('');
+    const [priceHint, setPriceHint] = useState('');
+    const [priceHintLoading, setPriceHintLoading] = useState(false);
+    const [priceSaving, setPriceSaving] = useState(false);
+    const [priceError, setPriceError] = useState(null);
+    const priceSuggestReqRef = useRef(0);
     const [sortBy, setSortBy] = useState(null);
     const [sortDir, setSortDir] = useState(null);
     const [page, setPage] = useState(1);
@@ -310,7 +405,7 @@ export default function Products() {
     const [editError, setEditError] = useState(null);
 
     const [adjustProduct, setAdjustProduct] = useState(null);
-    const [adjustForm, setAdjustForm] = useState({ delta: '', reason: 'correction', reason_note: '' });
+    const [adjustForm, setAdjustForm] = useState({ delta: '', reason: 'damaged', reason_note: '' });
     const [adjustSaving, setAdjustSaving] = useState(false);
     const [adjustError, setAdjustError] = useState(null);
 
@@ -457,9 +552,38 @@ export default function Products() {
     );
 
     const listedProducts = useMemo(
-        () => products.filter((product) => product.is_listed !== false),
+        () => products.filter((product) => !product.is_defect),
         [products],
     );
+
+    const defectProducts = useMemo(
+        () => products.filter((product) => Boolean(product.is_defect)),
+        [products],
+    );
+
+    const activeTabMeta = PRODUCT_TABS.find((tab) => tab.key === productTab) ?? PRODUCT_TABS[0];
+
+    const tabProducts = useMemo(() => {
+        switch (productTab) {
+            case 'all_products':
+                return [...listedProducts, ...defectProducts];
+            case 'defect':
+                return defectProducts;
+            case 'in':
+                return listedProducts.filter((p) => stockState(p).key === 'in');
+            case 'low':
+                return listedProducts.filter((p) => stockState(p).key === 'low');
+            case 'out':
+                return listedProducts.filter((p) => stockState(p).key === 'out');
+            case 'deactivated':
+                return listedProducts.filter((p) => !p.is_active && p.last_supplier_active !== false);
+            case 'inactive_supplier':
+                return listedProducts.filter((p) => !p.is_active && p.last_supplier_active === false);
+            case 'all':
+            default:
+                return listedProducts.filter((p) => Boolean(p.is_active));
+        }
+    }, [productTab, listedProducts, defectProducts]);
 
     const queueLastPage = Math.max(1, Math.ceil(queuedProducts.length / QUEUE_PER_PAGE));
     const queueSafePage = Math.min(queuePage, queueLastPage);
@@ -482,10 +606,23 @@ export default function Products() {
         return Array.from(set).sort((a, b) => a.localeCompare(b));
     }, [listedProducts]);
 
+    const dropdownCategories = useMemo(() => {
+        const set = new Set();
+        categoriesList.forEach((cat) => {
+            if (cat?.name) set.add(cat.name);
+        });
+        listedProducts.forEach((product) => {
+            if (product?.category && product.category !== 'Uncategorized') {
+                set.add(product.category);
+            }
+        });
+        return Array.from(set).sort((a, b) => a.localeCompare(b));
+    }, [categoriesList, listedProducts]);
+
     const filtered = useMemo(() => {
         const needle = search.trim().toLowerCase();
 
-        return listedProducts.filter((product) => {
+        return tabProducts.filter((product) => {
             if (needle) {
                 const matches = [product.name, product.sku, product.category]
                     .filter(Boolean)
@@ -515,7 +652,18 @@ export default function Products() {
 
             return true;
         });
-    }, [products, search, categoryFilter, activeFilter, statusFilter]);
+    }, [tabProducts, search, categoryFilter, activeFilter, statusFilter]);
+
+    useEffect(() => {
+        if (!activeStat) return undefined;
+        const onMouseDown = (event) => {
+            if (!statGridRef.current?.contains(event.target)) {
+                setActiveStat(null);
+            }
+        };
+        document.addEventListener('mousedown', onMouseDown);
+        return () => document.removeEventListener('mousedown', onMouseDown);
+    }, [activeStat]);
 
     const hasActiveFilters = Boolean(search.trim() || categoryFilter || statusFilter || activeFilter);
 
@@ -1176,6 +1324,12 @@ export default function Products() {
             setMessage(
                 `${response.message}: ${response.adjustment.stock_before} → ${response.adjustment.stock_after}.`,
             );
+            const adjustedDelta = Number(response.adjustment?.delta ?? adjustForm.delta);
+            if (adjustedDelta < 0) {
+                notifyConnectedNav('productDeactivated', adjustedDelta);
+            } else if (adjustedDelta > 0) {
+                notifyConnectedNav('productReactivated', adjustedDelta);
+            }
             setAdjustProduct(null);
             await refresh();
         } catch (err) {
@@ -1199,6 +1353,7 @@ export default function Products() {
             const response = await del(`/api/inventory/${product.id}`);
             setMessage(response.message);
             setDeactivateProduct(null);
+            notifyConnectedNav('productDeactivated', -1);
             await refresh();
         } catch (err) {
             setDeactivateError(err.message);
@@ -1237,6 +1392,12 @@ export default function Products() {
             const response = await post('/api/inventory/seed');
             setMessage(response?.message ?? '7 sample products added.');
             notifyConnectedNav('productAdded', response?.created ?? 7);
+            if (Number(response?.created_categories) > 0) {
+                notifyConnectedNav('categoriesSynced', Number(response.created_categories));
+            }
+            if (Number(response?.created_suppliers) > 0) {
+                notifyConnectedNav('suppliersSynced', Number(response.created_suppliers));
+            }
             await refresh();
         } catch (err) {
             setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample products.');
@@ -1254,17 +1415,9 @@ export default function Products() {
             const response = await del('/api/inventory');
             setDeleteAllConfirm(false);
             const deleted = Number(response?.deleted) || 0;
-            const deletedListed = Number(response?.deleted_listed) || 0;
             clearConnectedNav('productAdded');
             if (deleted > 0) {
                 notifyConnectedNav('productAdded', -deleted, '/products');
-            }
-            if (deletedListed !== deleted) {
-                // Only show the actually-listed count on POS Checkout.
-                clearConnectedNav('productListed');
-                if (deletedListed > 0) {
-                    notifyConnectedNav('productListed', -deletedListed);
-                }
             }
             setMessage(response?.message ?? 'All products deleted.');
             await refresh();
@@ -1276,22 +1429,161 @@ export default function Products() {
     }
 
     // SS-25 / SS-110 / SS-111: Export Inventory Catalogue to PDF & Excel
-    function handleExportPdf() {
-        if (sorted.length === 0) return;
+    function openPriceModal(product) {
+        setPriceProduct(product);
+        const current = Number(product.price ?? 0);
+        setPriceValue(current > 0 ? current.toFixed(2) : '');
+        setPriceError(null);
 
+        const cached = getPriceHint(product.id);
+        if (cached) {
+            setPriceHint(cached);
+            setPriceHintLoading(false);
+            return;
+        }
+
+        setPriceHint('');
+        const reqId = ++priceSuggestReqRef.current;
+        const unit = product.receiving_unit || 'piece';
+        if (product.name && product.name.trim().length >= 2) {
+            setPriceHintLoading(true);
+            prefetchPriceHint(product.id, product.name.trim(), unit)
+                .then((formatted) => {
+                    if (priceSuggestReqRef.current === reqId && formatted) {
+                        setPriceHint(formatted);
+                    }
+                })
+                .finally(() => {
+                    if (priceSuggestReqRef.current === reqId) {
+                        setPriceHintLoading(false);
+                    }
+                });
+        } else {
+            setPriceHintLoading(false);
+        }
+    }
+
+    async function handleSavePrice(event) {
+        event.preventDefault();
+        if (!priceProduct) return;
+
+        const effectivePrice = String(priceValue).trim() !== '' ? priceValue : priceHint;
+        const numericPrice = Number(String(effectivePrice).replace(/[^0-9.]/g, ''));
+        if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+            setPriceError('Please enter a valid price greater than ₱0.00.');
+            return;
+        }
+
+        setPriceSaving(true);
+        setPriceError(null);
+
+        try {
+            const response = await put('/api/inventory/update', {
+                id: priceProduct.id,
+                name: priceProduct.name,
+                sku: priceProduct.sku,
+                category: priceProduct.category || null,
+                price: numericPrice,
+                current_stock: Number(priceProduct.current_stock ?? 0),
+                reorder_threshold: Number(priceProduct.reorder_threshold ?? 0),
+                receiving_unit: priceProduct.receiving_unit || 'piece',
+                supplier_id: priceProduct.last_supplier_id && priceProduct.last_supplier_active !== false
+                    ? Number(priceProduct.last_supplier_id)
+                    : null,
+            });
+
+            const wasUnpriced = Number(priceProduct.price ?? 0) <= 0;
+            clearPriceHint(priceProduct.id);
+            setMessage(response?.message ? `Price updated for ${priceProduct.name} (${formatPeso(numericPrice)}).` : 'Price updated successfully.');
+            setPriceProduct(null);
+            if (wasUnpriced) {
+                notifyConnectedNav('productPriced', 1);
+            }
+            await refresh();
+        } catch (err) {
+            setPriceError(validationMessages(err)[0] ?? err.message ?? 'Could not update price.');
+        } finally {
+            setPriceSaving(false);
+        }
+    }
+
+    function openExportModal() {
+        setExportFormat('');
+        setExportScope('');
+        setExportRange('');
+        setExportFrom('');
+        setExportTo('');
+        setExportModalError(null);
+        setExportModalOpen(true);
+    }
+
+    function filterProductsByScope(scope) {
+        switch (scope) {
+            case 'all_products':
+                return [...listedProducts, ...defectProducts];
+            case 'defect':
+                return defectProducts;
+            case 'in':
+                return listedProducts.filter((p) => stockState(p).key === 'in');
+            case 'low':
+                return listedProducts.filter((p) => stockState(p).key === 'low');
+            case 'out':
+                return listedProducts.filter((p) => stockState(p).key === 'out');
+            case 'deactivated':
+                return listedProducts.filter((p) => !p.is_active && p.last_supplier_active !== false);
+            case 'inactive_supplier':
+                return listedProducts.filter((p) => !p.is_active && p.last_supplier_active === false);
+            case 'all':
+            default:
+                return listedProducts.filter((p) => Boolean(p.is_active));
+        }
+    }
+
+    function filterProductsByDateRange(items, range, fromDate, toDate) {
+        if (range === 'all') {
+            return items;
+        }
+
+        const now = Date.now();
+        let minMs = null;
+        let maxMs = null;
+
+        if (range === '1d') {
+            minMs = now - 24 * 60 * 60 * 1000;
+        } else if (range === '1w') {
+            minMs = now - 7 * 24 * 60 * 60 * 1000;
+        } else if (range === '1m') {
+            minMs = now - 30 * 24 * 60 * 60 * 1000;
+        } else if (range === 'custom') {
+            minMs = new Date(`${fromDate}T00:00:00`).getTime();
+            maxMs = new Date(`${toDate}T23:59:59.999`).getTime();
+        }
+
+        return items.filter((item) => {
+            const rawDate = item.updated_at || item.created_at;
+            if (!rawDate) return false;
+            const ts = new Date(rawDate).getTime();
+            if (!Number.isFinite(ts)) return false;
+            if (minMs != null && ts < minMs) return false;
+            if (maxMs != null && ts > maxMs) return false;
+            return true;
+        });
+    }
+
+    function exportProductsToPdf(items, scopeLabel) {
         const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
         const generatedAt = new Date().toLocaleString();
 
         doc.setFontSize(16);
-        doc.text('Smart-Stock — Inventory Catalogue Report', 40, 42);
+        doc.text(`Smart-Stock — Inventory Catalogue Report (${scopeLabel})`, 40, 42);
         doc.setFontSize(9.5);
         doc.setTextColor(100);
-        doc.text(`Generated: ${generatedAt}  |  Total items: ${sorted.length}`, 40, 58);
+        doc.text(`Generated: ${generatedAt}  |  Total items: ${items.length}`, 40, 58);
 
         autoTable(doc, {
             startY: 72,
             head: [['SKU', 'Product', 'Category', 'Unit', 'Price (PHP)', 'Stock', 'Reorder At', 'Status']],
-            body: sorted.map((p) => [
+            body: items.map((p) => [
                 p.sku ?? '—',
                 p.name ?? '—',
                 p.category || '—',
@@ -1306,14 +1598,12 @@ export default function Products() {
         });
 
         const stamp = new Date().toISOString().slice(0, 10);
-        doc.save(`smart-stock-inventory-${stamp}.pdf`);
-        setMessage(`Exported ${sorted.length} product(s) to PDF.`);
+        doc.save(`smart-stock-products-${stamp}.pdf`);
+        setMessage(`Exported ${items.length} product(s) to PDF.`);
     }
 
-    function handleExportExcel() {
-        if (sorted.length === 0) return;
-
-        const rows = sorted.map((p) => ({
+    function exportProductsToExcel(items, scopeLabel) {
+        const rows = items.map((p) => ({
             SKU: p.sku ?? '',
             Product: p.name ?? '',
             Category: p.category || '',
@@ -1331,10 +1621,59 @@ export default function Products() {
             { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 14 }, { wch: 10 },
         ];
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Inventory');
+        XLSX.utils.book_append_sheet(workbook, worksheet, scopeLabel.slice(0, 31) || 'Inventory');
         const stamp = new Date().toISOString().slice(0, 10);
-        XLSX.writeFile(workbook, `smart-stock-inventory-${stamp}.xlsx`);
-        setMessage(`Exported ${sorted.length} product(s) to Excel.`);
+        XLSX.writeFile(workbook, `smart-stock-products-${stamp}.xlsx`);
+        setMessage(`Exported ${items.length} product(s) to Excel.`);
+    }
+
+    function handleExportSubmit(event) {
+        event.preventDefault();
+        setExportModalError(null);
+
+        if (!exportFormat) {
+            setExportModalError('Please select a file format.');
+            return;
+        }
+        if (!exportScope) {
+            setExportModalError('Please select which products to export.');
+            return;
+        }
+        if (!exportRange) {
+            setExportModalError('Please select a data range.');
+            return;
+        }
+
+        if (exportRange === 'custom') {
+            if (!exportFrom || !exportTo) {
+                setExportModalError('Please select both From and To dates.');
+                return;
+            }
+            if (exportFrom > exportTo) {
+                setExportModalError('The "From" date cannot be later than the "To" date.');
+                return;
+            }
+        }
+
+        const scoped = filterProductsByScope(exportScope);
+        const rows = filterProductsByDateRange(scoped, exportRange, exportFrom, exportTo);
+
+        if (rows.length === 0) {
+            setExportModalError('No products match the selected tab and date range.');
+            return;
+        }
+
+        const scopeLabel = exportScope === 'all_products'
+            ? 'All Products'
+            : (PRODUCT_TABS.find((t) => t.key === exportScope)?.label ?? 'Products');
+
+        if (exportFormat === 'excel') {
+            exportProductsToExcel(rows, scopeLabel);
+        } else {
+            exportProductsToPdf(rows, scopeLabel);
+        }
+
+        setExportModalOpen(false);
     }
 
     async function handleReactivate(event) {
@@ -1352,6 +1691,7 @@ export default function Products() {
             const response = await del(`/api/inventory/${product.id}?reactivate=1`);
             setMessage(response.message);
             setReactivateProduct(null);
+            notifyConnectedNav('productReactivated', 1);
             await refresh();
         } catch (err) {
             setReactivateError(err.message);
@@ -1389,32 +1729,6 @@ export default function Products() {
                         ))}
                     </div>
 
-                    {/* Product Queue List */}
-                    <section className="card padded recent-activity">
-                        <div className="filter-head">
-                            <div>
-                                <span className="skeleton skeleton-lg" style={{ marginBottom: 8 }} />
-                                <span className="skeleton skeleton-line skeleton-sm" />
-                            </div>
-                        </div>
-                        <div className="activity-shell">
-                            <ul className="activity-list">
-                                {[0, 1].map((i) => (
-                                    <li key={i}>
-                                        <div className="activity-row" aria-hidden="true">
-                                            <span className="skeleton" style={{ width: 32, height: 32, borderRadius: 9, flexShrink: 0 }} />
-                                            <div className="activity-body">
-                                                <span className="skeleton skeleton-line" style={{ width: '55%', marginBottom: 8 }} />
-                                                <span className="skeleton skeleton-line skeleton-sm" style={{ width: '35%' }} />
-                                            </div>
-                                            <span className="skeleton skeleton-line" style={{ width: 90, height: 10, flexShrink: 0 }} />
-                                        </div>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </section>
-
                     {/* Search & Filter Options */}
                     <section className="card padded">
                         <div className="filter-head">
@@ -1451,8 +1765,8 @@ export default function Products() {
                             <table className="table" aria-hidden="true">
                                 <thead>
                                     <tr>
-                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-                                            <th key={i} className={i === 4 || i === 5 || i === 6 || i === 8 ? 'text-right' : undefined}>
+                                        {[0, 1, 2, 3, 4, 5].map((i) => (
+                                            <th key={i} className={i === 2 || i === 4 || i === 5 ? 'text-right' : undefined}>
                                                 <span className="skeleton skeleton-line skeleton-sm" style={{ width: '70%' }} />
                                             </th>
                                         ))}
@@ -1461,9 +1775,9 @@ export default function Products() {
                                 <tbody>
                                     {[0, 1, 2, 3, 4, 5].map((r) => (
                                         <tr key={r}>
-                                            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((c) => (
-                                                <td key={c} className={c === 4 || c === 5 || c === 6 || c === 8 ? 'text-right' : undefined}>
-                                                    <span className="skeleton skeleton-line" style={{ width: c === 8 ? '62%' : '85%' }} />
+                                            {[0, 1, 2, 3, 4, 5].map((c) => (
+                                                <td key={c} className={c === 2 || c === 4 || c === 5 ? 'text-right' : undefined}>
+                                                    <span className="skeleton skeleton-line" style={{ width: c === 5 ? '62%' : '85%' }} />
                                                 </td>
                                             ))}
                                         </tr>
@@ -1513,126 +1827,71 @@ export default function Products() {
 
             {!loading && !error && (
                 <div className="page-body">
-                    <div className="stat-grid">
-                        <article className="card stat">
-                            <span>Active products</span>
-                            <strong>{stats.total}</strong>
-                            <small className="stat-hint">Items currently in the catalogue.</small>
-                        </article>
-                        <article className="card stat">
+                    <div className="stat-grid" ref={statGridRef}>
+                        <button
+                            type="button"
+                            className={`card stat stat-clickable${activeStat === 'active' ? ' is-active' : ''}`}
+                            onClick={() => {
+                                setActiveStat('active');
+                                setProductTab('all_products');
+                                clearFilters();
+                                setPage(1);
+                                productTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                        >
+                            <span>Overall products</span>
+                            <strong>{listedProducts.length + defectProducts.length}</strong>
+                            <small className="stat-hint">All products across every status.</small>
+                        </button>
+                        <button
+                            type="button"
+                            className={`card stat stat-clickable${activeStat === 'low' ? ' is-active' : ''}`}
+                            onClick={() => {
+                                const next = productTab === 'low' ? 'all' : 'low';
+                                setActiveStat(next === 'low' ? 'low' : null);
+                                setProductTab(next);
+                                clearFilters();
+                                setPage(1);
+                                productTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                        >
                             <span>Low stock</span>
                             <strong className={stats.low > 0 ? 'text-warn' : ''}>{stats.low}</strong>
                             <small className="stat-hint">At or below reorder threshold.</small>
-                        </article>
-                        <article className="card stat">
+                        </button>
+                        <button
+                            type="button"
+                            className={`card stat stat-clickable${activeStat === 'out' ? ' is-active' : ''}`}
+                            onClick={() => {
+                                const next = productTab === 'out' ? 'all' : 'out';
+                                setActiveStat(next === 'out' ? 'out' : null);
+                                setProductTab(next);
+                                clearFilters();
+                                setPage(1);
+                                productTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                        >
                             <span>Out of stock</span>
                             <strong className={stats.out > 0 ? 'text-danger' : ''}>{stats.out}</strong>
                             <small className="stat-hint">Zero units on hand.</small>
-                        </article>
-                        <article className="card stat">
+                        </button>
+                        <button
+                            type="button"
+                            className={`card stat stat-clickable${activeStat === 'defect' ? ' is-active' : ''}`}
+                            onClick={() => {
+                                const next = productTab === 'defect' ? 'all' : 'defect';
+                                setActiveStat(next === 'defect' ? 'defect' : null);
+                                setProductTab(next);
+                                clearFilters();
+                                setPage(1);
+                                productTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }}
+                        >
                             <span>Defect Items</span>
-                            <strong className={defectCount > 0 ? 'text-danger' : ''}>{defectCount ?? 0}</strong>
+                            <strong className={defectProducts.length > 0 ? 'text-danger' : ''}>{defectProducts.length}</strong>
                             <small className="stat-hint">Damage recorded in stock adjustments.</small>
-                        </article>
+                        </button>
                     </div>
-
-                    <section className="card padded recent-activity">
-                        <div className="filter-head">
-                            <div>
-                                <h3>Product Queue List</h3>
-                                <p className="muted">Received stock waiting for complete product details before being listed.</p>
-                            </div>
-                        </div>
-                        {queuedProducts.length === 0 ? (
-                            <div className="table-empty">
-                                <span className="table-empty-icon" aria-hidden="true">
-                                    <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5" />
-                                        <path d="M3.75 7.5h16.5" />
-                                        <path d="M9 7.5V4.5h6v3" />
-                                    </svg>
-                                </span>
-                                <p className="table-empty-title">No products in queue</p>
-                                <p className="table-empty-sub">New stock received on Stock Inventory will appear here to complete and add to the Product List.</p>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="activity-shell">
-                                    <ul className="activity-list">
-                                        {pagedQueue.map((product) => {
-                                            const reason = getQueueBlockReason(product);
-                                            return (
-                                                <li key={product.id}>
-                                                    <button
-                                                        type="button"
-                                                        className="activity-row"
-                                                        onClick={() => openEdit(product, true)}
-                                                        aria-label={`Complete and add ${product.name}`}
-                                                    >
-                                                        <span className={`activity-icon ${reason ? 'activity-icon-danger' : 'activity-icon-warn'}`} aria-hidden="true">
-                                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-                                                                <path d="m3.3 7 8.7 5 8.7-5" />
-                                                                <path d="M12 22V12" />
-                                                            </svg>
-                                                        </span>
-                                                        <div className="activity-body">
-                                                            <p className="activity-desc" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                                <span>{product.name}</span>
-                                                                <span className="activity-role">{product.current_stock} {product.receiving_unit || 'piece'}</span>
-                                                            </p>
-                                                            <p className="activity-meta muted">
-                                                                <span className="mono">{product.sku}</span>
-                                                            </p>
-                                                        </div>
-                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-                                                            <span className={`pill ${reason ? 'pill-danger' : 'pill-warn'}`}>
-                                                                {reason || 'Pending'}
-                                                            </span>
-                                                            <time
-                                                                className="activity-time muted"
-                                                                dateTime={product.last_received_at ?? product.created_at ?? undefined}
-                                                            >
-                                                                {timeAgo(product.last_received_at ?? product.created_at)}
-                                                            </time>
-                                                        </div>
-                                                    </button>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
-                                </div>
-                                {queuedProducts.length > QUEUE_PER_PAGE && (
-                                    <div className="pagination">
-                                        <button
-                                            type="button"
-                                            className="btn btn-ghost btn-sm page-btn"
-                                            disabled={queueSafePage <= 1}
-                                            onClick={() => setQueuePage((p) => Math.max(1, p - 1))}
-                                            aria-label="Previous queue page"
-                                        >
-                                            <svg className="page-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                                                <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                        </button>
-                                        <span className="page-count">{queueSafePage}</span>
-                                        <button
-                                            type="button"
-                                            className="btn btn-ghost btn-sm page-btn"
-                                            disabled={queueSafePage >= queueLastPage}
-                                            onClick={() => setQueuePage((p) => Math.min(queueLastPage, p + 1))}
-                                            aria-label="Next queue page"
-                                        >
-                                            <svg className="page-chevron" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                                                <path d="M9 18l6-6-6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                            </svg>
-                                        </button>
-                                        <span className="page-detail">{Math.min(queueSafePage * QUEUE_PER_PAGE, queuedProducts.length)} of {queuedProducts.length}</span>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </section>
 
                     <section className="card padded">
                         <div className="filter-head">
@@ -1706,28 +1965,40 @@ export default function Products() {
                         </div>
                     </section>
 
-                    <section className="card padded">
+                    <section className="card padded tabs-card">
+                        <div className="mode-tabs" role="tablist">
+                            {PRODUCT_TABS.map((tab) => (
+                                <button
+                                    key={tab.key}
+                                    type="button"
+                                    role="tab"
+                                    aria-selected={productTab === tab.key}
+                                    className={`mode-tab${productTab === tab.key ? ' is-active' : ''}`}
+                                    onClick={() => {
+                                        setProductTab(tab.key);
+                                        setPage(1);
+                                    }}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    </section>
+
+                    <section className="card padded" ref={productTableRef}>
                         <div className="filter-head">
                             <div>
-                                <h3>Product List</h3>
-                                <p className="muted">Overview of all registered products and their current stock levels.</p>
+                                <h3>{activeTabMeta.title}</h3>
+                                <p className="muted">{activeTabMeta.description}</p>
                             </div>
                             <div className="head-actions">
                                 <button
                                     type="button"
-                                    className="btn btn-ghost btn-sm"
-                                    onClick={handleExportPdf}
-                                    disabled={sorted.length === 0}
+                                    className="btn btn-primary"
+                                    onClick={openExportModal}
+                                    disabled={products.length === 0}
                                 >
-                                    Export PDF
-                                </button>
-                                <button
-                                    type="button"
-                                    className="btn btn-ghost btn-sm"
-                                    onClick={handleExportExcel}
-                                    disabled={sorted.length === 0}
-                                >
-                                    Export Excel
+                                    Export Products
                                 </button>
                                 <div className="activity-options" ref={productsOptionsRef}>
                                 <button
@@ -1774,7 +2045,7 @@ export default function Products() {
                                                 if (products.length === 0) {
                                                     setEmptyNotice({
                                                         title: 'No products to delete',
-                                                        description: 'The product list is already empty. Add a product or add the 7 sample products first.',
+                                                        description: 'The product list is already empty. Receive stock in Stock Inventory first.',
                                                     });
                                                     return;
                                                 }
@@ -1823,48 +2094,14 @@ export default function Products() {
                                             <span className="th-sub">Stock Keeping Unit</span>
                                         </th>
                                         <th
-                                            className="sort-header"
-                                            onClick={() => toggleSort('category')}
-                                        >
-                                            Category
-                                            <span className={`sort-indicator${sortBy === 'category' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'category' && sortDir === 'desc' ? '▼' : '▲'}
-                                            </span>
-                                        </th>
-                                        <th
-                                            className="sort-header"
-                                            onClick={() => toggleSort('receiving_unit')}
-                                        >
-                                            Unit
-                                            <span className={`sort-indicator${sortBy === 'receiving_unit' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'receiving_unit' && sortDir === 'desc' ? '▼' : '▲'}
-                                            </span>
-                                        </th>
-                                        <th
-                                            className="sort-header text-right"
-                                            onClick={() => toggleSort('price')}
-                                        >
-                                            Price
-                                            <span className={`sort-indicator${sortBy === 'price' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'price' && sortDir === 'desc' ? '▼' : '▲'}
-                                            </span>
-                                        </th>
-                                        <th
                                             className="sort-header text-right"
                                             onClick={() => toggleSort('current_stock')}
                                         >
-                                            Current<br />stock
-                                            <span className={`sort-indicator${sortBy === 'current_stock' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'current_stock' && sortDir === 'desc' ? '▼' : '▲'}
-                                            </span>
-                                        </th>
-                                        <th
-                                            className="sort-header text-right"
-                                            onClick={() => toggleSort('reorder_threshold')}
-                                        >
-                                            Reorder<br />at
-                                            <span className={`sort-indicator${sortBy === 'reorder_threshold' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'reorder_threshold' && sortDir === 'desc' ? '▼' : '▲'}
+                                            <span className="sort-header-inner">
+                                                <span>Current<br />stock</span>
+                                                <span className={`sort-indicator${sortBy === 'current_stock' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'current_stock' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                             </span>
                                         </th>
                                         <th
@@ -1876,6 +2113,15 @@ export default function Products() {
                                                 {sortBy === 'status' && sortDir === 'desc' ? '▼' : '▲'}
                                             </span>
                                         </th>
+                                        <th
+                                            className="sort-header text-right"
+                                            onClick={() => toggleSort('price')}
+                                        >
+                                            Price
+                                            <span className={`sort-indicator${sortBy === 'price' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'price' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
+                                        </th>
                                         <th className="text-right">Actions</th>
                                     </tr>
                                 </thead>
@@ -1884,7 +2130,12 @@ export default function Products() {
                                         const state = stockState(product);
 
                                         return (
-                                            <tr key={product.id} data-product-id={product.id} className={product.is_active ? undefined : 'row-inactive'}>
+                                            <tr
+                                                key={product.id}
+                                                data-product-id={product.id}
+                                                className={`row-clickable${product.is_active ? '' : ' row-inactive'}`}
+                                                onClick={() => setViewingProduct(product)}
+                                            >
                                                 <td>
                                                     <span className="stock-cell-value">
                                                         {highlight(product.name, search.trim())}
@@ -1896,9 +2147,6 @@ export default function Products() {
                                                     )}
                                                 </td>
                                                 <td className="mono">{product.sku}</td>
-                                                <td>{product.category || '—'}</td>
-                                                <td>{product.receiving_unit || 'piece'}</td>
-                                                <td className="text-right">{formatPeso(product.price)}</td>
                                                 <td className="text-right">
                                                     <span className="stock-cell-value">
                                                         {product.current_stock}
@@ -1909,19 +2157,23 @@ export default function Products() {
                                                         )}
                                                     </span>
                                                 </td>
-                                                <td className="text-right">{product.reorder_threshold}</td>
                                                 <td>
                                                     <span className={`pill ${state.className}`}>{state.label}</span>
                                                 </td>
-                                                <td className="text-right actions-cell">
+                                                <td className="text-right">{formatPeso(product.price)}</td>
+                                                <td
+                                                    className="text-right actions-cell"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
                                                     <Tooltip
-                                                        label="Edit"
+                                                        label={product.is_defect ? 'Defect items cannot be priced' : (Number(product.price) > 0 ? 'Edit price' : 'Add price')}
                                                         className="btn btn-ghost btn-sm action-icon-btn"
-                                                        onClick={() => openEdit(product)}
+                                                        disabled={Boolean(product.is_defect)}
+                                                        onClick={() => openPriceModal(product)}
                                                     >
                                                         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                            <path d="M12 20h9" />
-                                                            <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                                                            <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
+                                                            <path d="M7 7h.01" />
                                                         </svg>
                                                     </Tooltip>
                                                 </td>
@@ -1941,10 +2193,10 @@ export default function Products() {
                                         </svg>
                                     </span>
                                     <p className="table-empty-title">
-                                        {hasActiveFilters ? 'No results found' : 'No products yet'}
+                                        {hasActiveFilters ? 'No results found' : activeTabMeta.emptyTitle}
                                     </p>
                                     <p className="table-empty-sub">
-                                        {hasActiveFilters ? 'Try adjusting your search or filters.' : 'Add a product or add the 7 sample products to populate this list.'}
+                                        {hasActiveFilters ? 'Try adjusting your search or filters.' : activeTabMeta.emptySub}
                                     </p>
                                 </div>
                             )}
@@ -2248,98 +2500,116 @@ export default function Products() {
 
             {editProduct && editForm && (
                 <Modal
-                    bare
+                    title={editFromQueue ? 'Add Product' : 'Edit'}
+                    titleIcon={(
+                        <span className="modal-title-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z" />
+                            </svg>
+                        </span>
+                    )}
                     noClose
                     ariaLabel={editFromQueue ? 'Add product' : 'Edit product'}
-                    className="modal-edit"
+                    className="modal-receive-wide"
                     onClose={() => { setEditProduct(null); setEditFromQueue(false); }}
                 >
                     <form className="form" onSubmit={handleEdit}>
-                        <div className="confirm-dialog confirm-dialog-info">
-                            <span className="confirm-dialog-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5Z" />
-                                </svg>
-                            </span>
-                            <div className="confirm-dialog-body">
-                                <p className="confirm-dialog-title">{editFromQueue ? 'Add Product' : 'Edit'}</p>
-                                <p className="muted confirm-dialog-text">
-                                    {editFromQueue
-                                        ? 'Fill in all required fields to list this received item in the Product List.'
-                                        : "Update this product's details."}
-                                </p>
+                        <div className="receive-modal-grid">
+                            <div className="receive-modal-main">
+                                <div className="field-row">
+                                    <label className="field">
+                                        <span className="field-label">Product name <span className="text-danger">*</span></span>
+                                        <input type="text" required maxLength={255} placeholder="e.g. Cordless Drill 18V" value={editForm.name} onChange={(event) => setEditForm((c) => ({ ...c, name: event.target.value }))} />
+                                    </label>
+                                    <label className="field">
+                                        <span className="field-label">Item Code <span className="text-danger">*</span></span>
+                                        <input type="text" className="mono" required maxLength={50} placeholder="Item code" value={editForm.sku} onChange={(event) => setEditForm((c) => ({ ...c, sku: event.target.value.toUpperCase() }))} />
+                                    </label>
+                                </div>
+                                <div className="field-row">
+                                    <label className="field">
+                                        <span className="field-label">Price <span className="text-danger">*</span></span>
+                                        <div className="input-prefix-wrap">
+                                            <span className="input-prefix" aria-hidden="true">₱</span>
+                                            <input type="text" inputMode="decimal" required className="input" placeholder="0.00" value={editForm.price} onChange={(event) => setEditForm((c) => ({ ...c, price: event.target.value }))} onBlur={(event) => setEditForm((c) => ({ ...c, price: formatPriceInput(event.target.value) }))} />
+                                        </div>
+                                    </label>
+                                    <label className="field">
+                                        <span className="field-label">Unit of measure{editFromQueue && <> <span className="text-danger">*</span></>}</span>
+                                        <select className="input" required={editFromQueue} value={editForm.receiving_unit} onChange={(event) => setEditForm((c) => ({ ...c, receiving_unit: event.target.value }))}>
+                                            {UNITS.map((unit) => (
+                                                <option key={unit} value={unit}>{unit}</option>
+                                            ))}
+                                        </select>
+                                    </label>
+                                </div>
+                                <div className="field-row">
+                                    <label className="field">
+                                        <span className="field-label">Current stock <span className="text-danger">*</span></span>
+                                        <input type="number" required min="0" step="1" placeholder="0" value={editForm.current_stock} onChange={(event) => setEditForm((c) => ({ ...c, current_stock: event.target.value }))} />
+                                    </label>
+                                    <label className="field">
+                                        <span className="field-label">Reorder threshold <span className="text-danger">*</span></span>
+                                        <input type="number" required min="0" step="1" placeholder="0" value={editForm.reorder_threshold} onChange={(event) => setEditForm((c) => ({ ...c, reorder_threshold: event.target.value }))} />
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="receive-modal-aside">
+                                <label className="field">
+                                    <span className="field-label">Supplier</span>
+                                    <select
+                                        className="input"
+                                        disabled={suppliers.length === 0 && !(editProduct.last_supplier_id && editProduct.last_supplier_name && editProduct.last_supplier_active !== false)}
+                                        value={editForm.supplier_id ?? ''}
+                                        onChange={(event) => setEditForm((c) => ({ ...c, supplier_id: event.target.value }))}
+                                    >
+                                        <option value="" disabled hidden>No supplier</option>
+                                        {editProduct.last_supplier_id &&
+                                            editProduct.last_supplier_name &&
+                                            editProduct.last_supplier_active !== false &&
+                                            !suppliers.some((sup) => String(sup.id) === String(editProduct.last_supplier_id)) && (
+                                                <option value={String(editProduct.last_supplier_id)}>
+                                                    {editProduct.last_supplier_name}
+                                                </option>
+                                            )}
+                                        {suppliers.map((sup) => (
+                                            <option key={sup.id} value={String(sup.id)}>
+                                                {sup.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {editProduct.last_supplier_active === false && editProduct.last_supplier_name && (
+                                        <small className="text-danger">
+                                            Previous supplier &ldquo;{editProduct.last_supplier_name}&rdquo; was removed.
+                                        </small>
+                                    )}
+                                </label>
+                                <label className="field">
+                                    <span className="field-label">Category{editFromQueue && <> <span className="text-danger">*</span></>}</span>
+                                    <select
+                                        className="input"
+                                        disabled={dropdownCategories.length === 0 && !(editForm.category && editForm.category !== 'Uncategorized')}
+                                        required={editFromQueue}
+                                        value={editForm.category || ''}
+                                        onChange={(event) => setEditForm((c) => ({ ...c, category: event.target.value }))}
+                                    >
+                                        <option value="" disabled hidden>No category</option>
+                                        {editForm.category &&
+                                            editForm.category !== 'Uncategorized' &&
+                                            !dropdownCategories.includes(editForm.category) && (
+                                                <option value={editForm.category}>{editForm.category}</option>
+                                            )}
+                                        {dropdownCategories.map((cat) => (
+                                            <option key={cat} value={cat}>
+                                                {cat}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
                             </div>
                         </div>
-                        <label className="field">
-                            <span className="field-label">Product name <span className="text-danger">*</span></span>
-                            <input type="text" required maxLength={255} placeholder="e.g. Cordless Drill 18V" value={editForm.name} onChange={(event) => setEditForm((c) => ({ ...c, name: event.target.value }))} />
-                        </label>
-                        <div className="field-row">
-                            <label className="field">
-                                <span className="field-label">Item Code <span className="text-danger">*</span></span>
-                                <input type="text" className="mono" required maxLength={50} placeholder="Item code" value={editForm.sku} onChange={(event) => setEditForm((c) => ({ ...c, sku: event.target.value.toUpperCase() }))} />
-                            </label>
-                            <label className="field">
-                                <span className="field-label">Category{editFromQueue && <> <span className="text-danger">*</span></>}</span>
-                                <input type="text" required={editFromQueue} maxLength={100} placeholder="e.g. Power Tools" value={editForm.category} onChange={(event) => setEditForm((c) => ({ ...c, category: event.target.value }))} />
-                            </label>
-                        </div>
-                        <div className="field-row">
-                            <label className="field">
-                                <span className="field-label">Price <span className="text-danger">*</span></span>
-                                <div className="input-prefix-wrap">
-                                    <span className="input-prefix" aria-hidden="true">₱</span>
-                                    <input type="text" inputMode="decimal" required className="input" placeholder="0.00" value={editForm.price} onChange={(event) => setEditForm((c) => ({ ...c, price: event.target.value }))} onBlur={(event) => setEditForm((c) => ({ ...c, price: formatPriceInput(event.target.value) }))} />
-                                </div>
-                            </label>
-                            <label className="field">
-                                <span className="field-label">Unit of measure{editFromQueue && <> <span className="text-danger">*</span></>}</span>
-                                <select className="input" required={editFromQueue} value={editForm.receiving_unit} onChange={(event) => setEditForm((c) => ({ ...c, receiving_unit: event.target.value }))}>
-                                    {UNITS.map((unit) => (
-                                        <option key={unit} value={unit}>{unit}</option>
-                                    ))}
-                                </select>
-                            </label>
-                        </div>
-                        <div className="field-row">
-                            <label className="field">
-                                <span className="field-label">Current stock <span className="text-danger">*</span></span>
-                                <input type="number" required min="0" step="1" placeholder="0" value={editForm.current_stock} onChange={(event) => setEditForm((c) => ({ ...c, current_stock: event.target.value }))} />
-                            </label>
-                            <label className="field">
-                                <span className="field-label">Reorder threshold <span className="text-danger">*</span></span>
-                                <input type="number" required min="0" step="1" placeholder="0" value={editForm.reorder_threshold} onChange={(event) => setEditForm((c) => ({ ...c, reorder_threshold: event.target.value }))} />
-                            </label>
-                        </div>
-                        <label className="field">
-                            <span className="field-label">Supplier</span>
-                            <select
-                                className="input"
-                                value={editForm.supplier_id ?? ''}
-                                onChange={(event) => setEditForm((c) => ({ ...c, supplier_id: event.target.value }))}
-                            >
-                                <option value="" disabled>No supplier</option>
-                                {editProduct.last_supplier_id &&
-                                    editProduct.last_supplier_name &&
-                                    editProduct.last_supplier_active !== false &&
-                                    !suppliers.some((sup) => String(sup.id) === String(editProduct.last_supplier_id)) && (
-                                        <option value={String(editProduct.last_supplier_id)}>
-                                            {editProduct.last_supplier_name}
-                                        </option>
-                                    )}
-                                {suppliers.map((sup) => (
-                                    <option key={sup.id} value={String(sup.id)}>
-                                        {sup.name}
-                                    </option>
-                                ))}
-                            </select>
-                            {editProduct.last_supplier_active === false && editProduct.last_supplier_name && (
-                                <small className="text-danger">
-                                    Previous supplier &ldquo;{editProduct.last_supplier_name}&rdquo; was removed.
-                                </small>
-                            )}
-                        </label>
 
                         {queueBlockReason && (
                             <div className="alert alert-error" role="alert">
@@ -2376,29 +2646,24 @@ export default function Products() {
 
             {adjustProduct && (
                 <Modal
-                    bare
+                    title="Adjust stock"
+                    titleIcon={(
+                        <span className="modal-title-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="4" y1="6" x2="20" y2="6" />
+                                <line x1="4" y1="12" x2="20" y2="12" />
+                                <line x1="4" y1="18" x2="20" y2="18" />
+                                <circle cx="9" cy="6" r="2" fill="currentColor" stroke="none" />
+                                <circle cx="15" cy="12" r="2" fill="currentColor" stroke="none" />
+                                <circle cx="7" cy="18" r="2" fill="currentColor" stroke="none" />
+                            </svg>
+                        </span>
+                    )}
                     noClose
-                    ariaLabel="Adjust stock"
                     className="modal-adjust"
                     onClose={() => setAdjustProduct(null)}
                 >
                     <form className="form" onSubmit={handleAdjust}>
-                        <div className="confirm-dialog confirm-dialog-info">
-                            <span className="confirm-dialog-icon" aria-hidden="true">
-                                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <line x1="4" y1="6" x2="20" y2="6" />
-                                    <line x1="4" y1="12" x2="20" y2="12" />
-                                    <line x1="4" y1="18" x2="20" y2="18" />
-                                    <circle cx="9" cy="6" r="2" fill="currentColor" stroke="none" />
-                                    <circle cx="15" cy="12" r="2" fill="currentColor" stroke="none" />
-                                    <circle cx="7" cy="18" r="2" fill="currentColor" stroke="none" />
-                                </svg>
-                            </span>
-                            <div className="confirm-dialog-body">
-                                <p className="confirm-dialog-title">Adjust stock</p>
-                                <p className="muted confirm-dialog-text">Manually correct the on-hand count for this product.</p>
-                            </div>
-                        </div>
                         <div className="field">
                             <span className="field-label">Product</span>
                             <div className="readonly-value readonly-static">{adjustProduct.name}</div>
@@ -2518,6 +2783,296 @@ export default function Products() {
                     <div className="modal-actions modal-actions-center">
                         <button type="button" className="btn btn-ghost" onClick={() => setActivityDetail(null)}>Close</button>
                     </div>
+                </Modal>
+            )}
+
+            {priceProduct && (
+                <Modal
+                    title={Number(priceProduct.price) > 0 ? 'Edit Price' : 'Add Price'}
+                    titleIcon={(
+                        <span className="modal-title-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" />
+                                <path d="M7 7h.01" />
+                            </svg>
+                        </span>
+                    )}
+                    noClose
+                    loading={priceHintLoading}
+                    className="modal-adjust"
+                    onClose={() => {
+                        if (!priceSaving) {
+                            priceSuggestReqRef.current++;
+                            setPriceProduct(null);
+                            setPriceHint('');
+                            setPriceHintLoading(false);
+                        }
+                    }}
+                >
+                    <form className="form" onSubmit={handleSavePrice}>
+                        <div className="field">
+                            <span className="field-label">Product</span>
+                            <div className="readonly-field">{priceProduct.name}</div>
+                        </div>
+                        <div className="field-row">
+                            <div className="field">
+                                <span className="field-label">Unit</span>
+                                <div className="readonly-field">{priceProduct.receiving_unit || 'piece'}</div>
+                            </div>
+                            <div className="field">
+                                <span className="field-label">Current price</span>
+                                <div className="readonly-field">{formatPeso(priceProduct.price)}</div>
+                            </div>
+                        </div>
+                        <label className="field">
+                            <span className="field-label">
+                                Price <span className="text-danger">*</span>
+                            </span>
+                            <div className="input-prefix-wrap">
+                                <span className="input-prefix" aria-hidden="true">₱</span>
+                                <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    required={!priceHint}
+                                    autoFocus
+                                    className="input"
+                                    placeholder={priceHint || '0.00'}
+                                    value={priceValue}
+                                    onChange={(event) => setPriceValue(event.target.value.replace(/[^0-9.]/g, ''))}
+                                    onBlur={(event) => setPriceValue(formatPriceInput(event.target.value))}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Tab' && !event.shiftKey && !priceValue && priceHint) {
+                                            setPriceValue(priceHint);
+                                        }
+                                    }}
+                                    disabled={priceSaving}
+                                />
+                            </div>
+                        </label>
+
+                        {priceError && (
+                            <div className="alert alert-error" role="alert">
+                                <span>{priceError}</span>
+                            </div>
+                        )}
+
+                        <div className="modal-actions modal-actions-center">
+                            <button
+                                type="button"
+                                className="btn btn-ghost"
+                                disabled={priceSaving}
+                                onClick={() => setPriceProduct(null)}
+                            >
+                                Cancel
+                            </button>
+                            <button type="submit" className="btn btn-primary" disabled={priceSaving}>
+                                {priceSaving ? 'Saving…' : 'Save price'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {viewingProduct && (() => {
+                const detailState = stockState(viewingProduct);
+                return (
+                    <Modal
+                        title={(
+                            <span className="activity-detail-title">
+                                <span className="activity-detail-infoicon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="9" />
+                                        <path d="M12 11v5M12 8h.01" />
+                                    </svg>
+                                </span>
+                                Product details
+                            </span>
+                        )}
+                        className="modal-detail-wide"
+                        noClose
+                        onClose={() => setViewingProduct(null)}
+                    >
+                        <dl className="activity-detail-list detail-grid-2">
+                            <div className="activity-detail-item">
+                                <dt>Product</dt>
+                                <dd><strong>{viewingProduct.name}</strong></dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>SKU</dt>
+                                <dd className="mono">{viewingProduct.sku}</dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>Category</dt>
+                                <dd>{viewingProduct.category || '—'}</dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>Unit</dt>
+                                <dd>{viewingProduct.receiving_unit || 'piece'}</dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>Current Stock</dt>
+                                <dd>{viewingProduct.current_stock}</dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>Reorder At</dt>
+                                <dd>{viewingProduct.reorder_threshold}</dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>Price</dt>
+                                <dd><strong>{formatPeso(viewingProduct.price)}</strong></dd>
+                            </div>
+                            <div className="activity-detail-item">
+                                <dt>Status</dt>
+                                <dd>
+                                    <span className={`pill ${detailState.className}`}>{detailState.label}</span>
+                                </dd>
+                            </div>
+                            {viewingProduct.last_supplier_name && (
+                                <div className="activity-detail-item detail-grid-full">
+                                    <dt>Supplier</dt>
+                                    <dd>{viewingProduct.last_supplier_name}</dd>
+                                </div>
+                            )}
+                        </dl>
+                        <div className="modal-actions modal-actions-center">
+                            <button type="button" className="btn btn-ghost" onClick={() => setViewingProduct(null)}>
+                                Close
+                            </button>
+                        </div>
+                    </Modal>
+                );
+            })()}
+
+            {exportModalOpen && (
+                <Modal
+                    title="Export Products"
+                    titleIcon={(
+                        <span className="modal-title-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                        </span>
+                    )}
+                    className="modal-user-form"
+                    noClose
+                    onClose={() => {
+                        setExportModalOpen(false);
+                        setExportModalError(null);
+                    }}
+                >
+                    <form className="form" onSubmit={handleExportSubmit} noValidate>
+                        <div className="field">
+                            <label htmlFor="export-format">Extract to</label>
+                            <select
+                                id="export-format"
+                                className="input"
+                                value={exportFormat}
+                                onChange={(event) => {
+                                    setExportFormat(event.target.value);
+                                    setExportModalError(null);
+                                }}
+                            >
+                                <option value="" disabled hidden>Select file format</option>
+                                <option value="pdf">PDF file (.pdf)</option>
+                                <option value="excel">Excel file (.xlsx)</option>
+                            </select>
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="export-scope">Products to export</label>
+                            <select
+                                id="export-scope"
+                                className="input"
+                                value={exportScope}
+                                onChange={(event) => {
+                                    setExportScope(event.target.value);
+                                    setExportModalError(null);
+                                }}
+                            >
+                                <option value="" disabled hidden>Select products</option>
+                                {PRODUCT_TABS.map((tab) => (
+                                    <option key={tab.key} value={tab.key}>
+                                        {tab.key === 'all_products' ? 'All products (All tab)' : tab.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="export-range">Data range</label>
+                            <select
+                                id="export-range"
+                                className="input"
+                                value={exportRange}
+                                onChange={(event) => {
+                                    setExportRange(event.target.value);
+                                    setExportModalError(null);
+                                }}
+                            >
+                                <option value="" disabled hidden>Select data range</option>
+                                <option value="1d">Per 1 day (Last 24 hours)</option>
+                                <option value="1w">Per 1 week (Last 7 days)</option>
+                                <option value="1m">Per 1 month (Last 30 days)</option>
+                                <option value="all">All data (No date limit)</option>
+                                <option value="custom">Custom date range</option>
+                            </select>
+                        </div>
+
+                        {exportRange === 'custom' && (
+                            <>
+                                <div className="field">
+                                    <label htmlFor="export-from">From date</label>
+                                    <input
+                                        id="export-from"
+                                        type="date"
+                                        value={exportFrom}
+                                        onChange={(event) => {
+                                            setExportFrom(event.target.value);
+                                            setExportModalError(null);
+                                        }}
+                                        required
+                                    />
+                                </div>
+                                <div className="field">
+                                    <label htmlFor="export-to">To date</label>
+                                    <input
+                                        id="export-to"
+                                        type="date"
+                                        value={exportTo}
+                                        onChange={(event) => {
+                                            setExportTo(event.target.value);
+                                            setExportModalError(null);
+                                        }}
+                                        required
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        {exportModalError && (
+                            <div className="alert alert-error" role="alert">
+                                <span>{exportModalError}</span>
+                            </div>
+                        )}
+
+                        <div className="modal-actions modal-actions-center">
+                            <button
+                                type="button"
+                                className="btn btn-ghost"
+                                onClick={() => {
+                                    setExportModalOpen(false);
+                                    setExportModalError(null);
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button type="submit" className="btn btn-primary">
+                                Export Products
+                            </button>
+                        </div>
+                    </form>
                 </Modal>
             )}
 
