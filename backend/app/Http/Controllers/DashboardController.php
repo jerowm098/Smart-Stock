@@ -25,21 +25,26 @@ class DashboardController extends Controller
             return response()->json(['message' => 'Unauthenticated'], 401);
         }
 
-        // Total products (admin sees all)
-        $totalProducts = Product::count();
+        // Total products (admin sees all non-defect catalogue items)
+        $totalProducts = Product::where('is_defect', false)->count();
 
         // Total revenue from all sales
         $totalRevenue = (float) Sale::sum('total_amount');
 
-        // Low stock count (current_stock <= reorder_threshold)
-        $lowStockCount = Product::whereColumn('current_stock', '<=', 'reorder_threshold')->count();
+        // Low stock count: active products above 0 and at or below reorder threshold
+        $lowStockCount = Product::where('is_active', true)
+            ->where('current_stock', '>', 0)
+            ->whereColumn('current_stock', '<=', 'reorder_threshold')
+            ->count();
 
-        // Critical / out of stock count
-        $criticalStockCount = Product::where('current_stock', '<=', 0)->count();
+        // Critical / out of stock count: active products with zero or less on hand
+        $criticalStockCount = Product::where('is_active', true)
+            ->where('current_stock', '<=', 0)
+            ->count();
         $totalSales = Sale::count();
 
         // Active suppliers (for admin overview)
-        $supplierCount = Supplier::count();
+        $supplierCount = Supplier::active()->count();
 
         // Total units received across all stock-in records
         $stockReceivedUnits = (int) StockIn::sum('quantity_received');
@@ -170,7 +175,7 @@ class DashboardController extends Controller
 
         return response()->json([
             'product_count'        => Product::count(),
-            'supplier_count'       => Supplier::count(),
+            'supplier_count'       => Supplier::active()->count(),
             'sale_count'           => Sale::count(),
             'stock_received_units' => (int) StockIn::sum('quantity_received'),
             'top_product'          => $topProduct
@@ -506,14 +511,38 @@ class DashboardController extends Controller
 
         $sales = $query->limit(5000)->get();
 
-        $filename = 'smart-stock-transactions-' . now()->format('Ymd-His') . '.csv';
+        $cashierNameForFile = $cashierId ? User::find($cashierId)?->name : null;
+
+        $parts = ['smart-stock-transactions'];
+        if ($channel === 'admin') {
+            $parts[] = 'admin-pos';
+        } elseif ($channel === 'cashier') {
+            $parts[] = 'cashier-pos';
+        }
+        if ($cashierNameForFile) {
+            $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($cashierNameForFile)), '-');
+            if ($slug !== '') {
+                $parts[] = $slug;
+            }
+        }
+        if ($dateFrom && $dateTo) {
+            $parts[] = $dateFrom === $dateTo ? $dateFrom : ($dateFrom . '-to-' . $dateTo);
+        } elseif ($dateFrom) {
+            $parts[] = 'from-' . $dateFrom;
+        } elseif ($dateTo) {
+            $parts[] = 'until-' . $dateTo;
+        } else {
+            $parts[] = now()->format('Y-m-d_His');
+        }
+
+        $filename = implode('-', $parts) . '.csv';
 
         // Audit the export (Transactions page feed): who downloaded the sales
         // report, with which filters and how many rows. Best-effort — a logging
         // failure must never break the download.
         ActivityLogger::safe(fn () => ActivityLogger::transactionsExported($user, $filename, $sales->count(), [
             'search'    => $search !== '' ? $search : null,
-            'cashier'   => $cashierId ? User::find($cashierId)?->name : null,
+            'cashier'   => $cashierNameForFile,
             'channel'   => $channel,
             'date_from' => $dateFrom,
             'date_to'   => $dateTo,

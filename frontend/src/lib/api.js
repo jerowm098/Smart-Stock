@@ -117,7 +117,7 @@ export function downloadFile(path, params = {}) {
  * triggers the browser download from a Blob once the body has arrived.
  * Resolves with the filename so callers can confirm the export in a toast.
  */
-export async function exportFile(path, params = {}) {
+export async function exportFile(path, params = {}, fallbackName = 'export.csv') {
     const response = await fetch(`${BASE}${withQuery(path, params)}`, {
         method: 'GET',
         credentials: 'include',
@@ -134,7 +134,12 @@ export async function exportFile(path, params = {}) {
 
     const blob = await response.blob();
     const disposition = response.headers.get('Content-Disposition') ?? '';
-    const filename = disposition.match(/filename="([^"]+)"/)?.[1] ?? 'export.csv';
+    const utf8Match = disposition.match(/filename\*\s*=\s*UTF-8''([^;\r\n]+)/i);
+    const plainMatch = disposition.match(/filename\s*=\s*(?:"([^"]+)"|([^;\r\n]+))/i);
+    const rawName = utf8Match
+        ? decodeURIComponent(utf8Match[1].trim())
+        : (plainMatch?.[1] ?? plainMatch?.[2] ?? '').trim();
+    const filename = rawName || fallbackName;
 
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');

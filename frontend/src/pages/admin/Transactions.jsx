@@ -125,6 +125,13 @@ export default function Transactions() {
     const [clearing, setClearing] = useState(false);
     const [clearError, setClearError] = useState(null);
     const [exporting, setExporting] = useState(false);
+    const [exportModalOpen, setExportModalOpen] = useState(false);
+    const [exportChannel, setExportChannel] = useState('');
+    const [exportCashier, setExportCashier] = useState('');
+    const [exportRange, setExportRange] = useState('');
+    const [exportFrom, setExportFrom] = useState('');
+    const [exportTo, setExportTo] = useState('');
+    const [exportModalError, setExportModalError] = useState(null);
     const [toast, setToast] = useState(null);
 
     // Guards against out-of-order responses: only the newest request may write
@@ -255,16 +262,79 @@ export default function Transactions() {
         };
     }, [activityOptionsOpen, txnOptionsOpen]);
 
-    // Export CSV with real feedback (same convention as the other pages):
-    // loading state on the button, success/error toast, then a silent refresh
-    // of the Recent Activity feed so the new export row appears immediately —
-    // no page reload, no skeleton phase, no scroll jump.
-    async function handleExport() {
+    function formatIsoDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function openExportModal() {
+        setExportChannel('');
+        setExportCashier('');
+        setExportRange('');
+        setExportFrom('');
+        setExportTo('');
+        setExportModalError(null);
+        setExportModalOpen(true);
+    }
+
+    // Export CSV with real feedback (same convention as Products export):
+    // modal lets the user pick transaction type, cashier, and date range,
+    // followed by a success toast and silent refresh of Recent Activity.
+    async function handleExport(event) {
+        if (event) event.preventDefault();
         if (exporting) return;
+
+        if (!exportChannel) {
+            setExportModalError('Please choose a transaction type to export.');
+            return;
+        }
+        if (!exportCashier) {
+            setExportModalError('Please choose a cashier to export.');
+            return;
+        }
+        if (!exportRange) {
+            setExportModalError('Please choose a data range to export.');
+            return;
+        }
+        if (exportRange === 'custom') {
+            if (!exportFrom || !exportTo) {
+                setExportModalError('Please select both From and To dates.');
+                return;
+            }
+            if (exportFrom > exportTo) {
+                setExportModalError('From date cannot be later than To date.');
+                return;
+            }
+        }
+
+        const params = {};
+        if (exportChannel !== 'all') {
+            params.channel = exportChannel;
+        }
+        if (exportCashier !== 'all') {
+            params.cashier_id = exportCashier;
+        }
+        if (exportRange === '1d' || exportRange === '1w' || exportRange === '1m') {
+            const today = new Date();
+            const start = new Date(today);
+            if (exportRange === '1d') start.setDate(today.getDate() - 1);
+            if (exportRange === '1w') start.setDate(today.getDate() - 7);
+            if (exportRange === '1m') start.setDate(today.getDate() - 30);
+            params.date_from = formatIsoDate(start);
+            params.date_to = formatIsoDate(today);
+        } else if (exportRange === 'custom') {
+            params.date_from = exportFrom;
+            params.date_to = exportTo;
+        }
+
         setExporting(true);
+        setExportModalError(null);
 
         try {
-            await exportFile('/api/dashboard/transactions/export', filters);
+            await exportFile('/api/dashboard/transactions/export', params);
+            setExportModalOpen(false);
             setToast({ tone: 'success', text: 'Transactions exported successfully.' });
 
             // Silent feed refresh — never flips the page-level loading flag.
@@ -278,10 +348,9 @@ export default function Transactions() {
                 setActivityPage(1);
             }
         } catch (err) {
-            setToast({
-                tone: 'error',
-                text: validationMessages(err)[0] ?? err.message ?? 'Could not export transactions.',
-            });
+            setExportModalError(
+                validationMessages(err)[0] ?? err.message ?? 'Could not export transactions.'
+            );
         } finally {
             setExporting(false);
         }
@@ -516,10 +585,10 @@ export default function Transactions() {
                     <button
                         type="button"
                         className="btn btn-primary"
-                        onClick={handleExport}
+                        onClick={openExportModal}
                         disabled={exporting}
                     >
-                        {exporting ? 'Exporting…' : 'Export CSV'}
+                        Export CSV
                     </button>
                 </div>
             </section>
@@ -646,7 +715,7 @@ export default function Transactions() {
                                         if ((data?.total ?? sortedRows.length) === 0) {
                                             setEmptyNotice({
                                                 title: 'No transactions to delete',
-                                                description: 'The transaction list is already empty. Complete a sale or add the 7 sample transactions first.',
+                                                description: 'The transaction list is already empty. Complete a sale first.',
                                             });
                                             return;
                                         }
@@ -785,7 +854,7 @@ export default function Transactions() {
                                     <p className="table-empty-sub">
                                         {filters.search || filters.cashier_id || filters.channel || filters.date_from || filters.date_to
                                             ? 'Try adjusting your search or filters.'
-                                            : 'Complete a sale or add the 7 sample transactions to populate this list.'}
+                                            : 'Complete a sale to populate this list.'}
                                     </p>
                                 </div>
                             )}
@@ -964,6 +1033,150 @@ export default function Transactions() {
             </>
             )}
 
+            {exportModalOpen && (
+                <Modal
+                    title="Export Sales Records"
+                    titleIcon={(
+                        <span className="modal-title-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                        </span>
+                    )}
+                    className="modal-user-form"
+                    noClose
+                    loading={exporting}
+                    onClose={() => {
+                        if (!exporting) {
+                            setExportModalOpen(false);
+                            setExportModalError(null);
+                        }
+                    }}
+                >
+                    <form className="form" onSubmit={handleExport} noValidate>
+                        <div className="field">
+                            <label htmlFor="txn-export-channel">Transaction type</label>
+                            <select
+                                id="txn-export-channel"
+                                className="input"
+                                value={exportChannel}
+                                disabled={exporting}
+                                onChange={(event) => {
+                                    setExportChannel(event.target.value);
+                                    setExportModalError(null);
+                                }}
+                            >
+                                <option value="" disabled hidden>Select transaction type</option>
+                                <option value="admin">Admin POS</option>
+                                <option value="cashier">Cashier POS</option>
+                                <option value="all">All types</option>
+                            </select>
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="txn-export-cashier">Cashier</label>
+                            <select
+                                id="txn-export-cashier"
+                                className="input"
+                                value={exportCashier}
+                                disabled={exporting}
+                                onChange={(event) => {
+                                    setExportCashier(event.target.value);
+                                    setExportModalError(null);
+                                }}
+                            >
+                                <option value="" disabled hidden>Select cashier</option>
+                                {(data?.cashiers ?? []).map((cashier) => (
+                                    <option key={cashier.id} value={String(cashier.id)}>
+                                        {cashier.name}
+                                    </option>
+                                ))}
+                                <option value="all">All cashiers</option>
+                            </select>
+                        </div>
+
+                        <div className="field">
+                            <label htmlFor="txn-export-range">Data range</label>
+                            <select
+                                id="txn-export-range"
+                                className="input"
+                                value={exportRange}
+                                disabled={exporting}
+                                onChange={(event) => {
+                                    setExportRange(event.target.value);
+                                    setExportModalError(null);
+                                }}
+                            >
+                                <option value="" disabled hidden>Select data range</option>
+                                <option value="1d">Per 1 day (Last 24 hours)</option>
+                                <option value="1w">Per 1 week (Last 7 days)</option>
+                                <option value="1m">Per 1 month (Last 30 days)</option>
+                                <option value="all">All data (No date limit)</option>
+                                <option value="custom">Custom date range</option>
+                            </select>
+                        </div>
+
+                        {exportRange === 'custom' && (
+                            <>
+                                <div className="field">
+                                    <label htmlFor="txn-export-from">From date</label>
+                                    <input
+                                        id="txn-export-from"
+                                        type="date"
+                                        value={exportFrom}
+                                        disabled={exporting}
+                                        onChange={(event) => {
+                                            setExportFrom(event.target.value);
+                                            setExportModalError(null);
+                                        }}
+                                        required
+                                    />
+                                </div>
+                                <div className="field">
+                                    <label htmlFor="txn-export-to">To date</label>
+                                    <input
+                                        id="txn-export-to"
+                                        type="date"
+                                        value={exportTo}
+                                        disabled={exporting}
+                                        onChange={(event) => {
+                                            setExportTo(event.target.value);
+                                            setExportModalError(null);
+                                        }}
+                                        required
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        {exportModalError && (
+                            <div className="alert alert-error" role="alert">
+                                <span>{exportModalError}</span>
+                            </div>
+                        )}
+
+                        <div className="modal-actions modal-actions-center">
+                            <button
+                                type="button"
+                                className="btn btn-ghost"
+                                disabled={exporting}
+                                onClick={() => {
+                                    setExportModalOpen(false);
+                                    setExportModalError(null);
+                                }}
+                            >
+                                Cancel
+                            </button>
+                            <button type="submit" className="btn btn-primary" disabled={exporting}>
+                                {exporting ? 'Exporting…' : 'Export CSV'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
             {viewing && (
                 <Modal
                     title={(
@@ -1004,18 +1217,6 @@ export default function Transactions() {
                             <dd>{viewing.date}</dd>
                         </div>
                         <div className="activity-detail-item">
-                            <dt>Total</dt>
-                            <dd><strong>{formatPeso(viewing.total_amount)}</strong></dd>
-                        </div>
-                        <div className="activity-detail-item">
-                            <dt>Payment</dt>
-                            <dd>{formatPeso(viewing.payment_amount)}</dd>
-                        </div>
-                        <div className="activity-detail-item">
-                            <dt>Change</dt>
-                            <dd>{formatPeso(viewing.change_amount)}</dd>
-                        </div>
-                        <div className="activity-detail-item">
                             <dt>Items</dt>
                             <dd>
                                 <ul className="activity-detail-changes">
@@ -1026,6 +1227,18 @@ export default function Transactions() {
                                     ))}
                                 </ul>
                             </dd>
+                        </div>
+                        <div className="activity-detail-item">
+                            <dt>Total</dt>
+                            <dd><strong>{formatPeso(viewing.total_amount)}</strong></dd>
+                        </div>
+                        <div className="activity-detail-item">
+                            <dt>Payment</dt>
+                            <dd>{formatPeso(viewing.payment_amount)}</dd>
+                        </div>
+                        <div className="activity-detail-item">
+                            <dt>Change</dt>
+                            <dd>{formatPeso(viewing.change_amount)}</dd>
                         </div>
                     </dl>
 
