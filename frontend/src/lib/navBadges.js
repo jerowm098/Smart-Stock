@@ -78,7 +78,13 @@ export function notifyConnectedNav(eventKey, count = 1, currentPath = window.loc
         if (currentPath && currentPath.startsWith(route)) {
             continue;
         }
-        const updated = (Number(next[route]) || 0) + delta;
+        const currentVal = Number(next[route]) || 0;
+        // Same direction accumulates (+1 + +1 = +2, -1 + -1 = -2).
+        // Opposite direction (e.g. -7 Clear data followed by +7 Add sample)
+        // switches immediately in real time to show the latest action.
+        const updated = (currentVal !== 0 && Math.sign(currentVal) !== Math.sign(delta))
+            ? delta
+            : currentVal + delta;
         if (updated === 0) {
             if (next[route] !== undefined) {
                 delete next[route];
