@@ -80,6 +80,7 @@ class ForecastingService
             ->pluck('days', 'product_id');
 
         $products = Product::where('is_active', true)->orderBy('name')->get();
+        $stats['active_products'] = $products->count();
 
         foreach ($products as $product) {
             $sold        = (int) ($soldMap[$product->id] ?? 0);

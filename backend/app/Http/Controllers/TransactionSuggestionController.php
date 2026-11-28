@@ -6,6 +6,7 @@ use App\Models\OrderSuggestion;
 use App\Models\Product;
 use App\Services\ActivityLogger;
 use App\Services\ForecastingService;
+use App\Services\SkuGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -88,7 +89,19 @@ class TransactionSuggestionController extends Controller
             return response()->json(['message' => 'Authentication required.'], 401);
         }
 
-        $status = (string) $request->query('status', OrderSuggestion::STATUS_ACTIVE);
+        $validated = $request->validate([
+            'status'    => 'sometimes|nullable|in:active,ordered,dismissed,all',
+            'urgency'   => 'sometimes|nullable|in:critical,low',
+            'category'  => 'sometimes|nullable|string|max:100',
+            'date_from' => 'sometimes|nullable|date',
+            'date_to'   => 'sometimes|nullable|date',
+        ]);
+
+        $status   = (string) ($validated['status'] ?? OrderSuggestion::STATUS_ACTIVE);
+        $urgency  = $validated['urgency'] ?? null;
+        $category = isset($validated['category']) ? trim((string) $validated['category']) : '';
+        $dateFrom = $validated['date_from'] ?? null;
+        $dateTo   = $validated['date_to'] ?? null;
 
         $query = OrderSuggestion::with('product:id,name,sku,category,price,current_stock,reorder_threshold')
             ->orderByRaw("CASE urgency WHEN 'critical' THEN 0 WHEN 'low' THEN 1 ELSE 2 END")
@@ -98,10 +111,43 @@ class TransactionSuggestionController extends Controller
             $query->where('status', $status);
         }
 
-        $filename = 'order-suggestions-'.now()->format('Ymd-His').'.csv';
+        if ($urgency === 'critical' || $urgency === 'low') {
+            $query->where('urgency', $urgency);
+        }
+
+        if ($category !== '') {
+            $query->whereHas('product', fn ($q) => $q->where('category', $category));
+        }
+
+        if ($dateFrom) {
+            $query->whereDate(\Illuminate\Support\Facades\DB::raw('COALESCE(generated_at, created_at)'), '>=', $dateFrom);
+        }
+
+        if ($dateTo) {
+            $query->whereDate(\Illuminate\Support\Facades\DB::raw('COALESCE(generated_at, created_at)'), '<=', $dateTo);
+        }
+
+        $parts = ['smart-stock-order-suggestions'];
+        if ($status !== 'all') {
+            $parts[] = $status;
+        }
+        if ($urgency) {
+            $parts[] = $urgency;
+        }
+        if ($dateFrom && $dateTo) {
+            $parts[] = $dateFrom === $dateTo ? $dateFrom : ($dateFrom . '-to-' . $dateTo);
+        } elseif ($dateFrom) {
+            $parts[] = 'from-' . $dateFrom;
+        } elseif ($dateTo) {
+            $parts[] = 'until-' . $dateTo;
+        } else {
+            $parts[] = now()->format('Y-m-d_His');
+        }
+
+        $filename = implode('-', $parts) . '.csv';
 
         $headers = [
-            'Content-Type' => 'text/csv',
+            'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
@@ -233,34 +279,132 @@ class TransactionSuggestionController extends Controller
      */
     public function seed(): JsonResponse
     {
+        $user = Auth::user();
         $products = \App\Models\Product::orderBy('id')->limit(7)->get();
+        $createdProductsCount = 0;
+        $createdCategoriesCount = 0;
+        $createdSuppliersCount = 0;
+        $createdSalesCount = 0;
 
         if ($products->isEmpty()) {
+            // Ensure active suppliers exist so seeded items link cleanly to Stock Inventory.
+            $suppliers = \App\Models\Supplier::active()->orderBy('id')->get();
+            if ($suppliers->isEmpty()) {
+                $defaultSuppliers = [
+                    ['name' => 'Metro Hardware Trading', 'contact_person' => 'Ramon Reyes', 'phone' => '0917-555-0101', 'email' => 'sales@metrohardware.ph'],
+                    ['name' => 'BuildRight Supply Corp.', 'contact_person' => 'Elena Cruz', 'phone' => '0918-555-0102', 'email' => 'orders@buildright.ph'],
+                    ['name' => 'PrimeCoat & Electrical Co.', 'contact_person' => 'Marco Santos', 'phone' => '0919-555-0103', 'email' => 'dispatch@primecoat.ph'],
+                    ['name' => 'FlowLine Plumbing Depot', 'contact_person' => 'Liza Mendoza', 'phone' => '0920-555-0104', 'email' => 'supply@flowline.ph'],
+                    ['name' => 'VoltEdge Electrical Supplies', 'contact_person' => 'Carlos Villanueva', 'phone' => '0921-555-0105', 'email' => 'sales@voltedge.ph'],
+                    ['name' => 'SteelGrip Fasteners Inc.', 'contact_person' => 'Grace Bautista', 'phone' => '0922-555-0106', 'email' => 'orders@steelgrip.ph'],
+                    ['name' => 'Apex Power Tools Distribution', 'contact_person' => 'Dennis Aquino', 'phone' => '0923-555-0107', 'email' => 'support@apexpowertools.ph'],
+                ];
+                foreach ($defaultSuppliers as $row) {
+                    $existingSup = \App\Models\Supplier::where('name', $row['name'])->first();
+                    if ($existingSup) {
+                        if (! $existingSup->is_active) {
+                            $existingSup->update($row + ['is_active' => true]);
+                            $createdSuppliersCount++;
+                        }
+                    } else {
+                        \App\Models\Supplier::create($row + ['is_active' => true]);
+                        $createdSuppliersCount++;
+                    }
+                }
+                $suppliers = \App\Models\Supplier::active()->orderBy('id')->get();
+            }
+
+            // Match InventoryController::seed() exactly: 3 In stock, 2 Low stock, 2 Critical/Out of stock.
             $fallbackItems = [
-                ['name' => 'Claw Hammer 16oz', 'sku' => 'CLA-HAM-16O', 'category' => 'Hand Tools', 'price' => 245, 'current_stock' => 2, 'reorder_threshold' => 10, 'receiving_unit' => 'piece'],
-                ['name' => 'Portland Cement 40kg', 'sku' => 'POR-CEM-40K', 'category' => 'Building Materials', 'price' => 260, 'current_stock' => 5, 'reorder_threshold' => 15, 'receiving_unit' => 'sack'],
-                ['name' => 'Latex Paint White 4L', 'sku' => 'LAT-PAI-WHI', 'category' => 'Paints & Coatings', 'price' => 680, 'current_stock' => 3, 'reorder_threshold' => 8, 'receiving_unit' => 'gallon'],
-                ['name' => 'PVC Pipe 1/2in 3m', 'sku' => 'PVC-PIP-12I', 'category' => 'Plumbing', 'price' => 95, 'current_stock' => 6, 'reorder_threshold' => 12, 'receiving_unit' => 'piece'],
-                ['name' => 'THHN Wire 12 AWG', 'sku' => 'THH-WIR-12A', 'category' => 'Electrical', 'price' => 38, 'current_stock' => 14, 'reorder_threshold' => 25, 'receiving_unit' => 'meter'],
-                ['name' => 'Common Wire Nails 2in', 'sku' => 'COM-WIR-NAI', 'category' => 'Fasteners', 'price' => 85, 'current_stock' => 4, 'reorder_threshold' => 10, 'receiving_unit' => 'kilogram'],
-                ['name' => 'Heavy Duty Padlock 50mm', 'sku' => 'HEA-DUT-PAD', 'category' => 'Hardware', 'price' => 190, 'current_stock' => 5, 'reorder_threshold' => 8, 'receiving_unit' => 'piece'],
+                ['name' => 'Claw Hammer 16oz', 'category' => 'Hand Tools', 'category_desc' => 'Manual carpentry and workshop hand tools.', 'price' => 245, 'current_stock' => 24, 'reorder_threshold' => 10, 'receiving_unit' => 'piece', 'note' => 'Received — DR #1041'],
+                ['name' => 'Portland Cement 40kg', 'category' => 'Building Materials', 'category_desc' => 'Cement, lumber, aggregates, and structural supplies.', 'price' => 260, 'current_stock' => 45, 'reorder_threshold' => 15, 'receiving_unit' => 'sack', 'note' => 'Supplier delivery — verified'],
+                ['name' => 'Latex Paint White 4L', 'category' => 'Paints & Coatings', 'category_desc' => 'Interior and exterior paints, primers, rollers, and brushes.', 'price' => 680, 'current_stock' => 4, 'reorder_threshold' => 8, 'receiving_unit' => 'gallon', 'note' => 'Received — batch checked'],
+                ['name' => 'PVC Pipe 1/2in 3m', 'category' => 'Plumbing', 'category_desc' => 'PVC pipes, fittings, valves, and sealants.', 'price' => 95, 'current_stock' => 0, 'reorder_threshold' => 12, 'receiving_unit' => 'piece', 'note' => 'Initial stock entry — awaiting restock'],
+                ['name' => 'THHN Wire 12 AWG', 'category' => 'Electrical', 'category_desc' => 'Wires, conduits, switches, breakers, and lighting.', 'price' => 38, 'current_stock' => 80, 'reorder_threshold' => 25, 'receiving_unit' => 'meter', 'note' => 'Supplier delivery — DR #1045'],
+                ['name' => 'Common Wire Nails 2in', 'category' => 'Fasteners', 'category_desc' => 'Nails, screws, bolts, anchors, and washers.', 'price' => 85, 'current_stock' => 0, 'reorder_threshold' => 10, 'receiving_unit' => 'kilogram', 'note' => 'Initial stock entry — awaiting restock'],
+                ['name' => 'Cordless Drill 18V', 'category' => 'Power Tools', 'category_desc' => 'Cordless drills, grinders, saws, and electric equipment.', 'price' => 1850, 'current_stock' => 3, 'reorder_threshold' => 5, 'receiving_unit' => 'piece', 'note' => 'Received — warranty sealed'],
             ];
 
             $createdProducts = collect();
-            foreach ($fallbackItems as $item) {
-                $sku = $item['sku'];
-                $suffix = 2;
-                while (\App\Models\Product::where('sku', $sku)->exists()) {
-                    $sku = $item['sku'] . '-' . $suffix;
-                    $suffix++;
+            foreach ($fallbackItems as $index => $item) {
+                $cat = \App\Models\Category::whereRaw('LOWER(TRIM(name)) = LOWER(TRIM(?))', [$item['category']])->first();
+                if (! $cat) {
+                    $cat = \App\Models\Category::create([
+                        'name' => $item['category'],
+                        'description' => $item['category_desc'],
+                    ]);
+                    $createdCategoriesCount++;
                 }
-                $createdProducts->push(\App\Models\Product::create([
-                    ...$item,
-                    'sku' => $sku,
+
+                $product = \App\Models\Product::create([
+                    'name' => $item['name'],
+                    'sku' => SkuGenerator::next($item['name']),
+                    'category' => $item['category'],
+                    'category_id' => $cat->id,
+                    'price' => $item['price'],
+                    'current_stock' => $item['current_stock'],
+                    'reorder_threshold' => $item['reorder_threshold'],
+                    'receiving_unit' => $item['receiving_unit'],
                     'is_active' => true,
-                ]));
+                    'is_listed' => true,
+                    'is_queue_dismissed' => false,
+                ]);
+
+                if ($suppliers->isNotEmpty() && $user) {
+                    $sup = $suppliers[$index % $suppliers->count()];
+                    \App\Models\StockIn::create([
+                        'product_id' => $product->id,
+                        'user_id' => $user->id,
+                        'supplier_id' => $sup->id,
+                        'quantity_received' => $item['current_stock'],
+                        'unit_of_measure' => $item['receiving_unit'],
+                        'unit_conversion' => 1,
+                        'piece_delta' => $item['current_stock'],
+                        'stock_before' => 0,
+                        'stock_after' => $item['current_stock'],
+                        'note' => $item['note'] ?? 'Received',
+                    ]);
+                }
+
+                $createdProducts->push($product);
+                $createdProductsCount++;
             }
             $products = $createdProducts;
+        }
+
+        // Seed connected sample transactions when none exist so Transactions,
+        // Overview Revenue Trend, and Forecasting all have real sales history.
+        if (\App\Models\Sale::count() === 0 && $products->isNotEmpty() && $user) {
+            $cashier = \App\Models\User::where('role', 'cashier')->first();
+            for ($i = 0; $i < 7; $i++) {
+                $product = $products[$i % $products->count()];
+                $qty = ($i % 3) + 2;
+                $unitPrice = (float) ($product->price ?: 100);
+                $lineTotal = round($unitPrice * $qty, 2);
+                $payment = ceil($lineTotal / 50) * 50;
+                $change = round($payment - $lineTotal, 2);
+                $useCashier = $cashier && ($i % 2 === 1);
+                $ts = now()->subDays(6 - $i)->subMinutes(15);
+
+                $sale = \App\Models\Sale::create([
+                    'user_id' => $useCashier ? $cashier->id : $user->id,
+                    'total_amount' => $lineTotal,
+                    'payment_amount' => $payment,
+                    'change_amount' => $change,
+                    'channel' => $useCashier ? 'cashier' : 'admin',
+                    'created_at' => $ts,
+                    'updated_at' => $ts,
+                ]);
+
+                \App\Models\SaleItem::create([
+                    'sale_id' => $sale->id,
+                    'product_id' => $product->id,
+                    'quantity' => $qty,
+                    'unit_price' => $unitPrice,
+                    'line_total' => $lineTotal,
+                ]);
+                $createdSalesCount++;
+            }
         }
 
         $presets = [
@@ -293,6 +437,11 @@ class TransactionSuggestionController extends Controller
 
         return response()->json([
             'message' => "{$created} sample order suggestions added.",
+            'created' => $created,
+            'created_products' => $createdProductsCount,
+            'created_sales' => $createdSalesCount,
+            'created_categories' => $createdCategoriesCount,
+            'created_suppliers' => $createdSuppliersCount,
         ], 201);
     }
 

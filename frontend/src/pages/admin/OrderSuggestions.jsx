@@ -5,15 +5,35 @@ import ConfirmDialog from '../../components/ConfirmDialog.jsx';
 import MessageDialog from '../../components/MessageDialog.jsx';
 import Tooltip from '../../components/Tooltip.jsx';
 import Alert, { Toast } from '../../components/Feedback.jsx';
-import { downloadFile, del, get, post, validationMessages } from '../../lib/api.js';
+import { exportFile, del, get, post, validationMessages } from '../../lib/api.js';
 import { formatPeso } from '../../lib/format.js';
 import { clearConnectedNav, notifyConnectedNav } from '../../lib/navBadges.js';
 
 const TABS = [
-    { key: 'active', label: 'Active' },
-    { key: 'ordered', label: 'Ordered' },
-    { key: 'dismissed', label: 'Dismissed' },
-    { key: 'all', label: 'All' },
+    {
+        key: 'active',
+        label: 'Active',
+        title: 'Active Order Suggestions',
+        description: 'Items currently due for restocking based on sales demand.',
+    },
+    {
+        key: 'ordered',
+        label: 'Ordered',
+        title: 'Ordered Suggestions',
+        description: 'Restock suggestions already marked as ordered.',
+    },
+    {
+        key: 'dismissed',
+        label: 'Dismissed',
+        title: 'Dismissed Suggestions',
+        description: 'Restock suggestions reviewed and dismissed by an admin.',
+    },
+    {
+        key: 'all',
+        label: 'All',
+        title: 'All Order Suggestions',
+        description: 'Complete list of active, ordered, and dismissed restock suggestions.',
+    },
 ];
 
 const PER_PAGE = 6;
@@ -125,6 +145,7 @@ export default function OrderSuggestions() {
     const [sortBy, setSortBy] = useState(null);
     const [sortDir, setSortDir] = useState(null);
     const [page, setPage] = useState(1);
+    const [viewingSuggestion, setViewingSuggestion] = useState(null);
 
     // Recent Activity
     const [activity, setActivity] = useState([]);
@@ -142,6 +163,14 @@ export default function OrderSuggestions() {
     const [deletingAll, setDeletingAll] = useState(false);
     const [deleteAllError, setDeleteAllError] = useState(null);
     const [emptyNotice, setEmptyNotice] = useState(null);
+    const [exporting, setExporting] = useState(false);
+    const [exportModalOpen, setExportModalOpen] = useState(false);
+    const [exportStatus, setExportStatus] = useState('');
+    const [exportUrgency, setExportUrgency] = useState('');
+    const [exportRange, setExportRange] = useState('');
+    const [exportFrom, setExportFrom] = useState('');
+    const [exportTo, setExportTo] = useState('');
+    const [exportModalError, setExportModalError] = useState(null);
     const ACTIVITY_PER_PAGE = 3;
 
     const load = useCallback(async (silent = false) => {
@@ -205,6 +234,83 @@ export default function OrderSuggestions() {
         };
     }, [activityOptionsOpen, suggestionsOptionsOpen]);
 
+    function formatIsoDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function openExportModal() {
+        setExportStatus('');
+        setExportUrgency('');
+        setExportRange('');
+        setExportFrom('');
+        setExportTo('');
+        setExportModalError(null);
+        setExportModalOpen(true);
+    }
+
+    async function handleExport(event) {
+        if (event) event.preventDefault();
+        if (exporting) return;
+
+        if (!exportStatus) {
+            setExportModalError('Please choose which order suggestions to export.');
+            return;
+        }
+        if (!exportUrgency) {
+            setExportModalError('Please choose an urgency level to export.');
+            return;
+        }
+        if (!exportRange) {
+            setExportModalError('Please choose a data range to export.');
+            return;
+        }
+        if (exportRange === 'custom') {
+            if (!exportFrom || !exportTo) {
+                setExportModalError('Please select both From and To dates.');
+                return;
+            }
+            if (exportFrom > exportTo) {
+                setExportModalError('From date cannot be later than To date.');
+                return;
+            }
+        }
+
+        const params = { status: exportStatus };
+        if (exportUrgency !== 'all') {
+            params.urgency = exportUrgency;
+        }
+        if (exportRange === '1d' || exportRange === '1w' || exportRange === '1m') {
+            const today = new Date();
+            const start = new Date(today);
+            if (exportRange === '1d') start.setDate(today.getDate() - 1);
+            if (exportRange === '1w') start.setDate(today.getDate() - 7);
+            if (exportRange === '1m') start.setDate(today.getDate() - 30);
+            params.date_from = formatIsoDate(start);
+            params.date_to = formatIsoDate(today);
+        } else if (exportRange === 'custom') {
+            params.date_from = exportFrom;
+            params.date_to = exportTo;
+        }
+
+        setExporting(true);
+        setExportModalError(null);
+
+        try {
+            await exportFile('/api/dashboard/order-suggestions/export', params, 'smart-stock-order-suggestions.csv');
+            setExportModalOpen(false);
+            setMessage('Order suggestions exported successfully.');
+        } catch (err) {
+            setExportModalError(
+                validationMessages(err)[0] ?? err.message ?? 'Could not export order suggestions.',
+            );
+        } finally {
+            setExporting(false);
+        }
+    }
+
     async function handleClearActivity() {
         setClearing(true);
         setClearError(null);
@@ -235,6 +341,18 @@ export default function OrderSuggestions() {
             const response = await post('/api/dashboard/order-suggestions/seed');
             setMessage(response?.message ?? '7 sample order suggestions added.');
             notifyConnectedNav('suggestionAdded', response?.created ?? 7);
+            if ((response?.created_products ?? 0) > 0) {
+                notifyConnectedNav('productAdded', response.created_products);
+            }
+            if ((response?.created_sales ?? 0) > 0) {
+                notifyConnectedNav('saleCompleted', response.created_sales);
+            }
+            if ((response?.created_categories ?? 0) > 0) {
+                notifyConnectedNav('categoriesSynced', response.created_categories);
+            }
+            if ((response?.created_suppliers ?? 0) > 0) {
+                notifyConnectedNav('suppliersSynced', response.created_suppliers);
+            }
             await refresh();
         } catch (err) {
             setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample suggestions.');
@@ -273,6 +391,7 @@ export default function OrderSuggestions() {
         try {
             const response = await post(`/api/dashboard/order-suggestions/${suggestion.id}/${action}`);
             setMessage(response.message);
+            notifyConnectedNav('suggestionAdded', -1);
             await refresh();
         } catch (err) {
             setError(validationMessages(err)[0] ?? err.message);
@@ -289,13 +408,30 @@ export default function OrderSuggestions() {
         try {
             const response = await post('/api/dashboard/order-suggestions/run');
             const stats = response.stats ?? {};
-            setMessage(
-                `Forecasts recomputed. ${stats.created ?? 0} created, ${stats.updated ?? 0} updated, ` +
-                    `${stats.preserved ?? 0} preserved, ${stats.skipped_fallback ?? 0} on static fallback.`,
-            );
-            setStatus('active');
-            if ((stats.created ?? 0) > 0) {
-                notifyConnectedNav('suggestionAdded', stats.created);
+            const activeProducts = Number(stats.active_products ?? 0);
+            const created = Number(stats.created ?? 0);
+            const updated = Number(stats.updated ?? 0);
+            const preserved = Number(stats.preserved ?? 0);
+
+            if (activeProducts === 0) {
+                setEmptyNotice({
+                    title: 'Nothing to forecast',
+                    description: 'There are no active products in your inventory yet. Receive stock in Stock Inventory first before running a forecast.',
+                });
+            } else if (created === 0 && updated === 0 && preserved === 0) {
+                setEmptyNotice({
+                    title: 'No restock suggestions found',
+                    description: 'All active products currently have sufficient stock above their reorder point, so there is nothing to forecast right now.',
+                });
+            } else {
+                setMessage(
+                    `Forecasts recomputed. ${created} created, ${updated} updated, ` +
+                        `${preserved} preserved, ${stats.skipped_fallback ?? 0} on static fallback.`,
+                );
+                setStatus('active');
+                if (created > 0) {
+                    notifyConnectedNav('suggestionAdded', created);
+                }
             }
             await load(true);
         } catch (err) {
@@ -492,7 +628,7 @@ export default function OrderSuggestions() {
                             <table className="table" aria-hidden="true">
                                 <thead>
                                     <tr>
-                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
+                                        {[0, 1, 2, 3, 4, 5].map((i) => (
                                             <th key={i}>
                                                 <span className="skeleton skeleton-line skeleton-sm" style={{ width: '70%' }} />
                                             </th>
@@ -502,9 +638,9 @@ export default function OrderSuggestions() {
                                 <tbody>
                                     {[0, 1, 2, 3, 4, 5].map((r) => (
                                         <tr key={r}>
-                                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((c) => (
+                                            {[0, 1, 2, 3, 4, 5].map((c) => (
                                                 <td key={c}>
-                                                    <span className="skeleton skeleton-line" style={{ width: c === 8 ? '62%' : '85%' }} />
+                                                    <span className="skeleton skeleton-line" style={{ width: c === 4 ? '62%' : '85%' }} />
                                                 </td>
                                             ))}
                                         </tr>
@@ -562,7 +698,7 @@ export default function OrderSuggestions() {
                             <button
                                 type="button"
                                 className="btn btn-primary"
-                                onClick={() => downloadFile('/api/dashboard/order-suggestions/export', { status })}
+                                onClick={openExportModal}
                             >
                                 Export CSV
                             </button>
@@ -648,8 +784,8 @@ export default function OrderSuggestions() {
                     <section className="card padded">
                         <div className="filter-head">
                             <div>
-                                <h3>Order Suggestions</h3>
-                                <p className="muted">Suggested restocks with demand, urgency and estimated cost.</p>
+                                <h3>{(TABS.find((t) => t.key === status) ?? TABS[0]).title}</h3>
+                                <p className="muted">{(TABS.find((t) => t.key === status) ?? TABS[0]).description}</p>
                             </div>
                             <div className="head-actions">
                                 <button
@@ -705,7 +841,7 @@ export default function OrderSuggestions() {
                                                     if (suggestions.length === 0) {
                                                         setEmptyNotice({
                                                             title: 'No suggestions to delete',
-                                                            description: 'The order suggestions list is already empty. Run a forecast or add the 7 sample suggestions on the Active tab first.',
+                                                            description: 'The order suggestions list is already empty. Run a forecast on the Active tab first.',
                                                         });
                                                         return;
                                                     }
@@ -753,32 +889,11 @@ export default function OrderSuggestions() {
                                                     {sortBy === 'stock' && sortDir === 'desc' ? '▼' : '▲'}
                                                 </span>
                                             </th>
-                                            <th className="sort-header" onClick={() => toggleSort('avg_daily')} title="Average daily sales">
-                                                Avg Daily
-                                                <span className={`sort-indicator${sortBy === 'avg_daily' ? ' is-active' : ''}`} aria-hidden="true">
-                                                    {sortBy === 'avg_daily' && sortDir === 'desc' ? '▼' : '▲'}
-                                                </span>
-                                                <span className="th-sub">Average daily sales</span>
-                                            </th>
-                                            <th className="sort-header" onClick={() => toggleSort('reorder_point')} title="Reorder threshold point">
-                                                Reorder pt
-                                                <span className={`sort-indicator${sortBy === 'reorder_point' ? ' is-active' : ''}`} aria-hidden="true">
-                                                    {sortBy === 'reorder_point' && sortDir === 'desc' ? '▼' : '▲'}
-                                                </span>
-                                                <span className="th-sub">Reorder point</span>
-                                            </th>
                                             <th className="sort-header" onClick={() => toggleSort('suggested_qty')} title="Suggested order quantity">
                                                 Suggested
                                                 <span className={`sort-indicator${sortBy === 'suggested_qty' ? ' is-active' : ''}`} aria-hidden="true">
                                                     {sortBy === 'suggested_qty' && sortDir === 'desc' ? '▼' : '▲'}
                                                 </span>
-                                            </th>
-                                            <th className="sort-header" onClick={() => toggleSort('est_cost')} title="Estimated restock cost">
-                                                Est. Cost
-                                                <span className={`sort-indicator${sortBy === 'est_cost' ? ' is-active' : ''}`} aria-hidden="true">
-                                                    {sortBy === 'est_cost' && sortDir === 'desc' ? '▼' : '▲'}
-                                                </span>
-                                                <span className="th-sub">Estimated cost</span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('urgency')}>
                                                 Urgency
@@ -786,18 +901,16 @@ export default function OrderSuggestions() {
                                                     {sortBy === 'urgency' && sortDir === 'desc' ? '▼' : '▲'}
                                                 </span>
                                             </th>
-                                            <th className="sort-header" onClick={() => toggleSort('reason')}>
-                                                Reason
-                                                <span className={`sort-indicator${sortBy === 'reason' ? ' is-active' : ''}`} aria-hidden="true">
-                                                    {sortBy === 'reason' && sortDir === 'desc' ? '▼' : '▲'}
-                                                </span>
-                                            </th>
                                             {status === 'active' && <th>Actions</th>}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {pagedSuggestions.map((suggestion) => (
-                                            <tr key={suggestion.id}>
+                                            <tr
+                                                key={suggestion.id}
+                                                className="row-clickable"
+                                                onClick={() => setViewingSuggestion(suggestion)}
+                                            >
                                                 <td>
                                                     <strong>{highlight(suggestion.name, search)}</strong>
                                                 </td>
@@ -805,26 +918,19 @@ export default function OrderSuggestions() {
                                                     {highlight(suggestion.sku, search)}
                                                 </td>
                                                 <td className="num-cell">{suggestion.current_stock}</td>
-                                                <td className="num-cell">{suggestion.avg_daily}</td>
-                                                <td className="num-cell">{suggestion.reorder_point}</td>
                                                 <td className="num-cell">
                                                     <strong>{suggestion.suggested_qty}</strong>
-                                                </td>
-                                                <td className="num-cell est-cost-cell">
-                                                    {suggestion.est_cost !== null ? formatPeso(suggestion.est_cost) : '—'}
                                                 </td>
                                                 <td>
                                                     <span className={`pill ${urgencyClass(suggestion.urgency)}`}>
                                                         {suggestion.urgency}
                                                     </span>
                                                 </td>
-                                                <td className="muted reason-cell">
-                                                    <span className="reason-text" title={suggestion.reason ?? undefined}>
-                                                        {suggestion.reason ?? '—'}
-                                                    </span>
-                                                </td>
                                                 {status === 'active' && (
-                                                    <td className="actions-cell">
+                                                    <td
+                                                        className="actions-cell"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                    >
                                                         <Tooltip
                                                             label="Ordered"
                                                             className="btn btn-ghost btn-sm btn-success-text action-icon-btn"
@@ -870,7 +976,7 @@ export default function OrderSuggestions() {
                                             {hasActiveFilters
                                                 ? 'Try adjusting your search or filters.'
                                                 : status === 'active'
-                                                    ? 'Run a forecast or add the 7 sample suggestions to populate this list.'
+                                                    ? 'Run a forecast to populate this list.'
                                                     : 'No suggestions with this status.'}
                                         </p>
                                     </div>
@@ -1105,6 +1211,251 @@ export default function OrderSuggestions() {
                 <div className="modal-actions modal-actions-center">
                     <button type="button" className="btn btn-ghost" onClick={() => setActivityDetail(null)}>Close</button>
                 </div>
+            </Modal>
+        )}
+
+        {viewingSuggestion && (
+            <Modal
+                title={(
+                    <span className="activity-detail-title">
+                        <span className="activity-detail-infoicon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="9" />
+                                <path d="M12 11v5M12 8h.01" />
+                            </svg>
+                        </span>
+                        Order suggestion details
+                    </span>
+                )}
+                className="modal-detail-wide"
+                noClose
+                onClose={() => setViewingSuggestion(null)}
+            >
+                <dl className="activity-detail-list detail-grid-2">
+                    <div className="activity-detail-item">
+                        <dt>Product</dt>
+                        <dd><strong>{viewingSuggestion.name}</strong></dd>
+                    </div>
+                    <div className="activity-detail-item">
+                        <dt>SKU</dt>
+                        <dd className="mono">{viewingSuggestion.sku}</dd>
+                    </div>
+                    {viewingSuggestion.category && viewingSuggestion.category !== '—' && (
+                        <div className="activity-detail-item">
+                            <dt>Category</dt>
+                            <dd>{viewingSuggestion.category}</dd>
+                        </div>
+                    )}
+                    <div className="activity-detail-item">
+                        <dt>Urgency</dt>
+                        <dd>
+                            <span className={`pill ${urgencyClass(viewingSuggestion.urgency)}`}>
+                                {viewingSuggestion.urgency}
+                            </span>
+                        </dd>
+                    </div>
+                    <div className="activity-detail-item">
+                        <dt>Status</dt>
+                        <dd>
+                            <span className={`pill ${viewingSuggestion.status === 'ordered' ? 'pill-ok' : viewingSuggestion.status === 'dismissed' ? 'pill-danger' : 'pill-info'}`}>
+                                {viewingSuggestion.status}
+                            </span>
+                        </dd>
+                    </div>
+                    <div className="activity-detail-item">
+                        <dt>Current Stock</dt>
+                        <dd>{viewingSuggestion.current_stock}</dd>
+                    </div>
+                    <div className="activity-detail-item">
+                        <dt>Avg Daily Sales</dt>
+                        <dd>{viewingSuggestion.avg_daily} / day</dd>
+                    </div>
+                    <div className="activity-detail-item">
+                        <dt>Reorder Point</dt>
+                        <dd>{viewingSuggestion.reorder_point}</dd>
+                    </div>
+                    <div className="activity-detail-item">
+                        <dt>Suggested Order Qty</dt>
+                        <dd><strong>{viewingSuggestion.suggested_qty}</strong></dd>
+                    </div>
+                    {viewingSuggestion.unit_price !== null && viewingSuggestion.unit_price !== undefined && (
+                        <div className="activity-detail-item">
+                            <dt>Unit Price</dt>
+                            <dd>{formatPeso(viewingSuggestion.unit_price)}</dd>
+                        </div>
+                    )}
+                    <div className="activity-detail-item">
+                        <dt>Est. Cost</dt>
+                        <dd>
+                            <strong>
+                                {viewingSuggestion.est_cost !== null ? formatPeso(viewingSuggestion.est_cost) : '—'}
+                            </strong>
+                        </dd>
+                    </div>
+                    {viewingSuggestion.days_until_out !== null && viewingSuggestion.days_until_out !== undefined && (
+                        <div className="activity-detail-item">
+                            <dt>Days Until Out</dt>
+                            <dd>{viewingSuggestion.days_until_out} day{viewingSuggestion.days_until_out === 1 ? '' : 's'}</dd>
+                        </div>
+                    )}
+                    {viewingSuggestion.generated_at && (
+                        <div className="activity-detail-item">
+                            <dt>Generated</dt>
+                            <dd>{viewingSuggestion.generated_at}</dd>
+                        </div>
+                    )}
+                    {viewingSuggestion.actioned_at && (
+                        <div className="activity-detail-item">
+                            <dt>Actioned</dt>
+                            <dd>{viewingSuggestion.actioned_at}</dd>
+                        </div>
+                    )}
+                    <div className="activity-detail-item detail-grid-full">
+                        <dt>Reason</dt>
+                        <dd>{viewingSuggestion.reason ?? '—'}</dd>
+                    </div>
+                </dl>
+                <div className="modal-actions modal-actions-center">
+                    <button type="button" className="btn btn-ghost" onClick={() => setViewingSuggestion(null)}>
+                        Close
+                    </button>
+                </div>
+            </Modal>
+        )}
+
+        {exportModalOpen && (
+            <Modal
+                title="Export Order Suggestions"
+                titleIcon={(
+                    <span className="modal-title-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7 10 12 15 17 10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                    </span>
+                )}
+                className="modal-user-form"
+                noClose
+                loading={exporting}
+                onClose={() => {
+                    if (!exporting) {
+                        setExportModalOpen(false);
+                        setExportModalError(null);
+                    }
+                }}
+            >
+                <form className="form" onSubmit={handleExport} noValidate>
+                    <div className="field">
+                        <label htmlFor="sug-export-status">Suggestions to export</label>
+                        <select
+                            id="sug-export-status"
+                            className="input"
+                            value={exportStatus}
+                            disabled={exporting}
+                            onChange={(event) => {
+                                setExportStatus(event.target.value);
+                                setExportModalError(null);
+                            }}
+                        >
+                            <option value="" disabled hidden>Select suggestions to export</option>
+                            <option value="active">Active</option>
+                            <option value="ordered">Ordered</option>
+                            <option value="dismissed">Dismissed</option>
+                            <option value="all">All suggestions (All tab)</option>
+                        </select>
+                    </div>
+
+                    <div className="field">
+                        <label htmlFor="sug-export-urgency">Urgency</label>
+                        <select
+                            id="sug-export-urgency"
+                            className="input"
+                            value={exportUrgency}
+                            disabled={exporting}
+                            onChange={(event) => {
+                                setExportUrgency(event.target.value);
+                                setExportModalError(null);
+                            }}
+                        >
+                            <option value="" disabled hidden>Select urgency</option>
+                            <option value="critical">Critical</option>
+                            <option value="low">Low</option>
+                            <option value="all">All urgencies</option>
+                        </select>
+                    </div>
+
+                    <div className="field">
+                        <label htmlFor="sug-export-range">Data range</label>
+                        <select
+                            id="sug-export-range"
+                            className="input"
+                            value={exportRange}
+                            disabled={exporting}
+                            onChange={(event) => {
+                                setExportRange(event.target.value);
+                                setExportModalError(null);
+                            }}
+                        >
+                            <option value="" disabled hidden>Select data range</option>
+                            <option value="1d">Per 1 day (Last 24 hours)</option>
+                            <option value="1w">Per 1 week (Last 7 days)</option>
+                            <option value="1m">Per 1 month (Last 30 days)</option>
+                            <option value="all">All data (No date limit)</option>
+                            <option value="custom">Custom date range</option>
+                        </select>
+                    </div>
+
+                    {exportRange === 'custom' && (
+                        <>
+                            <div className="field">
+                                <label htmlFor="sug-export-from">From date</label>
+                                <input
+                                    id="sug-export-from"
+                                    type="date"
+                                    value={exportFrom}
+                                    disabled={exporting}
+                                    onChange={(event) => {
+                                        setExportFrom(event.target.value);
+                                        setExportModalError(null);
+                                    }}
+                                />
+                            </div>
+                            <div className="field">
+                                <label htmlFor="sug-export-to">To date</label>
+                                <input
+                                    id="sug-export-to"
+                                    type="date"
+                                    value={exportTo}
+                                    disabled={exporting}
+                                    onChange={(event) => {
+                                        setExportTo(event.target.value);
+                                        setExportModalError(null);
+                                    }}
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {exportModalError && <Alert tone="error">{exportModalError}</Alert>}
+
+                    <div className="modal-actions modal-actions-end">
+                        <button
+                            type="button"
+                            className="btn btn-ghost"
+                            disabled={exporting}
+                            onClick={() => {
+                                setExportModalOpen(false);
+                                setExportModalError(null);
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button type="submit" className="btn btn-primary" disabled={exporting}>
+                            {exporting ? 'Exporting…' : 'Export CSV'}
+                        </button>
+                    </div>
+                </form>
             </Modal>
         )}
 
