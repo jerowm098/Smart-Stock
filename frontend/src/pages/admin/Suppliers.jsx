@@ -568,7 +568,7 @@ export default function Suppliers() {
                                         if (sortedSuppliers.length === 0) {
                                             setEmptyNotice({
                                                 title: 'No suppliers to delete',
-                                                description: 'The supplier list is already empty. Add a supplier or add the 7 sample suppliers first.',
+                                                description: 'The supplier list is already empty. Add a supplier first.',
                                             });
                                             return;
                                         }
@@ -603,9 +603,11 @@ export default function Suppliers() {
                                             </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('contact')}>
-                                            Contact<br />person
-                                            <span className={`sort-indicator${sortBy === 'contact' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'contact' && sortDir === 'desc' ? '▼' : '▲'}
+                                            <span className="sort-header-inner">
+                                                <span>Contact<br />person</span>
+                                                <span className={`sort-indicator${sortBy === 'contact' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'contact' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                             </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('phone')}>
@@ -680,7 +682,7 @@ export default function Suppliers() {
                                         </svg>
                                     </span>
                                     <p className="table-empty-title">No suppliers yet</p>
-                                    <p className="table-empty-sub">Add a supplier or add the 7 sample suppliers to populate this list.</p>
+                                    <p className="table-empty-sub">Add a supplier to populate this list.</p>
                                 </div>
                             )}
                         </div>

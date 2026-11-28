@@ -134,13 +134,13 @@ class SupplierController extends Controller
         }
 
         $samples = [
-            ['name' => 'Metro Steel & Hardware Supply', 'contact_person' => 'Ramon Villanueva', 'phone' => '0917-482-1104', 'email' => 'sales@metrosteel.example.com'],
-            ['name' => 'Pacific Lumber & Builders Co.', 'contact_person' => 'Elena Soriano', 'phone' => '0918-553-2091', 'email' => 'orders@pacificlumber.example.com'],
-            ['name' => 'Northern Electrical Distributors', 'contact_person' => 'Marco Bautista', 'phone' => '0927-614-8820', 'email' => 'supply@northernelec.example.com'],
-            ['name' => 'Apex Paint & Coatings Corp.', 'contact_person' => 'Clarissa Mendoza', 'phone' => '0919-740-3315', 'email' => 'dispatch@apexpaint.example.com'],
-            ['name' => 'Summit Plumbing & Fixtures', 'contact_person' => 'Dante Pascual', 'phone' => '0920-812-4498', 'email' => 'accounts@summitplumbing.example.com'],
-            ['name' => 'BuildRight Fasteners Inc.', 'contact_person' => 'Teresita Aquino', 'phone' => '0916-905-6723', 'email' => 'hello@buildright.example.com'],
-            ['name' => 'Visayas Cement & Aggregates', 'contact_person' => 'Nestor Castillo', 'phone' => '0915-338-7540', 'email' => 'logistics@visayascement.example.com'],
+            ['name' => 'Metro Hardware Trading', 'contact_person' => 'Ramon Reyes', 'phone' => '0917-555-0101', 'email' => 'sales@metrohardware.ph'],
+            ['name' => 'BuildRight Supply Corp.', 'contact_person' => 'Elena Cruz', 'phone' => '0918-555-0102', 'email' => 'orders@buildright.ph'],
+            ['name' => 'PrimeCoat & Electrical Co.', 'contact_person' => 'Marco Santos', 'phone' => '0919-555-0103', 'email' => 'dispatch@primecoat.ph'],
+            ['name' => 'FlowLine Plumbing Depot', 'contact_person' => 'Liza Mendoza', 'phone' => '0920-555-0104', 'email' => 'supply@flowline.ph'],
+            ['name' => 'VoltEdge Electrical Supplies', 'contact_person' => 'Carlos Villanueva', 'phone' => '0921-555-0105', 'email' => 'sales@voltedge.ph'],
+            ['name' => 'SteelGrip Fasteners Inc.', 'contact_person' => 'Grace Bautista', 'phone' => '0922-555-0106', 'email' => 'orders@steelgrip.ph'],
+            ['name' => 'Apex Power Tools Distribution', 'contact_person' => 'Dennis Aquino', 'phone' => '0923-555-0107', 'email' => 'support@apexpowertools.ph'],
         ];
 
         $created = 0;
