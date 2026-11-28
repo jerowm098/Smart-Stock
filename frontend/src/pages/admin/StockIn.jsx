@@ -117,11 +117,105 @@ const UNITS = [
     'can', 'bottle', 'tube', 'sheet',
 ];
 
+const RECEIVING_UNIT_OPTIONS = [
+    { value: 'piece', label: 'piece(pc)', suffix: 'pc', sizePlaceholder: 'e.g. 1' },
+    { value: 'inch', label: 'inch(in)', suffix: 'in', sizePlaceholder: 'e.g. 1' },
+    { value: 'millimeter', label: 'millimeter(mm)', suffix: 'mm', sizePlaceholder: 'e.g. 50' },
+    { value: 'centimeter', label: 'centimeter(cm)', suffix: 'cm', sizePlaceholder: 'e.g. 30' },
+    { value: 'meter', label: 'meter(m)', suffix: 'm', sizePlaceholder: 'e.g. 3' },
+    { value: 'foot', label: 'foot(ft)', suffix: 'ft', sizePlaceholder: 'e.g. 8' },
+    { value: 'kilogram', label: 'kilogram(kg)', suffix: 'kg', sizePlaceholder: 'e.g. 40' },
+    { value: 'gram', label: 'gram(g)', suffix: 'g', sizePlaceholder: 'e.g. 500' },
+    { value: 'ounce', label: 'ounce(oz)', suffix: 'oz', sizePlaceholder: 'e.g. 16' },
+    { value: 'liter', label: 'liter(L)', suffix: 'L', sizePlaceholder: 'e.g. 4' },
+    { value: 'milliliter', label: 'milliliter(mL)', suffix: 'mL', sizePlaceholder: 'e.g. 500' },
+    { value: 'gallon', label: 'gallon(gal)', suffix: 'gal', sizePlaceholder: 'e.g. 1' },
+    { value: 'volt', label: 'volt(V)', suffix: 'V', sizePlaceholder: 'e.g. 18' },
+    { value: 'watt', label: 'watt(W)', suffix: 'W', sizePlaceholder: 'e.g. 12' },
+    { value: 'gauge', label: 'gauge(AWG)', suffix: 'AWG', sizePlaceholder: 'e.g. 12' },
+    { value: 'box', label: 'box(bx)', suffix: 'bx', sizePlaceholder: 'e.g. 1' },
+    { value: 'sack', label: 'sack(sck)', suffix: 'sck', sizePlaceholder: 'e.g. 40' },
+    { value: 'bag', label: 'bag(bag)', suffix: 'bag', sizePlaceholder: 'e.g. 1' },
+    { value: 'pack', label: 'pack(pk)', suffix: 'pk', sizePlaceholder: 'e.g. 1' },
+    { value: 'set', label: 'set(set)', suffix: 'set', sizePlaceholder: 'e.g. 1' },
+    { value: 'roll', label: 'roll(rl)', suffix: 'rl', sizePlaceholder: 'e.g. 1' },
+    { value: 'bundle', label: 'bundle(bdl)', suffix: 'bdl', sizePlaceholder: 'e.g. 1' },
+    { value: 'can', label: 'can(can)', suffix: 'can', sizePlaceholder: 'e.g. 1' },
+    { value: 'bottle', label: 'bottle(btl)', suffix: 'btl', sizePlaceholder: 'e.g. 1' },
+    { value: 'tube', label: 'tube(tb)', suffix: 'tb', sizePlaceholder: 'e.g. 1' },
+    { value: 'sheet', label: 'sheet(sht)', suffix: 'sht', sizePlaceholder: 'e.g. 1' },
+];
+
+const UNIT_SUGGESTION_RULES = [
+    {
+        pattern: /\b(pako|nail|nails|turnilyo|screw|screws|bolt|bolts|nut|washer|rivet|staple)\b/i,
+        defaultUnit: 'inch',
+        units: ['inch', 'millimeter', 'kilogram', 'piece', 'box'],
+        sizePlaceholder: 'e.g. 1',
+    },
+    {
+        pattern: /\b(pipe|tubo|pvc|lumber|kahoy|plywood|rebar|bakal|conduit|hose|tali|rope)\b/i,
+        defaultUnit: 'inch',
+        units: ['inch', 'millimeter', 'meter', 'foot', 'piece'],
+        sizePlaceholder: 'e.g. 2',
+    },
+    {
+        pattern: /\b(wire|kawad|cable|thhn|cord)\b/i,
+        defaultUnit: 'gauge',
+        units: ['gauge', 'meter', 'roll', 'millimeter'],
+        sizePlaceholder: 'e.g. 12',
+    },
+    {
+        pattern: /\b(paint|pintura|thinner|primer|varnish|enamel|latex|epoxy|glue|rugby|oil|sealant)\b/i,
+        defaultUnit: 'liter',
+        units: ['liter', 'gallon', 'milliliter', 'can', 'bottle'],
+        sizePlaceholder: 'e.g. 4',
+    },
+    {
+        pattern: /\b(cement|semento|sand|buhangin|gravel|graba|skim|putty|grout|masilya)\b/i,
+        defaultUnit: 'kilogram',
+        units: ['kilogram', 'sack', 'bag'],
+        sizePlaceholder: 'e.g. 40',
+    },
+    {
+        pattern: /\b(hammer|martilyo|mallet|wrench|pliers|screwdriver|chisel|saw|lagari|brush|roller)\b/i,
+        defaultUnit: 'ounce',
+        units: ['ounce', 'inch', 'piece', 'set'],
+        sizePlaceholder: 'e.g. 16',
+    },
+    {
+        pattern: /\b(bulb|led|lamp|ilaw|spotlight|floodlight)\b/i,
+        defaultUnit: 'watt',
+        units: ['watt', 'volt', 'piece', 'set'],
+        sizePlaceholder: 'e.g. 12',
+    },
+    {
+        pattern: /\b(drill|grinder|sander|battery|charger|breaker|outlet|switch)\b/i,
+        defaultUnit: 'volt',
+        units: ['volt', 'watt', 'piece', 'set'],
+        sizePlaceholder: 'e.g. 18',
+    },
+    {
+        pattern: /\b(padlock|kandado|lock|hinge|bisagra)\b/i,
+        defaultUnit: 'millimeter',
+        units: ['millimeter', 'inch', 'piece', 'set'],
+        sizePlaceholder: 'e.g. 50',
+    },
+];
+
+function matchUnitSuggestion(productName) {
+    const text = String(productName ?? '').trim();
+    if (!text) return null;
+    return UNIT_SUGGESTION_RULES.find((rule) => rule.pattern.test(text)) ?? null;
+}
+
 const EMPTY_RECEIVE_FORM = {
     product_id: '',
     product_name: '',
     sku: '',
+    category: '',
     current_stock: '',
+    reorder_threshold: '',
     supplier_id: '',
     unit_of_measure: '',
     quantity_received: '',
@@ -130,12 +224,14 @@ const EMPTY_RECEIVE_FORM = {
 
 const EMPTY_ADD_FORM = {
     name: '',
+    spec_value: '',
     sku: '',
     category: '',
     supplier_id: '',
     unit_choice: '',
     unit_other: '',
     quantity_received: '',
+    reorder_threshold: '',
     note_type: '',
     note: '',
 };
@@ -205,6 +301,9 @@ export default function StockIn() {
     const suggestTimer = useRef(null);
     const lastSuggestedName = useRef('');
     const currentNameRef = useRef('');
+    const reorderTouchedRef = useRef(false);
+    const unitTouchedRef = useRef(false);
+    const [showAllUnits, setShowAllUnits] = useState(false);
 
     // Search & filter over the receiving table.
     const [search, setSearch] = useState('');
@@ -310,46 +409,57 @@ export default function StockIn() {
     // Ghost hints for the new-product form: debounce the name, then ask the
     // suggestion endpoint for a code + category. Values are only ever shown as
     // placeholders (never committed), and a failure is silent.
-    const runSuggest = useCallback(async (name) => {
+    const runSuggest = useCallback(async (name, spec = '') => {
         const clean = name.trim();
-        if (clean.length < 3) {
+        if (clean.length < 2) {
             return;
         }
 
+        const key = `${clean}|${spec}`;
         setSuggesting(true);
 
         try {
-            const response = await post('/api/inventory/suggest', { name: clean });
+            const response = await post('/api/inventory/suggest', {
+                name: clean,
+                spec: spec || undefined,
+            });
 
-            // Ignore stale responses: only apply if the box still holds this name.
-            if (currentNameRef.current.trim() !== clean) {
+            // Ignore stale responses: only apply if the box still holds this name+spec.
+            if (currentNameRef.current !== key) {
                 return;
             }
 
             const s = response.suggestion || {};
             setSuggestions({ sku: s.sku || '', category: s.category || '' });
-            lastSuggestedName.current = clean;
+            lastSuggestedName.current = key;
         } catch {
-            if (currentNameRef.current.trim() === clean) {
+            if (currentNameRef.current === key) {
                 setSuggestions({});
             }
         } finally {
-            if (currentNameRef.current.trim() === clean) {
+            if (currentNameRef.current === key) {
                 setSuggesting(false);
             }
         }
     }, []);
 
     useEffect(() => {
-        currentNameRef.current = addForm.name;
+        const baseName = addForm.name.trim();
+        const specDigits = String(addForm.spec_value ?? '').replace(/[^0-9]/g, '');
+        const unitMeta = RECEIVING_UNIT_OPTIONS.find((opt) => opt.value === addForm.unit_choice);
+        const unitSuffix = addForm.unit_choice === 'other'
+            ? String(addForm.unit_other ?? '').trim()
+            : (unitMeta?.suffix ?? '');
+        const specSuffix = specDigits ? `${specDigits}${unitSuffix}` : '';
+        const key = `${baseName}|${specSuffix}`;
+
+        currentNameRef.current = key;
 
         if (!addOpen) {
             return undefined;
         }
 
-        const name = addForm.name.trim();
-
-        if (name.length < 3) {
+        if (baseName.length < 2) {
             clearTimeout(suggestTimer.current);
             setSuggestions({});
             setSuggesting(false);
@@ -357,13 +467,13 @@ export default function StockIn() {
             return undefined;
         }
 
-        if (name !== lastSuggestedName.current) {
+        if (key !== lastSuggestedName.current) {
             clearTimeout(suggestTimer.current);
-            suggestTimer.current = setTimeout(() => runSuggest(name), 500);
+            suggestTimer.current = setTimeout(() => runSuggest(baseName, specSuffix), 250);
         }
 
         return () => clearTimeout(suggestTimer.current);
-    }, [addForm.name, addOpen, runSuggest]);
+    }, [addForm.name, addForm.spec_value, addForm.unit_choice, addForm.unit_other, addOpen, runSuggest]);
 
     const categories = useMemo(
         () => [...new Set(products.map((product) => product.category).filter(Boolean))]
@@ -443,8 +553,8 @@ export default function StockIn() {
             let av = a[sortBy];
             let bv = b[sortBy];
 
-            // Numeric comparison for stock
-            if (sortBy === 'current_stock') {
+            // Numeric comparison for stock & reorder threshold
+            if (sortBy === 'current_stock' || sortBy === 'reorder_threshold') {
                 av = Number(av ?? 0);
                 bv = Number(bv ?? 0);
                 return (av - bv) * dir;
@@ -501,7 +611,9 @@ export default function StockIn() {
             product_id: String(product.id),
             product_name: product.name || '',
             sku: product.sku || '',
+            category: product.category && product.category !== 'Uncategorized' ? product.category : '',
             current_stock: String(product.current_stock ?? 0),
+            reorder_threshold: String(product.reorder_threshold ?? 0),
             supplier_id: product.last_supplier_id && product.last_supplier_active !== false
                 ? String(product.last_supplier_id)
                 : '',
@@ -524,6 +636,9 @@ export default function StockIn() {
         setSuggesting(false);
         lastSuggestedName.current = '';
         currentNameRef.current = '';
+        reorderTouchedRef.current = false;
+        unitTouchedRef.current = false;
+        setShowAllUnits(false);
         setAddError(null);
         setAddFieldErrors([]);
         setAddOpen(true);
@@ -537,6 +652,9 @@ export default function StockIn() {
         setSuggesting(false);
         lastSuggestedName.current = '';
         currentNameRef.current = '';
+        reorderTouchedRef.current = false;
+        unitTouchedRef.current = false;
+        setShowAllUnits(false);
         setAddError(null);
         setAddFieldErrors([]);
     }
@@ -629,9 +747,9 @@ export default function StockIn() {
         setSeeding(true);
 
         try {
-            const response = await post('/api/inventory/seed');
-            setToast(response?.message ?? '7 sample products added.');
-            notifyConnectedNav('productAdded', response?.created ?? 7);
+            const response = await post('/api/inventory/seed', { queued: true });
+            setToast(response?.message ?? '7 sample stock items received and queued on Products.');
+            notifyConnectedNav('stockNewProductReceived', response?.created ?? 7);
             await refresh();
         } catch (err) {
             setError(validationMessages(err)[0] ?? err.message ?? 'Could not add the sample products.');
@@ -649,9 +767,13 @@ export default function StockIn() {
             const response = await del('/api/inventory');
             setDeleteAllConfirm(false);
             const deleted = Number(response?.deleted) || 0;
+            const deletedListed = Number(response?.deleted_listed) || 0;
             clearConnectedNav('productAdded');
             if (deleted > 0) {
-                notifyConnectedNav('productAdded', -deleted);
+                notifyConnectedNav('stockNewProductReceived', -deleted);
+            }
+            if (deletedListed > 0) {
+                notifyConnectedNav('productListed', -deletedListed);
             }
             setToast(response?.message ?? 'All products deleted.');
             await refresh();
@@ -680,7 +802,9 @@ export default function StockIn() {
                 product_id: receiveForm.product_id || null,
                 product_name: receiveForm.product_name || null,
                 custom_sku: receiveForm.sku || null,
+                custom_category: receiveForm.category || null,
                 current_stock: receiveForm.current_stock !== '' ? Number(receiveForm.current_stock) : null,
+                reorder_threshold: receiveForm.reorder_threshold !== '' ? Number(receiveForm.reorder_threshold) : null,
                 supplier_id: receiveForm.supplier_id || null,
                 quantity_received: receiveForm.quantity_received,
                 unit_of_measure: receiveForm.unit_of_measure || null,
@@ -769,14 +893,29 @@ export default function StockIn() {
 
         try {
             const merged = mergeSuggestions();
+            const baseName = String(merged.name ?? '').trim();
+            const specDigits = String(merged.spec_value ?? '').replace(/[^0-9]/g, '');
+            const unitMeta = RECEIVING_UNIT_OPTIONS.find((opt) => opt.value === merged.unit_choice);
+            const unitSuffix = merged.unit_choice === 'other'
+                ? String(merged.unit_other ?? '').trim()
+                : (unitMeta?.suffix ?? '');
+            const specSuffix = specDigits
+                ? (unitSuffix === 'AWG'
+                    ? `${specDigits} ${unitSuffix}`
+                    : `${specDigits}${unitSuffix}`)
+                : '';
+            const fullProductName = specSuffix && !baseName.toLowerCase().endsWith(specSuffix.toLowerCase())
+                ? `${baseName} ${specSuffix}`
+                : baseName;
 
             const response = await post('/api/inventory/stock-in', {
-                new_product_name: merged.name,
+                new_product_name: fullProductName,
                 custom_sku: merged.sku || null,
                 custom_category: merged.category || null,
                 unit_of_measure: merged.unit_choice === 'other' ? (merged.unit_other.trim() || null) : merged.unit_choice,
                 supplier_id: merged.supplier_id || null,
                 quantity_received: merged.quantity_received,
+                reorder_threshold: merged.reorder_threshold !== '' ? Number(merged.reorder_threshold) : 0,
                 note: merged.note_type === 'others' ? (merged.note || null) : 'Received',
             });
 
@@ -887,7 +1026,7 @@ export default function StockIn() {
                             <table className="table" aria-hidden="true">
                                 <thead>
                                     <tr>
-                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                                        {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
                                             <th key={i}>
                                                 <span className="skeleton skeleton-line skeleton-sm" style={{ width: '70%' }} />
                                             </th>
@@ -897,9 +1036,9 @@ export default function StockIn() {
                                 <tbody>
                                     {[0, 1, 2, 3, 4, 5].map((r) => (
                                         <tr key={r}>
-                                            {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((c) => (
+                                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((c) => (
                                                 <td key={c}>
-                                                    <span className="skeleton skeleton-line" style={{ width: c === 8 ? '62%' : '85%' }} />
+                                                    <span className="skeleton skeleton-line" style={{ width: c === 9 ? '62%' : '85%' }} />
                                                 </td>
                                             ))}
                                         </tr>
@@ -983,7 +1122,7 @@ export default function StockIn() {
                             <p className="muted">Create a catalogue entry and record its first received stock.</p>
                         </div>
                         <button type="button" className="btn btn-primary" onClick={openAdd}>
-                            Receive Stock
+                            Receive New Stock
                         </button>
                     </div>
                 </section>
@@ -1169,6 +1308,15 @@ export default function StockIn() {
                                         </th>
                                         <th
                                             className="sort-header"
+                                            onClick={() => toggleSort('reorder_threshold')}
+                                        >
+                                            Reorder<br />at
+                                            <span className={`sort-indicator${sortBy === 'reorder_threshold' ? ' is-active' : ''}`} aria-hidden="true">
+                                                {sortBy === 'reorder_threshold' && sortDir === 'desc' ? '▼' : '▲'}
+                                            </span>
+                                        </th>
+                                        <th
+                                            className="sort-header"
                                             onClick={() => toggleSort('receiving_unit')}
                                         >
                                             Unit
@@ -1215,6 +1363,7 @@ export default function StockIn() {
                                             <td className="mono">{product.sku}</td>
                                             <td>{product.category || '—'}</td>
                                             <td>{product.current_stock}</td>
+                                            <td>{product.reorder_threshold ?? 0}</td>
                                             <td>{product.receiving_unit || '—'}</td>
                                             <td>
                                                 {product.last_supplier_name
@@ -1606,7 +1755,7 @@ export default function StockIn() {
             )}
 
             {receiveOpen && (
-                <Modal bare noClose className="modal-edit" onClose={resetReceive}>
+                <Modal bare noClose className="modal-receive-wide" onClose={resetReceive}>
                     <form className="form" onSubmit={handleReceive}>
                         <div className="confirm-dialog confirm-dialog-info">
                             <span className="confirm-dialog-icon" aria-hidden="true">
@@ -1621,91 +1770,119 @@ export default function StockIn() {
                                 <p className="muted confirm-dialog-text">Log incoming delivery quantity for this product.</p>
                             </div>
                         </div>
-                        {/* Both fields are editable: the modal opens prefilled from
-                            the clicked row, and a corrected name or SKU is saved
-                            together with the receive. */}
-                        <div className="field-row">
-                            <label className="field">
-                                <span>Product name</span>
-                                <input
-                                    className="input"
-                                    type="text"
-                                    required
-                                    maxLength={255}
-                                    value={receiveForm.product_name}
-                                    onChange={(event) => setReceiveField('product_name', event.target.value)}
-                                />
-                            </label>
-                        </div>
 
-                        <div className="field-row">
-                            <label className="field">
-                                <span>SKU code</span>
-                                <input
-                                    className="input mono"
-                                    type="text"
-                                    maxLength={50}
-                                    value={receiveForm.sku}
-                                    onChange={(event) => setReceiveField('sku', event.target.value)}
-                                />
-                            </label>
-                            {selected && (
+                        <div className="receive-modal-grid">
+                            <div className="receive-modal-main">
+                                <div className="field-row">
+                                    <label className="field">
+                                        <span>Product name</span>
+                                        <input
+                                            className="input"
+                                            type="text"
+                                            required
+                                            maxLength={255}
+                                            value={receiveForm.product_name}
+                                            onChange={(event) => setReceiveField('product_name', event.target.value)}
+                                        />
+                                    </label>
+                                    <label className="field">
+                                        <span>On hand</span>
+                                        <input
+                                            className="input"
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            required
+                                            value={receiveForm.current_stock}
+                                            onChange={(event) => setReceiveField('current_stock', event.target.value)}
+                                        />
+                                    </label>
+                                </div>
+
+                                <div className="field-row">
+                                    <label className="field">
+                                        <span>Receiving unit</span>
+                                        <input
+                                            type="text"
+                                            className="input"
+                                            maxLength={20}
+                                            placeholder="e.g. piece"
+                                            {...receiveInput('unit_of_measure')}
+                                        />
+                                    </label>
+                                    <label className="field">
+                                        <span>Reorder threshold</span>
+                                        <input
+                                            className="input"
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            required
+                                            value={receiveForm.reorder_threshold}
+                                            onChange={(event) => setReceiveField('reorder_threshold', event.target.value)}
+                                        />
+                                    </label>
+                                </div>
+
+                                <div className="field-row">
+                                    <label className="field">
+                                        <span>SKU code</span>
+                                        <input
+                                            className="input mono"
+                                            type="text"
+                                            maxLength={50}
+                                            value={receiveForm.sku}
+                                            onChange={(event) => setReceiveField('sku', event.target.value)}
+                                        />
+                                    </label>
+                                    <label className="field">
+                                        <span>Received qty <span className="text-danger">*</span></span>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            step="1"
+                                            required
+                                            autoFocus
+                                            placeholder="e.g. 10"
+                                            {...receiveInput('quantity_received')}
+                                        />
+                                    </label>
+                                </div>
+
                                 <label className="field">
-                                    <span>On hand</span>
-                                    <input
-                                        className="input"
-                                        type="number"
-                                        min="0"
-                                        step="1"
-                                        required
-                                        value={receiveForm.current_stock}
-                                        onChange={(event) => setReceiveField('current_stock', event.target.value)}
-                                    />
+                                    <span>Note</span>
+                                    <input type="text" maxLength={255} placeholder="Delivery receipt #, remarks…" {...receiveInput('note')} />
                                 </label>
-                            )}
-                        </div>
+                            </div>
 
-                        <div className="field-row">
-                            <label className="field">
-                                <span>Supplier</span>
-                                <select className="input" {...receiveInput('supplier_id')}>
-                                    <option value="">No supplier</option>
-                                    {suppliers.map((supplier) => (
-                                        <option key={supplier.id} value={supplier.id}>
-                                            {supplier.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </label>
-                            <label className="field">
-                                <span>Receiving unit</span>
-                                <input
-                                    type="text"
-                                    className="input"
-                                    maxLength={20}
-                                    placeholder="e.g. Per piece"
-                                    {...receiveInput('unit_of_measure')}
-                                />
-                            </label>
-                        </div>
-
-                        <div className="field-row-split">
-                            <label className="field">
-                                <span>Received qty *</span>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    step="1"
-                                    required
-                                    autoFocus
-                                    placeholder="e.g. 10"
-                                    {...receiveInput('quantity_received')}
-                                />
-                            </label>
-                            <label className="field">
-                                <span>Note</span>
-                                <input type="text" maxLength={255} placeholder="Delivery receipt #, remarks…" {...receiveInput('note')} />
-                            </label>
+                            <div className="receive-modal-aside">
+                                <label className="field">
+                                    <span>Supplier</span>
+                                    <select className="input" {...receiveInput('supplier_id')}>
+                                        <option value="" disabled>No supplier</option>
+                                        {suppliers.map((supplier) => (
+                                            <option key={supplier.id} value={supplier.id}>
+                                                {supplier.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                                <label className="field">
+                                    <span>Category</span>
+                                    <select
+                                        className="input"
+                                        value={receiveForm.category}
+                                        onChange={(event) => setReceiveField('category', event.target.value)}
+                                    >
+                                        <option value="" disabled>No category</option>
+                                        {dropdownCategories.map((cat) => (
+                                            <option key={cat} value={cat}>
+                                                {cat}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            </div>
                         </div>
 
                         {receiveError && (
@@ -1736,7 +1913,7 @@ export default function StockIn() {
                                     <rect x="3" y="13" width="18" height="8" rx="2" />
                                 </svg>
                             </span>
-                            Receive stock
+                            Receive New Stock
                         </span>
                     )}
                     className="modal-receive-wide"
@@ -1757,10 +1934,123 @@ export default function StockIn() {
                                             placeholder="e.g. Paint Brush"
                                             autoFocus
                                             value={addForm.name}
-                                            onChange={(event) => setAddForm((current) => ({ ...current, name: event.target.value }))}
+                                            onChange={(event) => {
+                                                const nextName = event.target.value;
+                                                const rule = matchUnitSuggestion(nextName);
+                                                setShowAllUnits(false);
+                                                setAddForm((current) => {
+                                                    if (!unitTouchedRef.current && rule) {
+                                                        return { ...current, name: nextName, unit_choice: rule.defaultUnit };
+                                                    }
+                                                    return { ...current, name: nextName };
+                                                });
+                                            }}
                                             onKeyDown={handleNameTab}
                                         />
                                     </label>
+                                    <span aria-hidden="true" />
+                                </div>
+                                {(() => {
+                                    const rule = matchUnitSuggestion(addForm.name);
+                                    const unitOptionsToShow = rule && !showAllUnits
+                                        ? RECEIVING_UNIT_OPTIONS.filter((opt) => rule.units.includes(opt.value) || opt.value === addForm.unit_choice)
+                                        : RECEIVING_UNIT_OPTIONS;
+                                    const activeMeta = RECEIVING_UNIT_OPTIONS.find((opt) => opt.value === addForm.unit_choice);
+                                    const sizePlaceholder = activeMeta?.sizePlaceholder ?? rule?.sizePlaceholder ?? 'e.g. 1';
+
+                                    return (
+                                        <div className="field-row">
+                                            <div className="field">
+                                                <span className="field-label">Receiving unit <InfoTip text="Unit of measure for this product. Choose 'Other' to specify a custom unit." /></span>
+                                                {addForm.unit_choice === 'other' ? (
+                                                    <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                                                        <input
+                                                            type="text"
+                                                            className="input"
+                                                            style={{ paddingRight: 36 }}
+                                                            maxLength={20}
+                                                            placeholder="Specify unit…"
+                                                            autoFocus
+                                                            value={addForm.unit_other}
+                                                            onChange={(event) => setAddForm((current) => ({ ...current, unit_other: event.target.value }))}
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                unitTouchedRef.current = true;
+                                                                setAddForm((current) => ({ ...current, unit_choice: '', unit_other: '' }));
+                                                            }}
+                                                            title="Back to unit list"
+                                                            aria-label="Back to unit list"
+                                                            style={{
+                                                                position: 'absolute',
+                                                                right: 4,
+                                                                top: '50%',
+                                                                transform: 'translateY(-50%)',
+                                                                width: 28,
+                                                                height: 28,
+                                                                border: 'none',
+                                                                background: 'transparent',
+                                                                color: 'var(--muted)',
+                                                                cursor: 'pointer',
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                borderRadius: 6,
+                                                            }}
+                                                        >
+                                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <polyline points="6 9 12 15 18 9" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <select
+                                                        className="input"
+                                                        value={addForm.unit_choice}
+                                                        onChange={(event) => {
+                                                            const val = event.target.value;
+                                                            if (val === '__all__') {
+                                                                setShowAllUnits(true);
+                                                                return;
+                                                            }
+                                                            unitTouchedRef.current = val !== '';
+                                                            setAddForm((current) => ({ ...current, unit_choice: val }));
+                                                        }}
+                                                    >
+                                                        <option value="" disabled>Select unit</option>
+                                                        {unitOptionsToShow.map((opt) => (
+                                                            <option key={opt.value} value={opt.value}>
+                                                                {opt.label}
+                                                            </option>
+                                                        ))}
+                                                        {rule && !showAllUnits && (
+                                                            <option value="__all__">Show all units…</option>
+                                                        )}
+                                                        <option value="other">Other…</option>
+                                                    </select>
+                                                )}
+                                            </div>
+                                            <label className="field">
+                                                <span className="field-label">Product size <InfoTip text="Optional whole number size/spec (numbers only, no fractions). Combined with the unit." /></span>
+                                                <input
+                                                    type="text"
+                                                    inputMode="numeric"
+                                                    pattern="[0-9]*"
+                                                    className="input"
+                                                    maxLength={10}
+                                                    placeholder={sizePlaceholder}
+                                                    value={addForm.spec_value}
+                                                    onChange={(event) => {
+                                                        const digitsOnly = event.target.value.replace(/[^0-9]/g, '');
+                                                        setAddForm((current) => ({ ...current, spec_value: digitsOnly }));
+                                                    }}
+                                                />
+                                            </label>
+                                        </div>
+                                    );
+                                })()}
+                                <div className="field-row">
                                     <label className="field">
                                         <span className="field-label">Quantity received <InfoTip text="How many units were received in this stock-in." /><span className="text-danger">*</span></span>
                                         <input
@@ -1769,52 +2059,37 @@ export default function StockIn() {
                                             step="1"
                                             required
                                             placeholder="e.g. 10"
-                                            {...addInput('quantity_received')}
+                                            value={addForm.quantity_received}
+                                            onChange={(event) => {
+                                                const raw = event.target.value;
+                                                setAddForm((current) => {
+                                                    if (reorderTouchedRef.current) {
+                                                        return { ...current, quantity_received: raw };
+                                                    }
+                                                    const num = Number(raw);
+                                                    const half = raw !== '' && Number.isFinite(num) && num >= 0
+                                                        ? String(Math.floor(num / 2))
+                                                        : '';
+                                                    return { ...current, quantity_received: raw, reorder_threshold: half };
+                                                });
+                                            }}
                                         />
                                     </label>
-                                </div>
-                                <div className="choice-field">
-                                    <span className="field-label">Receiving unit <InfoTip text="The unit each quantity is counted in, such as per piece or per kilo." /></span>
-                                    <div className="choice-list">
-                                        <label className="choice-item">
-                                            <input
-                                                type="checkbox"
-                                                name="unit_choice"
-                                                checked={addForm.unit_choice === 'piece'}
-                                                onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'piece' ? '' : 'piece' }))}
-                                            />
-                                            <span>Per piece</span>
-                                        </label>
-                                        <label className="choice-item">
-                                            <input
-                                                type="checkbox"
-                                                name="unit_choice"
-                                                checked={addForm.unit_choice === 'kilogram'}
-                                                onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'kilogram' ? '' : 'kilogram' }))}
-                                            />
-                                            <span>Per kilo</span>
-                                        </label>
-                                        <div className="choice-item choice-item-other">
-                                            <label className="choice-item-radio">
-                                                <input
-                                                    type="checkbox"
-                                                    name="unit_choice"
-                                                    checked={addForm.unit_choice === 'other'}
-                                                    onChange={() => setAddForm((current) => ({ ...current, unit_choice: current.unit_choice === 'other' ? '' : 'other' }))}
-                                                />
-                                                <span>Other:</span>
-                                            </label>
-                                            <input
-                                                type="text"
-                                                className="input choice-item-input"
-                                                maxLength={20}
-                                                placeholder="Please specify"
-                                                value={addForm.unit_other}
-                                                onChange={(event) => setAddForm((current) => ({ ...current, unit_other: event.target.value }))}
-                                                disabled={addForm.unit_choice !== 'other'}
-                                            />
-                                        </div>
-                                    </div>
+                                    <label className="field">
+                                        <span className="field-label">Reorder threshold <InfoTip text="Low-stock alert threshold for this product. Defaults to half of Quantity received." /></span>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="1"
+                                            placeholder="e.g. 5"
+                                            value={addForm.reorder_threshold}
+                                            onChange={(event) => {
+                                                const val = event.target.value;
+                                                reorderTouchedRef.current = val !== '';
+                                                setAddForm((current) => ({ ...current, reorder_threshold: val }));
+                                            }}
+                                        />
+                                    </label>
                                 </div>
                                 <div className="field-row">
                                     <label className="field">
@@ -1823,9 +2098,9 @@ export default function StockIn() {
                                             type="text"
                                             className="mono"
                                             maxLength={50}
-                                            placeholder={suggestions.sku || 'e.g. PAI-BRU'}
+                                            placeholder={suggestions.sku || 'e.g. PAI-BRU-1in'}
                                             value={addForm.sku}
-                                            onChange={(event) => setAddForm((current) => ({ ...current, sku: event.target.value.toUpperCase() }))}
+                                            onChange={(event) => setAddForm((current) => ({ ...current, sku: event.target.value }))}
                                             onKeyDown={handleSuggestionTab('sku')}
                                             disabled={suggesting}
                                         />
@@ -1874,7 +2149,7 @@ export default function StockIn() {
                                 <label className="field">
                                     <span className="field-label">Supplier <InfoTip text="Supplier who delivered the stock. Choose 'No supplier' if none." /></span>
                                     <select className="input" {...addInput('supplier_id')}>
-                                        <option value="">No supplier</option>
+                                        <option value="" disabled>No supplier</option>
                                         {suppliers.map((supplier) => (
                                             <option key={supplier.id} value={supplier.id}>
                                                 {supplier.name}
@@ -1889,7 +2164,7 @@ export default function StockIn() {
                                         value={addForm.category}
                                         onChange={(event) => setAddForm((current) => ({ ...current, category: event.target.value }))}
                                     >
-                                        <option value="">No category</option>
+                                        <option value="" disabled>No category</option>
                                         {dropdownCategories.map((cat) => (
                                             <option key={cat} value={cat}>
                                                 {cat}

@@ -67,6 +67,7 @@ class InventoryController extends Controller
             'custom_category' => ['nullable', 'string', 'max:100'],
             'supplier_id' => ['nullable', 'integer', 'exists:suppliers,id'],
             'current_stock' => ['nullable', 'integer', 'min:0'],
+            'reorder_threshold' => ['nullable', 'integer', 'min:0'],
             'quantity_received' => ['required', 'integer', 'min:1'],
             // The Receiving Unit dropdown pre-selects the product's configured
             // unit, so this is normally automatic. An override is a deliberate
@@ -88,7 +89,7 @@ class InventoryController extends Controller
 
         // A hand-typed SKU must be free before we start the transaction;
         // otherwise the unique constraint would abort the whole receive.
-        $customSku = strtoupper(trim((string) ($validated['custom_sku'] ?? '')));
+        $customSku = trim((string) ($validated['custom_sku'] ?? ''));
         if ($customSku !== '') {
             $skuQuery = Product::where('sku', $customSku);
             if ($hasProductId) {
@@ -145,6 +146,21 @@ class InventoryController extends Controller
                         $product->current_stock = $editedOnHand;
                     }
                 }
+                if (array_key_exists('reorder_threshold', $validated) && $validated['reorder_threshold'] !== null) {
+                    $editedReorder = (int) $validated['reorder_threshold'];
+                    if ($editedReorder !== (int) $product->reorder_threshold) {
+                        $product->reorder_threshold = $editedReorder;
+                    }
+                }
+                $editedCategory = trim((string) ($validated['custom_category'] ?? ''));
+                if ($editedCategory !== '' && $editedCategory !== (string) $product->category) {
+                    $product->category = $editedCategory;
+                    $product->category_id = $this->resolveCategoryId($editedCategory);
+                }
+                $editedUnit = trim((string) ($validated['unit_of_measure'] ?? ''));
+                if ($editedUnit !== '' && $editedUnit !== (string) $product->receiving_unit) {
+                    $product->receiving_unit = $editedUnit;
+                }
                 if ($product->isDirty()) {
                     $product->save();
                 }
@@ -162,7 +178,7 @@ class InventoryController extends Controller
                     'category_id' => $this->resolveCategoryId($catName),
                     'price' => 0,
                     'current_stock' => 0,
-                    'reorder_threshold' => 0,
+                    'reorder_threshold' => (int) ($validated['reorder_threshold'] ?? 0),
                     'user_id' => $user->id,
                     'is_active' => true,
                     'is_listed' => false,
@@ -555,9 +571,26 @@ public function getProducts(Request $request): JsonResponse
             return response()->json(['message' => 'Authentication required.'], 401);
         }
 
+        // ?discontinue_queue=1 removes a blocked/deactivated item from the Product Queue List
+        // while keeping it listed in Stock Inventory with its status.
+        if ($request->boolean('discontinue_queue')) {
+            $product->update([
+                'is_active' => false,
+                'is_queue_dismissed' => true,
+            ]);
+
+            return response()->json([
+                'message' => 'Product marked as discontinued and removed from queue.',
+                'product' => $product->fresh(),
+            ]);
+        }
+
         // ?reactivate=1 brings a discontinued item back into the catalogue.
         if ($request->boolean('reactivate')) {
-            $product->update(['is_active' => true]);
+            $product->update([
+                'is_active' => true,
+                'is_queue_dismissed' => false,
+            ]);
 
             ActivityLogger::safe(fn () => ActivityLogger::productReactivated($user, $product));
 
@@ -649,12 +682,14 @@ public function getProducts(Request $request): JsonResponse
     /**
      * Seed 7 sample hardware products for quick pagination / table testing.
      */
-    public function seed(): JsonResponse
+    public function seed(Request $request): JsonResponse
     {
         $user = $this->currentUser();
         if (! $user) {
             return response()->json(['message' => 'Authentication required.'], 401);
         }
+
+        $queued = $request->boolean('queued');
 
         $samples = [
             ['name' => 'Claw Hammer 16oz', 'category' => 'Hand Tools', 'price' => 245, 'current_stock' => 24, 'reorder_threshold' => 10, 'receiving_unit' => 'piece'],
@@ -663,7 +698,7 @@ public function getProducts(Request $request): JsonResponse
             ['name' => 'PVC Pipe 1/2in 3m', 'category' => 'Plumbing', 'price' => 95, 'current_stock' => 0, 'reorder_threshold' => 12, 'receiving_unit' => 'piece'],
             ['name' => 'THHN Wire 12 AWG', 'category' => 'Electrical', 'price' => 38, 'current_stock' => 80, 'reorder_threshold' => 25, 'receiving_unit' => 'meter'],
             ['name' => 'Common Wire Nails 2in', 'category' => 'Fasteners', 'price' => 85, 'current_stock' => 6, 'reorder_threshold' => 10, 'receiving_unit' => 'kilogram'],
-            ['name' => 'Heavy Duty Padlock 50mm', 'category' => 'Hardware', 'price' => 190, 'current_stock' => 0, 'reorder_threshold' => 8, 'receiving_unit' => 'piece'],
+            ['name' => 'Cordless Drill 18V', 'category' => 'Power Tools', 'price' => 1850, 'current_stock' => 12, 'reorder_threshold' => 5, 'receiving_unit' => 'piece'],
         ];
 
         $suppliers = Supplier::active()->orderBy('id')->get();
@@ -705,12 +740,13 @@ public function getProducts(Request $request): JsonResponse
                 'sku' => $this->generateSku($name),
                 'category' => $sample['category'],
                 'category_id' => $this->resolveCategoryId($sample['category']),
-                'price' => $sample['price'],
+                'price' => $queued ? 0 : $sample['price'],
                 'current_stock' => $sample['current_stock'],
                 'reorder_threshold' => $sample['reorder_threshold'],
                 'receiving_unit' => $sample['receiving_unit'],
                 'is_active' => true,
-                'is_listed' => true,
+                'is_listed' => ! $queued,
+                'is_queue_dismissed' => false,
             ]);
 
             $supplier = $suppliers->isNotEmpty()
@@ -736,7 +772,9 @@ public function getProducts(Request $request): JsonResponse
         }
 
         return response()->json([
-            'message' => "{$created} sample products added.",
+            'message' => $queued
+                ? "{$created} sample stock items received and queued on Products."
+                : "{$created} sample products added.",
             'created' => $created,
         ], 201);
     }
@@ -754,16 +792,21 @@ public function getProducts(Request $request): JsonResponse
         $products = Product::all();
 
         if ($products->isEmpty()) {
-            return response()->json(['message' => 'No products to delete.', 'deleted' => 0]);
+            return response()->json(['message' => 'No products to delete.', 'deleted' => 0, 'deleted_listed' => 0]);
         }
 
         $deleted = 0;
+        $deletedListed = 0;
         $skipped = 0;
 
         foreach ($products as $product) {
+            $wasListed = (bool) $product->is_listed;
             try {
                 $product->delete();
                 $deleted++;
+                if ($wasListed) {
+                    $deletedListed++;
+                }
             } catch (\Illuminate\Database\QueryException) {
                 $skipped++;
             }
@@ -779,6 +822,10 @@ public function getProducts(Request $request): JsonResponse
             ? "Deleted {$deleted} product(s) ({$skipped} kept due to linked transaction or stock history)."
             : "All products deleted ({$deleted}).";
 
-        return response()->json(['message' => $msg, 'deleted' => $deleted]);
+        return response()->json([
+            'message' => $msg,
+            'deleted' => $deleted,
+            'deleted_listed' => $deletedListed,
+        ]);
     }
 }

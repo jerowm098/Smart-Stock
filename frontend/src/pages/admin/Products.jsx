@@ -234,6 +234,7 @@ function stockState(product) {
 export default function Products() {
     const [products, setProducts] = useState([]);
     const [suppliers, setSuppliers] = useState([]);
+    const [categoriesList, setCategoriesList] = useState([]);
     const [defectCount, setDefectCount] = useState(null);
     const [activity, setActivity] = useState([]);
     // The activity row whose detail popup is currently open (null = closed).
@@ -335,7 +336,7 @@ export default function Products() {
         // times before surfacing the error, so a transient hiccup never flashes.
         const fetchProducts = async (attempt = 0) => {
             try {
-                const [rows, defects, feed, supplierRows] = await Promise.all([
+                const [rows, defects, feed, supplierRows, categoryRes] = await Promise.all([
                     get('/api/inventory/products'),
                     get('/api/inventory/defects').catch(() => null),
                     // Products page feed is scoped to product actions only —
@@ -345,8 +346,9 @@ export default function Products() {
                         actions: 'product_created,product_updated,product_deactivated,product_reactivated,stock_adjusted',
                     }).catch(() => null),
                     get('/api/suppliers/active').catch(() => []),
+                    get('/api/categories').catch(() => null),
                 ]);
-                return { rows, defects, feed, supplierRows };
+                return { rows, defects, feed, supplierRows, categoryRes };
             } catch (err) {
                 const retryable = !err.status || err.status >= 500;
                 if (retryable && attempt < 2) {
@@ -358,9 +360,11 @@ export default function Products() {
         };
 
         try {
-            const { rows, defects, feed, supplierRows } = await fetchProducts();
+            const { rows, defects, feed, supplierRows, categoryRes } = await fetchProducts();
             setProducts(Array.isArray(rows) ? rows : []);
             setSuppliers(Array.isArray(supplierRows) ? supplierRows : []);
+            const rawCats = categoryRes?.categories ?? categoryRes;
+            setCategoriesList(Array.isArray(rawCats) ? rawCats : []);
             if (defects && typeof defects.defect_count === 'number') {
                 setDefectCount(defects.defect_count);
             }
@@ -448,7 +452,7 @@ export default function Products() {
     }, [products, loading]);
 
     const queuedProducts = useMemo(
-        () => products.filter((product) => product.is_listed === false),
+        () => products.filter((product) => product.is_listed === false && !product.is_queue_dismissed),
         [products],
     );
 
@@ -1103,6 +1107,45 @@ export default function Products() {
         }
     }
 
+    async function handleDiscontinueQueue() {
+        if (!editProduct || editSaving) return;
+        setEditSaving(true);
+        setEditError(null);
+
+        try {
+            const response = await del(`/api/inventory/${editProduct.id}?discontinue_queue=1`);
+            setMessage(response?.message ?? 'Product marked as discontinued and removed from queue.');
+            setEditProduct(null);
+            setEditFromQueue(false);
+            await refresh();
+        } catch (err) {
+            setEditError(validationMessages(err)[0] ?? err.message ?? 'Could not discontinue product.');
+        } finally {
+            setEditSaving(false);
+        }
+    }
+
+    const getQueueBlockReason = useCallback((product) => {
+        if (!product) return null;
+        if (product.last_supplier_active === false) return 'Inactive supplier';
+        if (product.is_active === false || product.is_active === 0) return 'Deactivated';
+        const cat = String(product.category ?? '').trim();
+        if (
+            cat &&
+            cat.toLowerCase() !== 'uncategorized' &&
+            categoriesList.length > 0 &&
+            !categoriesList.some((c) => String(c?.name ?? '').trim().toLowerCase() === cat.toLowerCase())
+        ) {
+            return 'Removed category';
+        }
+        return null;
+    }, [categoriesList]);
+
+    const queueBlockReason = useMemo(
+        () => (editFromQueue ? getQueueBlockReason(editProduct) : null),
+        [editFromQueue, editProduct, getQueueBlockReason],
+    );
+
     function toggleSort(field) {
         if (sortBy === field) {
             if (sortDir === 'asc') {
@@ -1211,9 +1254,17 @@ export default function Products() {
             const response = await del('/api/inventory');
             setDeleteAllConfirm(false);
             const deleted = Number(response?.deleted) || 0;
+            const deletedListed = Number(response?.deleted_listed) || 0;
             clearConnectedNav('productAdded');
             if (deleted > 0) {
-                notifyConnectedNav('productAdded', -deleted);
+                notifyConnectedNav('productAdded', -deleted, '/products');
+            }
+            if (deletedListed !== deleted) {
+                // Only show the actually-listed count on POS Checkout.
+                clearConnectedNav('productListed');
+                if (deletedListed > 0) {
+                    notifyConnectedNav('productListed', -deletedListed);
+                }
             }
             setMessage(response?.message ?? 'All products deleted.');
             await refresh();
@@ -1491,11 +1542,6 @@ export default function Products() {
                                 <h3>Product Queue List</h3>
                                 <p className="muted">Received stock waiting for complete product details before being listed.</p>
                             </div>
-                            {queuedProducts.length > 0 && (
-                                <span className="pill pill-warn">
-                                    {queuedProducts.length} pending
-                                </span>
-                            )}
                         </div>
                         {queuedProducts.length === 0 ? (
                             <div className="table-empty">
@@ -1513,39 +1559,47 @@ export default function Products() {
                             <>
                                 <div className="activity-shell">
                                     <ul className="activity-list">
-                                        {pagedQueue.map((product) => (
-                                            <li key={product.id}>
-                                                <button
-                                                    type="button"
-                                                    className="activity-row"
-                                                    onClick={() => openEdit(product, true)}
-                                                    aria-label={`Complete and add ${product.name}`}
-                                                >
-                                                    <span className="activity-icon activity-icon-warn" aria-hidden="true">
-                                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
-                                                            <path d="m3.3 7 8.7 5 8.7-5" />
-                                                            <path d="M12 22V12" />
-                                                        </svg>
-                                                    </span>
-                                                    <div className="activity-body">
-                                                        <p className="activity-desc" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                                            <span>{product.name}</span>
-                                                            <span className="activity-role">{product.current_stock} {product.receiving_unit || 'piece'}</span>
-                                                        </p>
-                                                        <p className="activity-meta muted">
-                                                            <span className="mono">{product.sku}</span>
-                                                        </p>
-                                                    </div>
-                                                    <time
-                                                        className="activity-time muted"
-                                                        dateTime={product.last_received_at ?? product.created_at ?? undefined}
+                                        {pagedQueue.map((product) => {
+                                            const reason = getQueueBlockReason(product);
+                                            return (
+                                                <li key={product.id}>
+                                                    <button
+                                                        type="button"
+                                                        className="activity-row"
+                                                        onClick={() => openEdit(product, true)}
+                                                        aria-label={`Complete and add ${product.name}`}
                                                     >
-                                                        {timeAgo(product.last_received_at ?? product.created_at)}
-                                                    </time>
-                                                </button>
-                                            </li>
-                                        ))}
+                                                        <span className={`activity-icon ${reason ? 'activity-icon-danger' : 'activity-icon-warn'}`} aria-hidden="true">
+                                                            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+                                                                <path d="m3.3 7 8.7 5 8.7-5" />
+                                                                <path d="M12 22V12" />
+                                                            </svg>
+                                                        </span>
+                                                        <div className="activity-body">
+                                                            <p className="activity-desc" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                                                <span>{product.name}</span>
+                                                                <span className="activity-role">{product.current_stock} {product.receiving_unit || 'piece'}</span>
+                                                            </p>
+                                                            <p className="activity-meta muted">
+                                                                <span className="mono">{product.sku}</span>
+                                                            </p>
+                                                        </div>
+                                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
+                                                            <span className={`pill ${reason ? 'pill-danger' : 'pill-warn'}`}>
+                                                                {reason || 'Pending'}
+                                                            </span>
+                                                            <time
+                                                                className="activity-time muted"
+                                                                dateTime={product.last_received_at ?? product.created_at ?? undefined}
+                                                            >
+                                                                {timeAgo(product.last_received_at ?? product.created_at)}
+                                                            </time>
+                                                        </div>
+                                                    </button>
+                                                </li>
+                                            );
+                                        })}
                                     </ul>
                                 </div>
                                 {queuedProducts.length > QUEUE_PER_PAGE && (
@@ -2265,7 +2319,7 @@ export default function Products() {
                                 value={editForm.supplier_id ?? ''}
                                 onChange={(event) => setEditForm((c) => ({ ...c, supplier_id: event.target.value }))}
                             >
-                                <option value="">No supplier</option>
+                                <option value="" disabled>No supplier</option>
                                 {editProduct.last_supplier_id &&
                                     editProduct.last_supplier_name &&
                                     editProduct.last_supplier_active !== false &&
@@ -2287,15 +2341,34 @@ export default function Products() {
                             )}
                         </label>
 
+                        {queueBlockReason && (
+                            <div className="alert alert-error" role="alert">
+                                <span>
+                                    Cannot add to Product List ({queueBlockReason}). Click <strong>Discontinued</strong> to remove it from the queue.
+                                </span>
+                            </div>
+                        )}
+
                         {editError && <div className="alert alert-error" role="alert"><span>{editError}</span></div>}
 
                         <div className="modal-actions modal-actions-center">
                             <button type="button" className="btn btn-ghost" onClick={() => { setEditProduct(null); setEditFromQueue(false); }}>Cancel</button>
-                            <button type="submit" className="btn btn-primary" disabled={editSaving}>
-                                {editFromQueue
-                                    ? (editSaving ? 'Adding…' : 'Add product')
-                                    : (editSaving ? 'Saving…' : 'Save changes')}
-                            </button>
+                            {queueBlockReason ? (
+                                <button
+                                    type="button"
+                                    className="btn btn-danger"
+                                    disabled={editSaving}
+                                    onClick={handleDiscontinueQueue}
+                                >
+                                    {editSaving ? 'Discontinuing…' : 'Discontinued'}
+                                </button>
+                            ) : (
+                                <button type="submit" className="btn btn-primary" disabled={editSaving}>
+                                    {editFromQueue
+                                        ? (editSaving ? 'Adding…' : 'Add product')
+                                        : (editSaving ? 'Saving…' : 'Save changes')}
+                                </button>
+                            )}
                         </div>
                     </form>
                 </Modal>

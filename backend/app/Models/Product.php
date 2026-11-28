@@ -55,6 +55,7 @@ class Product extends Model
         'reorder_threshold',
         'is_active',
         'is_listed',
+        'is_queue_dismissed',
         'receiving_unit',
         'pieces_per_receiving_unit',
     ];
@@ -72,6 +73,7 @@ class Product extends Model
             'reorder_threshold' => 'integer',
             'is_active' => 'boolean',
             'is_listed' => 'boolean',
+            'is_queue_dismissed' => 'boolean',
             'pieces_per_receiving_unit' => 'integer',
         ];
     }
