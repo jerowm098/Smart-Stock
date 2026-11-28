@@ -645,7 +645,7 @@ export default function Users() {
                                         if (sortedUsers.length === 0) {
                                             setEmptyNotice({
                                                 title: 'No users to delete',
-                                                description: 'There are no other user accounts in the table. Add an account or add the 7 sample users first.',
+                                                description: 'There are no other user accounts in the table. Create an account first.',
                                             });
                                             return;
                                         }
@@ -674,9 +674,11 @@ export default function Users() {
                                 <thead>
                                     <tr>
                                         <th className="sort-header" onClick={() => toggleSort('name')}>
-                                            Full<br />name
-                                            <span className={`sort-indicator${sortBy === 'name' ? ' is-active' : ''}`} aria-hidden="true">
-                                                {sortBy === 'name' && sortDir === 'desc' ? '▼' : '▲'}
+                                            <span className="sort-header-inner">
+                                                <span>Full<br />name</span>
+                                                <span className={`sort-indicator${sortBy === 'name' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'name' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
                                             </span>
                                         </th>
                                         <th className="sort-header" onClick={() => toggleSort('username')}>
@@ -803,7 +805,7 @@ export default function Users() {
                                         </svg>
                                     </span>
                                     <p className="table-empty-title">No other accounts yet</p>
-                                    <p className="table-empty-sub">Create an account or add the 7 sample users to populate this list.</p>
+                                    <p className="table-empty-sub">Create an account to populate this list.</p>
                                 </div>
                             )}
                         </div>

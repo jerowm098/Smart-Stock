@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import NotificationBell from '../components/NotificationBell.jsx';
 import ThemeToggle from '../components/ThemeToggle.jsx';
 import UserMenu from '../components/UserMenu.jsx';
@@ -30,18 +30,18 @@ const ADMIN_NAV = [
         ],
     },
     {
-        label: 'Catalog',
+        label: 'Management',
         items: [
             { to: '/stock-in', label: 'Stock Inventory', icon: 'inbox' },
-            { to: '/categories', label: 'Categories', icon: 'tag' },
-            { to: '/suppliers', label: 'Suppliers', icon: 'truck' },
+            { to: '/products', label: 'Products', icon: 'box' },
+            { to: '/checkout', label: 'POS Checkout', icon: 'cart' },
         ],
     },
     {
-        label: 'Management',
+        label: 'Catalog',
         items: [
-            { to: '/products', label: 'Products', icon: 'box' },
-            { to: '/checkout', label: 'POS Checkout', icon: 'cart' },
+            { to: '/categories', label: 'Categories', icon: 'tag' },
+            { to: '/suppliers', label: 'Suppliers', icon: 'truck' },
         ],
     },
     {
@@ -98,6 +98,7 @@ function Icon({ name }) {
         database: 'M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125',
         cart: 'M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z',
         report: 'M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25M9 17.25v-2.25m3 2.25v-4.5m3 4.5v-6m3.75 7.5H6a2.25 2.25 0 01-2.25-2.25V5.25A2.25 2.25 0 016 3h4.5l6.75 6.75v9a2.25 2.25 0 01-2.25 2.25z',
+        back: 'M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18',
     };
 
     return (
@@ -110,6 +111,7 @@ function Icon({ name }) {
 export default function AppLayout() {
     const { user } = useAuth();
     const location = useLocation();
+    const navigate = useNavigate();
     const [menuOpen, setMenuOpen] = useState(false);
     const [navBadges, setNavBadges] = useState(() => readNavBadges());
     const scrollRef = useRef(null);
@@ -134,6 +136,10 @@ export default function AppLayout() {
     const navItems = nav.flatMap((section) => section.items);
     const current = navItems.find((item) => location.pathname.startsWith(item.to));
     const title = current?.label ?? 'Smart-Stock';
+    const isSupplierFromStockIn =
+        user?.role === 'admin'
+        && location.pathname.startsWith('/suppliers')
+        && Boolean(location.state?.fromStockIn);
 
     // Close the mobile drawer whenever the route changes.
     useEffect(() => {
@@ -172,7 +178,26 @@ export default function AppLayout() {
                 <div className="role-chip">{user?.role === 'admin' ? 'Administrator' : 'Cashier'}</div>
 
                 <nav className="nav">
-                    {nav.map((section, index) => (
+                    {isSupplierFromStockIn ? (
+                        <div className="nav-group">
+                            <button
+                                type="button"
+                                className="nav-back-btn"
+                                onClick={() => navigate('/stock-in')}
+                            >
+                                <Icon name="back" />
+                                <span>Back</span>
+                            </button>
+                            <NavLink
+                                to="/suppliers"
+                                state={{ fromStockIn: true }}
+                                className="nav-link is-active"
+                            >
+                                <Icon name="truck" />
+                                <span>Suppliers</span>
+                            </NavLink>
+                        </div>
+                    ) : nav.map((section, index) => (
                         <div className="nav-group" key={section.label ?? index}>
                             {section.label && <p className="nav-group-label">{section.label}</p>}
                             {section.items.map((item) => {

@@ -9,6 +9,7 @@ use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\PosCheckoutController;
 use App\Http\Controllers\ProductSuggestionController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\SystemResetController;
 use App\Http\Controllers\TransactionSuggestionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\Auth\AuthController;
@@ -147,6 +148,11 @@ Route::middleware('auth')->group(function () {
     // The header account menu edits the "Currently Using" account from here;
     // /api/users remains the Admin-only surface for every OTHER account.
     Route::put('/api/account', [AccountController::class, 'update'])->name('account.update');
+
+    // Overall system data reset (Admin only, password-confirmed).
+    Route::post('/api/system/clear-all', [SystemResetController::class, 'clearAll'])
+        ->name('system.clearAll')
+        ->middleware(EnsureUserIsAdmin::class);
 
     // User management API (Admin only) — BRD (Account Management)
     Route::get('/api/users', [UserController::class, 'list'])->name('users.index')->middleware(EnsureUserIsAdmin::class);

@@ -17,20 +17,24 @@ const EVENT_NAME = 'smart-stock:nav-badges';
 export const NAV_CONNECTIONS = {
     // New product row appears in Products table, Stock Inventory receiving table, and POS Checkout catalog
     productAdded: ['/products', '/stock-in', '/checkout'],
-    // Creating a new product via Stock-In goes to the Products page Queue List first
-    stockNewProductReceived: ['/products'],
-    // Completing a queued product on Products lists it into the POS Checkout catalog
-    productListed: ['/checkout'],
-    // Deactivating / reactivating a product updates its status in Products table and removes/restores it in POS Checkout catalog
-    productDeactivated: ['/products', '/checkout'],
-    productReactivated: ['/products', '/checkout'],
+    // Receiving a new stock item sends it to Products for pricing first (not POS Checkout yet)
+    stockReceivedNew: ['/products'],
+    // Setting a price (> 0) on an unpriced product publishes it to POS Checkout
+    productPriced: ['/checkout'],
+    // Deactivating / reactivating a product updates its status across Stock Inventory, Products, and POS Checkout
+    productDeactivated: ['/stock-in', '/products', '/checkout'],
+    productReactivated: ['/stock-in', '/products', '/checkout'],
     // Completing a POS sale creates a new receipt row in Transactions table
     saleCompleted: ['/transactions'],
-    // New active restock suggestions appear in Overview's Restock Suggestions table
-    suggestionAdded: ['/dashboard'],
+    // Active restock suggestions stay synced between Overview's Restock Suggestions table and Order Suggestions
+    suggestionAdded: ['/dashboard', '/order-suggestions'],
 
     // Removing a supplier deactivates linked products across Stock Inventory, Products, and POS Checkout
     supplierRemoved: ['/stock-in', '/products', '/checkout'],
+
+    // Auto-created categories / suppliers when seeding linked sample products
+    categoriesSynced: ['/categories'],
+    suppliersSynced: ['/suppliers'],
 
     // Pages whose additions only affect their own table (or dropdowns/stat cards elsewhere)
     categoryAdded: [],
@@ -135,6 +139,13 @@ export function clearConnectedNav(eventKey) {
     if (changed) {
         writeNavBadges(next);
     }
+}
+
+/**
+ * Clear every unread sidebar badge across all tabs (used after an overall clear-all).
+ */
+export function clearAllNavBadges() {
+    writeNavBadges({});
 }
 
 /**
