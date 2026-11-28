@@ -29,6 +29,7 @@ class ProductSuggestionController extends Controller
 
         $validated = $request->validate([
             'name'            => ['required', 'string', 'max:255'],
+            'spec'            => ['nullable', 'string', 'max:40'],
             'sku'             => ['nullable', 'string', 'max:50'],
             'category'        => ['nullable', 'string', 'max:100'],
             'unit'            => ['nullable', 'string', 'max:30'],
@@ -36,9 +37,20 @@ class ProductSuggestionController extends Controller
         ]);
 
         $unit = $validated['unit'] ?? ($validated['receiving_unit'] ?? null);
-        $prompt = ! empty($unit)
-            ? $this->buildPricePrompt(['name' => $validated['name'], 'unit' => $unit])
-            : $this->buildPrompt($validated);
+        if (empty($unit)) {
+            $code = SkuGenerator::next($validated['name'], $validated['spec'] ?? null);
+
+            return response()->json([
+                'suggestion' => [
+                    'sku' => $code,
+                    'category' => '',
+                ],
+                'model_used' => 'local-sku-generator',
+                'provider'   => 'local',
+            ]);
+        }
+
+        $prompt = $this->buildPricePrompt(['name' => $validated['name'], 'unit' => $unit]);
 
         // Try Gemini (primary) first, then Ollama (fallback). Each service has
         // its own ordered model chain.

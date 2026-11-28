@@ -23,37 +23,82 @@ use App\Models\Product;
  */
 class SkuGenerator
 {
-    /** Hard cap on the number of words in a generated code. */
-    private const MAX_SEGMENTS = 3;
-
-    /** How many random alphanumeric characters to append as the filler segment. */
-    private const SUFFIX_LENGTH = 6;
+    /** Max number of 3-letter English word segments from the product name. */
+    private const MAX_NAME_SEGMENTS = 2;
 
     /**
-     * Collision-free code for the given product name, capped at 3 words.
+     * Build a clean, collision-free SKU:
+     *   - 1 word + spec:  "nail" + "1in"               -> "NAI-1in"
+     *   - 2 words + spec: "Paint Brush" + "1in"        -> "PAI-BRU-1in"
+     *   - 3+ words + spec: "Latex Paint White" + "4L"  -> "LAT-PAI-4L"
+     *   - No spec yet:    "Paint Brush"                -> "PAI-BRU"
      */
-    public static function next(string $name): string
+    public static function next(string $name, ?string $spec = null): string
     {
-        $segments = HardwareTerms::skuSegments($name);
+        $baseName = trim($name);
+        $specToken = self::normalizeSpec($spec);
 
-        // A name that already fills all three words needs no random filler.
-        if (count($segments) >= self::MAX_SEGMENTS) {
-            $prefix = implode('-', array_slice($segments, 0, self::MAX_SEGMENTS));
-
-            return self::uniquify($prefix);
+        // If no explicit spec was passed, extract a trailing size+unit token
+        // (e.g. "Latex Paint White 4L" -> base "Latex Paint White", spec "4L").
+        if ($specToken === '' && preg_match('/\s+(\d+(?:\/\d+)?)\s*(oz|in|mm|cm|m|ft|kg|g|L|mL|gal|V|W|AWG)\s*$/i', $baseName, $m)) {
+            $specToken = self::normalizeSpec($m[1] . $m[2]);
+            $baseName = trim(substr($baseName, 0, -strlen($m[0])));
         }
 
-        $prefix = implode('-', $segments);
-        do {
-            $candidate = $prefix . '-' . self::randomSuffix(self::SUFFIX_LENGTH);
-        } while (Product::where('sku', $candidate)->exists());
+        // Convert Filipino/English name to English 3-letter segments, capped at 2 words.
+        $wordSegments = array_slice(HardwareTerms::skuSegments($baseName), 0, self::MAX_NAME_SEGMENTS);
+        $prefix = implode('-', $wordSegments);
 
-        return $candidate;
+        $code = $specToken !== ''
+            ? ($prefix !== '' ? $prefix . '-' . $specToken : $specToken)
+            : ($prefix !== '' ? $prefix : 'ITM');
+
+        return self::uniquify($code);
     }
 
     /**
-     * Ensure a no-suffix code is unique; if it is already taken, append a random
-     * segment so we never return a duplicate.
+     * Normalize a size+unit spec token (e.g. "1 in" -> "1in", "4 l" -> "4L").
+     */
+    private static function normalizeSpec(?string $spec): string
+    {
+        $clean = preg_replace('/\s+/', '', trim((string) $spec));
+        if ($clean === '') {
+            return '';
+        }
+
+        // Preserve canonical unit casing for common hardware units.
+        $unitMap = [
+            'oz' => 'oz',
+            'in' => 'in',
+            'mm' => 'mm',
+            'cm' => 'cm',
+            'm' => 'm',
+            'ft' => 'ft',
+            'kg' => 'kg',
+            'g' => 'g',
+            'l' => 'L',
+            'ml' => 'mL',
+            'gal' => 'gal',
+            'v' => 'V',
+            'w' => 'W',
+            'awg' => 'AWG',
+            'pc' => 'pc',
+            'bx' => 'bx',
+            'sck' => 'sck',
+        ];
+
+        if (preg_match('/^([0-9]+(?:\/[0-9]+)?)([a-zA-Z]+)$/', $clean, $m)) {
+            $unitKey = strtolower($m[2]);
+            $canonical = $unitMap[$unitKey] ?? $m[2];
+
+            return $m[1] . $canonical;
+        }
+
+        return $clean;
+    }
+
+    /**
+     * Ensure the generated code is unique; if already taken, append -2, -3, ...
      */
     private static function uniquify(string $code): string
     {
@@ -61,27 +106,11 @@ class SkuGenerator
             return $code;
         }
 
-        do {
-            $candidate = $code . '-' . self::randomSuffix(self::SUFFIX_LENGTH);
-        } while (Product::where('sku', $candidate)->exists());
-
-        return $candidate;
-    }
-
-    /**
-     * Cryptographically-random uppercase alphanumeric string (no ambiguous
-     * characters like 0/O or 1/I so codes are easy to read over the counter).
-     */
-    private static function randomSuffix(int $length): string
-    {
-        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-        $max = strlen($alphabet) - 1;
-        $out = '';
-
-        for ($i = 0; $i < $length; $i++) {
-            $out .= $alphabet[random_int(0, $max)];
+        $suffix = 2;
+        while (Product::where('sku', $code . '-' . $suffix)->exists()) {
+            $suffix++;
         }
 
-        return $out;
+        return $code . '-' . $suffix;
     }
 }
