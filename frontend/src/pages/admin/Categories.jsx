@@ -492,7 +492,7 @@ export default function Categories() {
                                         if (sortedCategories.length === 0) {
                                             setEmptyNotice({
                                                 title: 'No categories to delete',
-                                                description: 'The category list is already empty. Add a category or add the 7 sample categories first.',
+                                                description: 'The category list is already empty. Add a category first.',
                                             });
                                             return;
                                         }
@@ -599,7 +599,7 @@ export default function Categories() {
                                     </svg>
                                 </span>
                                 <p className="table-empty-title">No categories yet</p>
-                                <p className="table-empty-sub">Add a category or add the 7 sample categories to populate this list.</p>
+                                <p className="table-empty-sub">Add a category to populate this list.</p>
                             </div>
                         )}
                     </div>

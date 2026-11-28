@@ -177,13 +177,13 @@ class CategoryController extends Controller
         }
 
         $samples = [
-            ['name' => 'Hand Tools', 'description' => 'Hammers, screwdrivers, pliers, and wrenches.'],
-            ['name' => 'Power Tools', 'description' => 'Drills, grinders, saws, and corded equipment.'],
-            ['name' => 'Building Materials', 'description' => 'Cement, sand, gravel, plywood, and lumber.'],
-            ['name' => 'Paints & Coatings', 'description' => 'Latex paint, primer, thinner, and rollers.'],
+            ['name' => 'Hand Tools', 'description' => 'Manual carpentry and workshop hand tools.'],
+            ['name' => 'Building Materials', 'description' => 'Cement, lumber, aggregates, and structural supplies.'],
+            ['name' => 'Paints & Coatings', 'description' => 'Interior and exterior paints, primers, rollers, and brushes.'],
             ['name' => 'Plumbing', 'description' => 'PVC pipes, fittings, valves, and sealants.'],
-            ['name' => 'Electrical', 'description' => 'Wires, breakers, outlets, and conduits.'],
+            ['name' => 'Electrical', 'description' => 'Wires, conduits, switches, breakers, and lighting.'],
             ['name' => 'Fasteners', 'description' => 'Nails, screws, bolts, anchors, and washers.'],
+            ['name' => 'Power Tools', 'description' => 'Cordless drills, grinders, saws, and electric equipment.'],
         ];
 
         $created = 0;
