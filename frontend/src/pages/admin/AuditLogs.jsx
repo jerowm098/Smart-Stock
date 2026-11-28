@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import Modal from '../../components/Modal.jsx';
 import { get } from '../../lib/api.js';
@@ -7,8 +7,8 @@ const PER_PAGE = 6;
 
 const MODULES = [
     { value: '', label: 'All modules' },
-    { value: 'product', label: 'Products' },
     { value: 'stock', label: 'Stock Inventory' },
+    { value: 'product', label: 'Products' },
     { value: 'category', label: 'Categories' },
     { value: 'supplier', label: 'Suppliers' },
     { value: 'transaction', label: 'Transactions' },
@@ -17,10 +17,22 @@ const MODULES = [
     { value: 'backup', label: 'Backups' },
 ];
 
+const SORT_FIELDS = {
+    timestamp: (item) => new Date(item.created_at || 0).getTime(),
+    user: (item) => item.user_name ?? '',
+    action: (item) => cleanDisplayText(item.description || item.action_label),
+    module: (item) => item.module ?? '',
+};
+
+/** Hide the `.json` extension on backup filenames in display text (downloads stay `.json`). */
+function cleanDisplayText(text) {
+    return String(text ?? '').replace(/\.json\b/gi, '');
+}
+
 function activityChanges(item) {
     const explicit = item?.meta?.changes;
     if (Array.isArray(explicit) && explicit.length > 0) {
-        return explicit.map((c) => c.text ?? String(c));
+        return explicit.map((c) => cleanDisplayText(c.text ?? String(c)));
     }
     return [];
 }
@@ -39,6 +51,8 @@ export default function AuditLogs() {
     const [moduleFilter, setModuleFilter] = useState('');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo] = useState('');
+    const [sortBy, setSortBy] = useState(null);
+    const [sortDir, setSortDir] = useState(null);
     const [detail, setDetail] = useState(null);
 
     const reqIdRef = useRef(0);
@@ -86,6 +100,38 @@ export default function AuditLogs() {
         load(hasLoadedRef.current);
     }, [load]);
 
+    function toggleSort(field) {
+        if (sortBy === field) {
+            if (sortDir === 'asc') {
+                setSortDir('desc');
+            } else {
+                setSortBy(null);
+                setSortDir(null);
+            }
+        } else {
+            setSortBy(field);
+            setSortDir('asc');
+        }
+    }
+
+    const sortedLogs = useMemo(() => {
+        const key = SORT_FIELDS[sortBy];
+        if (!sortBy || !key) return logs;
+        const dir = sortDir === 'asc' ? 1 : -1;
+        return [...logs].sort((a, b) => {
+            const av = key(a);
+            const bv = key(b);
+            if (typeof av === 'number' && typeof bv === 'number') {
+                return (av - bv) * dir;
+            }
+            const as = String(av ?? '').toLowerCase();
+            const bs = String(bv ?? '').toLowerCase();
+            if (as < bs) return -1 * dir;
+            if (as > bs) return 1 * dir;
+            return 0;
+        });
+    }, [logs, sortBy, sortDir]);
+
     const hasActiveFilters = Boolean(searchInput.trim() || moduleFilter || dateFrom || dateTo);
 
     function clearFilters() {
@@ -103,7 +149,7 @@ export default function AuditLogs() {
                 <header className="page-head">
                     <div>
                         <h2>Audit Logs</h2>
-                        <p style={{ maxWidth: 'none' }}>Chronological system audit trail across inventory, sales, suppliers, categories, users, and backups.</p>
+                        <p style={{ maxWidth: 'none' }}>Chronological system audit trail across stock inventory, products, categories, suppliers, transactions, suggestions, users, and backups.</p>
                     </div>
                 </header>
             </section>
@@ -228,19 +274,45 @@ export default function AuditLogs() {
                                 <table className="table">
                                     <thead>
                                         <tr>
-                                            <th>Timestamp</th>
-                                            <th>User<br />Account</th>
-                                            <th>Action<br />Executed</th>
-                                            <th>Target<br />Module</th>
+                                            <th className="sort-header" onClick={() => toggleSort('timestamp')}>
+                                                Timestamp
+                                                <span className={`sort-indicator${sortBy === 'timestamp' ? ' is-active' : ''}`} aria-hidden="true">
+                                                    {sortBy === 'timestamp' && sortDir === 'desc' ? '▼' : '▲'}
+                                                </span>
+                                            </th>
+                                            <th className="sort-header" onClick={() => toggleSort('user')}>
+                                                <span className="sort-header-inner">
+                                                    <span>User<br />Account</span>
+                                                    <span className={`sort-indicator${sortBy === 'user' ? ' is-active' : ''}`} aria-hidden="true">
+                                                        {sortBy === 'user' && sortDir === 'desc' ? '▼' : '▲'}
+                                                    </span>
+                                                </span>
+                                            </th>
+                                            <th className="sort-header" onClick={() => toggleSort('action')}>
+                                                <span className="sort-header-inner">
+                                                    <span>Action<br />Executed</span>
+                                                    <span className={`sort-indicator${sortBy === 'action' ? ' is-active' : ''}`} aria-hidden="true">
+                                                        {sortBy === 'action' && sortDir === 'desc' ? '▼' : '▲'}
+                                                    </span>
+                                                </span>
+                                            </th>
+                                            <th className="sort-header" onClick={() => toggleSort('module')}>
+                                                <span className="sort-header-inner">
+                                                    <span>Target<br />Module</span>
+                                                    <span className={`sort-indicator${sortBy === 'module' ? ' is-active' : ''}`} aria-hidden="true">
+                                                        {sortBy === 'module' && sortDir === 'desc' ? '▼' : '▲'}
+                                                    </span>
+                                                </span>
+                                            </th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {logs.map((item) => (
+                                        {sortedLogs.map((item) => (
                                             <tr key={item.id} className="row-clickable" onClick={() => setDetail(item)}>
                                                 <td className="txn-date">{item.timestamp || item.created_at_human}</td>
                                                 <td><strong>{item.user_name}</strong></td>
-                                                <td>{item.description || item.action_label}</td>
+                                                <td>{cleanDisplayText(item.description || item.action_label)}</td>
                                                 <td><span className="pill pill-info">{item.module}</span></td>
                                                 <td className="actions-cell">
                                                     <button
@@ -316,8 +388,8 @@ export default function AuditLogs() {
 
             {detail && (
                 <Modal
-                    open={Boolean(detail)}
                     onClose={() => setDetail(null)}
+                    noClose
                     title={
                         <span className="activity-detail-title">
                             <span className="activity-detail-infoicon" aria-hidden="true">
@@ -342,7 +414,10 @@ export default function AuditLogs() {
                         </div>
                         <div className="activity-detail-item">
                             <dt>User</dt>
-                            <dd>{detail.user_name}</dd>
+                            <dd>
+                                {detail.user_name}
+                                {detail.user_role && <span className="activity-role">{detail.user_role}</span>}
+                            </dd>
                         </div>
                         <div className="activity-detail-item">
                             <dt>Timestamp</dt>
@@ -351,12 +426,12 @@ export default function AuditLogs() {
                         {detail.subject_name && (
                             <div className="activity-detail-item">
                                 <dt>Target</dt>
-                                <dd>{detail.subject_name}</dd>
+                                <dd>{cleanDisplayText(detail.subject_name)}</dd>
                             </div>
                         )}
                         <div className="activity-detail-item">
                             <dt>Summary</dt>
-                            <dd>{detail.description}</dd>
+                            <dd>{cleanDisplayText(detail.description)}</dd>
                         </div>
                         {activityChanges(detail).length > 0 && (
                             <div className="activity-detail-item">
@@ -372,7 +447,7 @@ export default function AuditLogs() {
                         )}
                     </dl>
                     <div className="modal-actions modal-actions-center">
-                        <button type="button" className="btn btn-primary" onClick={() => setDetail(null)}>
+                        <button type="button" className="btn btn-ghost" onClick={() => setDetail(null)}>
                             Close
                         </button>
                     </div>
