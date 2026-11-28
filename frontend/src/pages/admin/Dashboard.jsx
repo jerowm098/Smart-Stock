@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePageLoadbar } from '../../components/PageLoadbar.jsx';
 import { Link } from 'react-router-dom';
-import { get } from '../../lib/api.js';
+import { Toast } from '../../components/Feedback.jsx';
+import { get, post, validationMessages } from '../../lib/api.js';
 import { formatPeso } from '../../lib/format.js';
+import { notifyConnectedNav } from '../../lib/navBadges.js';
 
 // Restock Suggestions pager: 5 rows per page (same compact chevron pager as
 // the Products / Transactions / Stock Inventory tables).
@@ -31,10 +33,14 @@ export default function Dashboard() {
     const [sortBy, setSortBy] = useState(null);
     const [sortDir, setSortDir] = useState(null);
     const [page, setPage] = useState(1);
+    const [suggestionsOptionsOpen, setSuggestionsOptionsOpen] = useState(false);
+    const suggestionsOptionsRef = useRef(null);
+    const [seedingSuggestions, setSeedingSuggestions] = useState(false);
+    const [toast, setToast] = useState(null);
 
-    const loadStats = useCallback(async () => {
+    const loadStats = useCallback(async (silent = false) => {
         try {
-            setLoading(true);
+            if (!silent) setLoading(true);
             const [statsData, suggestData, chartData, topData, salesData, stockInsData] = await Promise.all([
                 get('/api/dashboard/stats'),
                 get('/api/dashboard/restock-suggestions', { status: 'active' }),
@@ -62,6 +68,54 @@ export default function Dashboard() {
     useEffect(() => {
         loadStats();
     }, [loadStats]);
+
+    useEffect(() => {
+        if (!suggestionsOptionsOpen) return;
+        const onDown = (event) => {
+            if (suggestionsOptionsRef.current && !suggestionsOptionsRef.current.contains(event.target)) {
+                setSuggestionsOptionsOpen(false);
+            }
+        };
+        const onKey = (event) => {
+            if (event.key === 'Escape') setSuggestionsOptionsOpen(false);
+        };
+        document.addEventListener('mousedown', onDown);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('mousedown', onDown);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [suggestionsOptionsOpen]);
+
+    async function handleSeedSuggestions() {
+        if (seedingSuggestions) return;
+        setSeedingSuggestions(true);
+        try {
+            const response = await post('/api/dashboard/order-suggestions/seed');
+            setToast({ tone: 'success', text: response?.message ?? '7 sample order suggestions added.' });
+            notifyConnectedNav('suggestionAdded', response?.created ?? 7);
+            if ((response?.created_products ?? 0) > 0) {
+                notifyConnectedNav('productAdded', response.created_products);
+            }
+            if ((response?.created_sales ?? 0) > 0) {
+                notifyConnectedNav('saleCompleted', response.created_sales);
+            }
+            if ((response?.created_categories ?? 0) > 0) {
+                notifyConnectedNav('categoriesSynced', response.created_categories);
+            }
+            if ((response?.created_suppliers ?? 0) > 0) {
+                notifyConnectedNav('suppliersSynced', response.created_suppliers);
+            }
+            await loadStats(true);
+        } catch (err) {
+            setToast({
+                tone: 'error',
+                text: validationMessages(err)[0] ?? err.message ?? 'Could not add sample suggestions.',
+            });
+        } finally {
+            setSeedingSuggestions(false);
+        }
+    }
 
     /** Column sort: 1st click asc → 2nd desc → 3rd back to the default order. */
     function toggleSort(field) {
@@ -136,6 +190,8 @@ export default function Dashboard() {
                     </div>
                 </header>
             </section>
+
+            {toast && <Toast tone={toast.tone} onClose={() => setToast(null)}>{toast.text}</Toast>}
 
             {loading && (
                 /* Loading phase: the hero above stays put (its loadbar is the
@@ -372,20 +428,54 @@ export default function Dashboard() {
                                 <h3>Restock Suggestions</h3>
                                 <p className="muted">Demand-based restocking recommendations.</p>
                             </div>
-                            {/* View-all shortcut: icon-only northeast arrow pinned to
-                                the header's right corner (filter-head is
-                                space-between). Replaces the inline "View all" text. */}
-                            <Link
-                                to="/order-suggestions"
-                                className="icon-btn is-outlined"
-                                aria-label="View all restock suggestions"
-                                title="View all"
-                            >
-                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                    <path d="M7 17L17 7" />
-                                    <path d="M7 7h10v10" />
-                                </svg>
-                            </Link>
+                            <div className="head-actions">
+                                <Link
+                                    to="/order-suggestions"
+                                    className="icon-btn is-outlined"
+                                    aria-label="View all restock suggestions"
+                                    title="View all"
+                                >
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                        <path d="M7 17L17 7" />
+                                        <path d="M7 7h10v10" />
+                                    </svg>
+                                </Link>
+                                <div className="activity-options" ref={suggestionsOptionsRef}>
+                                    <button
+                                        type="button"
+                                        className="icon-btn is-outlined"
+                                        onClick={() => setSuggestionsOptionsOpen((open) => !open)}
+                                        aria-haspopup="menu"
+                                        aria-expanded={suggestionsOptionsOpen}
+                                        aria-label="Restock suggestion options"
+                                    >
+                                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" stroke="none" aria-hidden="true">
+                                            <circle cx="12" cy="5" r="1.7" />
+                                            <circle cx="12" cy="12" r="1.7" />
+                                            <circle cx="12" cy="19" r="1.7" />
+                                        </svg>
+                                    </button>
+                                    {suggestionsOptionsOpen && (
+                                        <div className="activity-options-panel" role="menu" aria-label="Restock suggestion options">
+                                            <button
+                                                type="button"
+                                                className="activity-options-item"
+                                                role="menuitem"
+                                                disabled={seedingSuggestions}
+                                                onClick={() => {
+                                                    setSuggestionsOptionsOpen(false);
+                                                    handleSeedSuggestions();
+                                                }}
+                                            >
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                                                    <path d="M9 12h6m-6 3.75h6M9 4.5h6M6.75 6.75h10.5a1.5 1.5 0 011.5 1.5v10.5a1.5 1.5 0 01-1.5 1.5H6.75a1.5 1.5 0 01-1.5-1.5V8.25a1.5 1.5 0 011.5-1.5z" />
+                                                </svg>
+                                                <span>Add 7 sample suggestions</span>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                         <div className="table-shell">
                             <div className="table-wrap">
@@ -405,15 +495,19 @@ export default function Dashboard() {
                                                 </span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('stock')}>
-                                                Current<br />Stock
-                                                <span className={`sort-indicator${sortBy === 'stock' ? ' is-active' : ''}`} aria-hidden="true">
-                                                    {sortBy === 'stock' && sortDir === 'desc' ? '▼' : '▲'}
+                                                <span className="sort-header-inner">
+                                                    <span>Current<br />Stock</span>
+                                                    <span className={`sort-indicator${sortBy === 'stock' ? ' is-active' : ''}`} aria-hidden="true">
+                                                        {sortBy === 'stock' && sortDir === 'desc' ? '▼' : '▲'}
+                                                    </span>
                                                 </span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('suggested_qty')}>
-                                                Suggested<br />Qty
-                                                <span className={`sort-indicator${sortBy === 'suggested_qty' ? ' is-active' : ''}`} aria-hidden="true">
-                                                    {sortBy === 'suggested_qty' && sortDir === 'desc' ? '▼' : '▲'}
+                                                <span className="sort-header-inner">
+                                                    <span>Suggested<br />Qty</span>
+                                                    <span className={`sort-indicator${sortBy === 'suggested_qty' ? ' is-active' : ''}`} aria-hidden="true">
+                                                        {sortBy === 'suggested_qty' && sortDir === 'desc' ? '▼' : '▲'}
+                                                    </span>
                                                 </span>
                                             </th>
                                             <th className="sort-header" onClick={() => toggleSort('urgency')}>
