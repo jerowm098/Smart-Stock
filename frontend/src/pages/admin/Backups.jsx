@@ -54,20 +54,24 @@ const ACTIVITY_ICONS = {
     ),
 };
 
-// One-line row summary, e.g. "Created backup smart-stock-backup-....json".
+function stripJsonExt(name) {
+    return String(name ?? '').replace(/\.json\b/gi, '');
+}
+
+// One-line row summary, e.g. "Created backup smart-stock-backup-...".
 function activitySummary(item) {
     const verb = ACTIVITY_VERB[item.action];
     if (verb && item.subject_name) {
-        return `${verb} ${item.subject_name}`;
+        return `${verb} ${stripJsonExt(item.subject_name)}`;
     }
-    return String(item.description ?? 'Backup activity');
+    return stripJsonExt(item.description ?? 'Backup activity');
 }
 
 // The "changes made" lines for the detail popup.
 function activityChanges(item) {
     const explicit = item?.meta?.changes;
     if (Array.isArray(explicit) && explicit.length > 0) {
-        return explicit.map((change) => change.text ?? String(change));
+        return explicit.map((change) => stripJsonExt(change.text ?? String(change)));
     }
 
     const meta = item?.meta ?? {};
@@ -75,16 +79,16 @@ function activityChanges(item) {
 
     switch (item?.action) {
         case 'backup_created':
-            if (meta.filename) lines.push(`File ${meta.filename}`);
+            if (meta.filename) lines.push(`File ${stripJsonExt(meta.filename)}`);
             if (meta.keep != null) lines.push(`Keep the newest ${meta.keep} backups`);
             lines.push('Stored in the database and on the server');
             break;
         case 'backup_downloaded':
-            if (meta.filename) lines.push(`File ${meta.filename}`);
+            if (meta.filename) lines.push(`File ${stripJsonExt(meta.filename)}`);
             lines.push('JSON database dump');
             break;
         case 'backup_deleted':
-            if (meta.filename) lines.push(`File ${meta.filename}`);
+            if (meta.filename) lines.push(`File ${stripJsonExt(meta.filename)}`);
             lines.push('Removed from the database and server storage');
             break;
         default:
@@ -116,7 +120,7 @@ export default function Backups() {
     const [deleteError, setDeleteError] = useState(null);
     const [keep, setKeep] = useState(7);
     const [runModalOpen, setRunModalOpen] = useState(false);
-    const [backupRange, setBackupRange] = useState('all');
+    const [backupRange, setBackupRange] = useState('');
     const [backupFrom, setBackupFrom] = useState('');
     const [backupTo, setBackupTo] = useState('');
     const [runModalError, setRunModalError] = useState(null);
@@ -309,12 +313,20 @@ export default function Backups() {
     }
 
     function openRunModal() {
+        setBackupRange('');
+        setBackupFrom('');
+        setBackupTo('');
         setRunModalError(null);
         setRunModalOpen(true);
     }
 
     async function runBackup(event) {
         event?.preventDefault();
+
+        if (!backupRange) {
+            setRunModalError('Please select a data range.');
+            return;
+        }
 
         if (backupRange === 'custom') {
             if (!backupFrom || !backupTo) {
@@ -621,7 +633,7 @@ export default function Backups() {
                                         if (sortedBackups.length === 0) {
                                             setEmptyNotice({
                                                 title: 'No backups to delete',
-                                                description: 'The backup list is already empty. Run a backup or add the 7 sample rows to populate it first.',
+                                                description: 'The backup list is already empty. Run a backup first.',
                                             });
                                             return;
                                         }
@@ -691,7 +703,7 @@ export default function Backups() {
                                 <tbody>
                                     {pagedBackups.map((backup) => (
                                         <tr key={backup.name}>
-                                            <td className="mono">{backup.name}</td>
+                                            <td className="mono">{backup.name.replace(/\.json$/i, '')}</td>
                                             <td>{backup.type}</td>
                                             <td className="text-right">{backup.size_human}</td>
                                             <td className="muted">{formatDate(backup.modified)}</td>
@@ -727,7 +739,7 @@ export default function Backups() {
                                         </svg>
                                     </span>
                                     <p className="table-empty-title">No backups yet</p>
-                                    <p className="table-empty-sub">Run a backup or add the 7 sample rows to populate this list.</p>
+                                    <p className="table-empty-sub">Run a backup to populate this list.</p>
                                 </div>
                             )}
                         </div>
@@ -1031,10 +1043,11 @@ export default function Backups() {
                                 onChange={(e) => handleRangeChange(e.target.value)}
                                 disabled={running}
                             >
-                                <option value="all">All data (Full backup)</option>
+                                <option value="" disabled hidden>Select data range</option>
                                 <option value="1d">Per 1 day (Last 24 hours)</option>
                                 <option value="1w">Per 1 week (Last 7 days)</option>
                                 <option value="1m">Per 1 month (Last 30 days)</option>
+                                <option value="all">All data (Full backup)</option>
                                 <option value="custom">Custom date range</option>
                             </select>
                         </div>
